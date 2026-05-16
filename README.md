@@ -1,28 +1,22 @@
-# MoviList Web
+# Klyvi Web
 
-MoviList is a simple web app to track movies and TV shows you've watched, plan to watch, or are currently watching. Inspired by AniList, but for film and TV.
+Next.js frontend for **Klyvi**, a personalized movie and TV discovery app that helps you find what to watch next based on your taste.
 
-This repository (`movilist-web`) contains the frontend client for MoviList. The backend REST API lives in a separate repo: [`movilist-api`](https://github.com/you/movilist-api).
+This repo is the web client only. The Go API lives in [klyvi](https://github/jacobkly/klyvi) and owns all recommendation and ranking logic, so the web app stays a thin, fast client.
 
-## Why Separate Repos?
+## Status
 
-- Easier deployment (Vercel for web, Heroku for API)
-- Simpler CI/CD and maintenance
-- Scalable for future features and contributors
+Early development. Setup and usage instructions will be added once there's something to run.
 
-## Tech Stack
+## Planned Stack
 
-- Frontend: [Next.js](https://nextjs.org/) & [React](https://react.dev/)
-- API: Connects to the [MoviList API](https://github.com/yourusername/movilist-api)
+- [Next.js](https://nextjs.org/) + [React](https://react.dev/)
+- TypeScript
+- [Supabase JS](https://supabase.com/docs/reference/javascript) for auth (sign-in/session only; the access token is forwarded to the Go API, which verifies it)
+- Hosted on Vercel
 
-## Hosting Plans
+## Scope
 
-- Web (Production): Vercel
+The client handles rendering, interaction capture (rate/log/dismiss/save), and auth. It does not talk to the database directly. Catalog, search, interactions, and recommendations all go through the Klyvi API. Nothing about scoring or personalization lives here.
 
-## Project Goal
-
-Get a hosted version online as soon as possible. MoviList aims to make it easy to organize and share your movie and show lists.
-
----
-
-Stay tuned for
+Stay tuned for updates!
