@@ -129,3 +129,24 @@ Append-only log. One section per surface (or major phase).
 
 **TODOs left for later:**
 - Persist results when backend lands.
+
+## Surface 8 — Settings
+
+**Decisions:**
+- Single-page sectioned layout (no tabs) — boring is correct per the surface prompt. Each section is a card with hairline border + subtle bg-card/30.
+- Five sections: Account, Display, Notifications, Data & Privacy, About — directly matches the user's appended spec.
+- Three real working toggles persisted to `localStorage[klyvi-prefs]`:
+  - Reduce motion → sets `data-motion="reduced"` on `<html>`, the globals.css rule kills animations.
+  - Compact poster grid → flag stored, consumed later if/when home/library are made density-aware.
+  - Show "Why this rec?" → flag stored, can be read by WhyThisRec.
+- Plus three notification toggles + a language Select (also persisted) — no real effect, just stored.
+- Theme row in Display is explicitly a read-only chip — beta is dark-only per surface prompt + DESIGN.md.
+- Delete-account dialog requires typing "DELETE" exactly. Button stays disabled until match.
+- Export-data fires a toast.
+- Build is clean — all 9 routes prerender static including this one.
+
+**For review when you return:**
+- LocalStorage prefs hydrate on mount (small initial flash possible if reduceMotion was on). Could move the data-motion attr setup to a small `<script>` in `app/layout.tsx` to apply pre-paint. Not critical for beta.
+
+**TODOs left for later:**
+- Wire account/email/username edit dialogs (stubbed).
