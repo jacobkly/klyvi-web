@@ -4,8 +4,19 @@ import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, ThumbsUp, Meh, ThumbsDown, EyeOff, Sparkles, ArrowRight, type LucideIcon } from 'lucide-react';
+import {
+  Heart,
+  ThumbsUp,
+  Meh,
+  ThumbsDown,
+  EyeOff,
+  Sparkles,
+  ArrowRight,
+  AlertTriangle,
+  type LucideIcon,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { cn, tmdb } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +29,15 @@ import {
 } from '@/components/ui/dialog';
 import { AmbientBlobs } from '@/components/motion/ambient-blobs';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { onboardingTitles } from '@/lib/placeholder';
+import { pickOnboardingPool, type OnboardingPoolItem } from '@/lib/api/onboarding-pool';
+import { recordInteraction } from '@/lib/api/interactions';
+import { getMovie } from '@/lib/api/movies';
+import { ApiError } from '@/lib/api/client';
+import { useAccessToken, useSupabaseUser } from '@/lib/hooks/use-supabase-user';
+
+interface OnboardingCard extends OnboardingPoolItem {
+  posterPath: string;
+}
 
 type Verdict = 'loved' | 'liked' | 'meh' | 'disliked' | 'skipped';
 
@@ -35,9 +54,65 @@ const ACTIONS: {
   { verdict: 'skipped', label: "Haven't seen", icon: EyeOff, classes: 'text-muted-foreground hover:text-foreground' },
 ];
 
+/** Maps a swipe verdict to the 0..100 rating the API expects. */
+function verdictRating(v: Verdict): number | null {
+  switch (v) {
+    case 'loved':
+      return 95;
+    case 'liked':
+      return 80;
+    case 'meh':
+      return 50;
+    case 'disliked':
+      return 20;
+    case 'skipped':
+      return null;
+  }
+}
+
 export default function RatePage() {
   const router = useRouter();
-  const titles = onboardingTitles;
+  const { user, loading: authLoading, unavailable } = useSupabaseUser();
+  const token = useAccessToken();
+  const pool = React.useMemo(() => pickOnboardingPool(10, user?.id ?? 'beta'), [user?.id]);
+
+  const [titles, setTitles] = React.useState<OnboardingCard[]>([]);
+  const [titlesLoading, setTitlesLoading] = React.useState(true);
+  const [titlesError, setTitlesError] = React.useState<string | null>(null);
+
+  // Fetch poster paths from the catalog. Lands fast against the seeded cache.
+  React.useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    setTitlesLoading(true);
+    setTitlesError(null);
+    Promise.all(
+      pool.map((p) =>
+        getMovie(p.tmdb_id, { idType: 'tmdb' })
+          .then((m) =>
+            m && m.poster_path
+              ? ({ ...p, posterPath: m.poster_path } as OnboardingCard)
+              : null
+          )
+          .catch(() => null)
+      )
+    )
+      .then((cards) => {
+        if (cancelled) return;
+        const ok = cards.filter((c): c is OnboardingCard => c !== null);
+        setTitles(ok);
+        if (ok.length === 0) {
+          setTitlesError('Couldn\'t load the onboarding pool. Is the API running?');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTitlesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pool, user]);
+
   const total = titles.length;
 
   const [i, setI] = React.useState(0);
@@ -48,9 +123,26 @@ export default function RatePage() {
 
   const current = titles[i];
 
-  function record(verdict: Verdict) {
-    setResults((prev) => ({ ...prev, [current.id]: verdict }));
+  async function record(verdict: Verdict) {
+    if (!current) return;
+    setResults((prev) => ({ ...prev, [current.tmdb_id]: verdict }));
     setDirection(1);
+
+    // Fire interaction in the background (don't block UI).
+    const rating = verdictRating(verdict);
+    if (token && rating !== null) {
+      recordInteraction(token, {
+        tmdb_id: current.tmdb_id,
+        media_type: 'movie',
+        kind: 'rated',
+        rating,
+        source: 'onboarding',
+      }).catch((e) => {
+        const msg = e instanceof ApiError ? e.message : 'Failed to record rating';
+        toast.error(msg);
+      });
+    }
+
     if (i + 1 >= total) {
       setDone(true);
     } else {
@@ -58,7 +150,7 @@ export default function RatePage() {
     }
   }
 
-  // Swipe support — basic touch swipe left/right to record liked/meh
+  // Touch swipe support — basic
   const touchStart = React.useRef<{ x: number; y: number } | null>(null);
   function onTouchStart(e: React.TouchEvent) {
     const t = e.touches[0];
@@ -73,6 +165,66 @@ export default function RatePage() {
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
       record(dx > 0 ? 'liked' : 'disliked');
     }
+  }
+
+  if (authLoading) {
+    return <div className="grid min-h-dvh place-items-center text-muted-foreground text-sm">Loading…</div>;
+  }
+
+  if (unavailable) {
+    return (
+      <div className="grid min-h-dvh place-items-center px-4">
+        <div className="max-w-md w-full rounded-2xl hairline bg-card/40 p-6 flex items-start gap-3">
+          <AlertTriangle className="size-5 text-destructive mt-0.5" strokeWidth={2} />
+          <div>
+            <div className="font-semibold">Sign-in not configured</div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Onboarding records your ratings to your account. Add Supabase env vars to enable.
+            </p>
+            <Button asChild className="mt-4" size="sm">
+              <Link href="/">Back to home</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    // Should be redirected by middleware, but render a safe net.
+    router.replace('/signin?next=/rate');
+    return null;
+  }
+
+  if (titlesLoading) {
+    return (
+      <div className="relative grid min-h-dvh place-items-center">
+        <AmbientBlobs intensity="low" />
+        <div className="text-center">
+          <div className="mx-auto grid size-12 place-items-center rounded-full bg-card hairline">
+            <Sparkles className="size-5 text-accent motion-safe:animate-pulse" strokeWidth={1.5} />
+          </div>
+          <p className="mt-4 text-sm text-muted-foreground">Loading your onboarding pool…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (titlesError || total === 0) {
+    return (
+      <div className="relative grid min-h-dvh place-items-center px-4">
+        <div className="max-w-md w-full rounded-2xl hairline bg-card/40 p-6 flex items-start gap-3">
+          <AlertTriangle className="size-5 text-destructive mt-0.5" strokeWidth={2} />
+          <div>
+            <div className="font-semibold">Couldn&apos;t load onboarding</div>
+            <p className="mt-1 text-sm text-muted-foreground">{titlesError ?? 'Pool is empty.'}</p>
+            <Button asChild className="mt-4" size="sm">
+              <Link href="/">Back to home</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (done) {
@@ -113,7 +265,6 @@ export default function RatePage() {
     <div className="relative grid min-h-dvh grid-rows-[auto_1fr_auto] gap-4 px-4 py-6 md:px-8">
       <AmbientBlobs intensity="low" />
 
-      {/* Top bar */}
       <header className="flex items-center gap-4">
         <Link href="/" className="text-lg font-semibold tracking-tight">
           Klyvi
@@ -149,14 +300,10 @@ export default function RatePage() {
         <div className="text-xs uppercase tracking-wider text-muted-foreground tabular-nums">
           {i + 1} of {total} · {Math.round(pct)}%
         </div>
-        <div
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          className="mt-4 w-full max-w-[280px] md:max-w-sm"
-        >
+        <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="mt-4 w-full max-w-[280px] md:max-w-sm">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={current.id}
+              key={current.tmdb_id}
               initial={{ opacity: 0, y: direction * 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -direction * 16, scale: 0.98 }}
@@ -165,28 +312,23 @@ export default function RatePage() {
             >
               <AspectRatio ratio={2 / 3}>
                 <Image
-                  src={tmdb(current.poster_path, 'w500')}
+                  src={tmdb(current.posterPath, 'w500')}
                   alt={`${current.title} poster`}
                   fill
                   sizes="(max-width: 768px) 80vw, 400px"
                   priority
-                  className="object-cover"
+                  className="object-cover bg-muted"
                 />
               </AspectRatio>
             </motion.div>
           </AnimatePresence>
           <div className="mt-4 text-center">
-            <h2 className="text-xl md:text-2xl font-semibold tracking-tight">
-              {current.title}
-            </h2>
-            <div className="text-sm text-muted-foreground tabular-nums">
-              {current.year}
-            </div>
+            <h2 className="text-xl md:text-2xl font-semibold tracking-tight">{current.title}</h2>
+            <div className="text-sm text-muted-foreground tabular-nums">{current.year}</div>
           </div>
         </div>
       </div>
 
-      {/* Actions */}
       <div className="mx-auto w-full max-w-2xl">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3">
           {ACTIONS.map(({ verdict, label, icon: Icon, classes }) => (
@@ -209,7 +351,6 @@ export default function RatePage() {
         </p>
       </div>
 
-      {/* Skip confirm dialog */}
       <Dialog open={confirmSkip} onOpenChange={setConfirmSkip}>
         <DialogContent>
           <DialogHeader>
@@ -219,12 +360,8 @@ export default function RatePage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setConfirmSkip(false)}>
-              Keep going
-            </Button>
-            <Button variant="destructive" onClick={() => router.push('/')}>
-              Skip
-            </Button>
+            <Button variant="ghost" onClick={() => setConfirmSkip(false)}>Keep going</Button>
+            <Button variant="destructive" onClick={() => router.push('/')}>Skip</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

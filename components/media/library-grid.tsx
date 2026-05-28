@@ -1,23 +1,30 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import * as React from 'react';
-import { BookmarkPlus, Eye, CheckCircle2, Pause, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  BookmarkPlus,
+  Eye,
+  CheckCircle2,
+  Pause,
+  AlertTriangle,
+  type LucideIcon,
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PosterCard } from '@/components/media/poster-card';
-import { libraryItems } from '@/lib/placeholder';
-import type { MediaCard, WatchStatus } from '@/src/types/media';
-
-function getTitle(item: MediaCard) {
-  return item.type === 'movie' ? item.title : item.name;
-}
+import { useAccessToken, useSupabaseUser } from '@/lib/hooks/use-supabase-user';
+import { listTracking } from '@/lib/api/tracking';
+import { getMovie } from '@/lib/api/movies';
+import { ApiError } from '@/lib/api/client';
+import type { ApiTrackingEntry, TrackingStatus } from '@/lib/api/types';
 
 interface TabDef {
   value: string;
   label: string;
-  statuses: WatchStatus[];
+  statuses: TrackingStatus[];
   emptyIcon: LucideIcon;
   emptyHeadline: string;
   emptyBody: string;
@@ -37,8 +44,8 @@ const TABS: TabDef[] = [
     label: 'Watching',
     statuses: ['watching', 'rewatching'],
     emptyIcon: Eye,
-    emptyHeadline: 'You\'re not watching anything',
-    emptyBody: 'Start a series or movie and we\'ll keep your place here.',
+    emptyHeadline: "You're not watching anything",
+    emptyBody: "Start a series or movie and we'll keep your place here.",
   },
   {
     value: 'completed',
@@ -46,7 +53,7 @@ const TABS: TabDef[] = [
     statuses: ['completed'],
     emptyIcon: CheckCircle2,
     emptyHeadline: 'No completed titles yet',
-    emptyBody: 'Mark something as watched and it\'ll land here.',
+    emptyBody: "Mark something as watched and it'll land here.",
   },
   {
     value: 'dropped',
@@ -54,11 +61,11 @@ const TABS: TabDef[] = [
     statuses: ['dropped', 'paused'],
     emptyIcon: Pause,
     emptyHeadline: 'Nothing dropped or paused',
-    emptyBody: 'Titles you stop watching show up here so they\'re out of your feed.',
+    emptyBody: "Titles you stop watching show up here so they're out of your feed.",
   },
 ];
 
-function statusBadgeFor(status?: WatchStatus) {
+function statusBadgeFor(status: TrackingStatus | undefined) {
   switch (status) {
     case 'watching':
       return { label: 'Watching', cn: 'bg-primary/20 text-primary border-primary/30' };
@@ -77,26 +84,120 @@ function statusBadgeFor(status?: WatchStatus) {
   }
 }
 
+interface ResolvedEntry {
+  entry: ApiTrackingEntry;
+  tmdbId: number;
+  title: string;
+  year?: number;
+  posterPath: string;
+  voteAverage?: number;
+}
+
+async function resolveEntry(entry: ApiTrackingEntry): Promise<ResolvedEntry | null> {
+  // /v1/tracking returns internal media_id only. Resolve display data via the
+  // movies cache. Tracking API works for both movies and seasons; for seasons
+  // we'd need to join differently. For beta we resolve movies and fall back
+  // to a placeholder for seasons.
+  if (entry.media_type === 'movie') {
+    const movie = await getMovie(entry.media_id, { idType: 'media' }).catch(() => null);
+    if (!movie) return null;
+    return {
+      entry,
+      tmdbId: movie.movie_id,
+      title: movie.title ?? movie.original_title ?? 'Untitled',
+      year: movie.release_date ? new Date(movie.release_date).getFullYear() : undefined,
+      posterPath: movie.poster_path ?? '',
+      voteAverage: movie.vote_average,
+    };
+  }
+  return {
+    entry,
+    tmdbId: entry.media_id,
+    title: 'TV Season',
+    posterPath: '',
+  };
+}
+
 export function LibraryGrid() {
   const router = useRouter();
   const params = useSearchParams();
+  const { user, unavailable } = useSupabaseUser();
+  const token = useAccessToken();
   const tabFromUrl = params.get('tab') ?? 'watchlist';
   const current = TABS.find((t) => t.value === tabFromUrl) ? tabFromUrl : 'watchlist';
 
-  const totals = React.useMemo(() => {
-    const out: Record<string, number> = {};
-    TABS.forEach((t) => {
-      out[t.value] = libraryItems.filter((i) =>
-        i.status && t.statuses.includes(i.status)
-      ).length;
-    });
-    return out;
-  }, []);
+  const [entries, setEntries] = React.useState<ResolvedEntry[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (unavailable) {
+      setLoading(false);
+      return;
+    }
+    if (!token) {
+      // Middleware should have already redirected to /signin, but render
+      // an inline state in case it didn't.
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    listTracking(token)
+      .then(async (rows) => {
+        const resolved = await Promise.all(rows.map((r) => resolveEntry(r)));
+        if (cancelled) return;
+        setEntries(resolved.filter((r): r is ResolvedEntry => r !== null));
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof ApiError ? e.message : 'Failed to load library.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, unavailable]);
 
   function setTab(v: string) {
     const sp = new URLSearchParams(params);
     sp.set('tab', v);
     router.replace(`/library?${sp.toString()}`, { scroll: false });
+  }
+
+  const totals = React.useMemo(() => {
+    const out: Record<string, number> = {};
+    TABS.forEach((t) => {
+      out[t.value] = entries.filter((r) => t.statuses.includes(r.entry.status)).length;
+    });
+    return out;
+  }, [entries]);
+
+  if (unavailable) {
+    return (
+      <div className="mt-6 rounded-xl hairline bg-card/40 p-6 flex items-start gap-3">
+        <AlertTriangle className="size-4 mt-0.5 text-destructive" strokeWidth={2} />
+        <div className="text-sm">
+          <div className="font-medium">Sign-in not configured</div>
+          <div className="text-muted-foreground mt-1">
+            Add Supabase env vars to enable accounts and load your library.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="mt-6 rounded-xl hairline bg-card/40 p-6 text-center">
+        <p className="text-sm text-muted-foreground">Sign in to see your library.</p>
+        <Button asChild className="mt-4" size="sm">
+          <Link href="/signin?next=/library">Sign in</Link>
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -113,14 +214,29 @@ export function LibraryGrid() {
       </TabsList>
 
       {TABS.map((t) => {
-        const items = libraryItems.filter(
-          (i) => i.status && t.statuses.includes(i.status)
-        );
-        const isEmpty = items.length === 0;
+        const items = entries.filter((r) => t.statuses.includes(r.entry.status));
         const Icon = t.emptyIcon;
         return (
           <TabsContent key={t.value} value={t.value}>
-            {isEmpty ? (
+            {loading ? (
+              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="aspect-[2/3] rounded-xl w-full" />
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="mt-6 rounded-xl hairline bg-card/40 p-6 flex items-start gap-3">
+                <AlertTriangle className="size-4 mt-0.5 text-destructive" strokeWidth={2} />
+                <div className="text-sm">
+                  <div className="font-medium">Couldn&apos;t load library</div>
+                  <div className="text-muted-foreground mt-1">{error}</div>
+                </div>
+              </div>
+            ) : items.length === 0 ? (
               <div className="mt-6 grid place-items-center rounded-2xl hairline bg-card/30 py-16 px-6 text-center">
                 <div className="grid size-12 place-items-center rounded-full bg-card hairline">
                   <Icon className="size-5 text-muted-foreground" strokeWidth={1.5} />
@@ -133,16 +249,16 @@ export function LibraryGrid() {
               </div>
             ) : (
               <ul className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-                {items.map((item) => {
-                  const badge = statusBadgeFor(item.status);
+                {items.map((r) => {
+                  const badge = statusBadgeFor(r.entry.status);
                   return (
-                    <li key={item.id}>
+                    <li key={r.entry.id}>
                       <PosterCard
-                        id={item.id}
-                        title={getTitle(item)}
-                        year={item.release_year}
-                        posterPath={item.poster_path}
-                        voteAverage={item.vote_average}
+                        id={r.tmdbId}
+                        title={r.title}
+                        year={r.year}
+                        posterPath={r.posterPath}
+                        voteAverage={r.voteAverage}
                         fill
                         badgeSlot={
                           badge && (
