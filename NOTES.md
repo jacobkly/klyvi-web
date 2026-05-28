@@ -94,3 +94,20 @@ Append-only log. One section per surface (or major phase).
 
 **TODOs left for later:**
 - Wire watched state to real persistence when backend lands. Currently lives in component state only.
+
+## Surface 5 — Library
+
+**Decisions:**
+- Combined watchlist/history into one page at `/library` per the user's appended spec (his decision, my plan had two separate pages — followed his lead).
+- Tabs: Watchlist (planning) / Watching (watching + rewatching) / Completed / Dropped (dropped + paused). Mapped to the six WatchStatus enum values from `src/types/media.ts`. Doubling up rewatching with watching and paused with dropped keeps the tab count to four like the user asked.
+- Tab state persisted in URL via `?tab=watching` so the header avatar's "My activity" link works.
+- Reused `PosterCard` as the card primitive (the surface prompt says "filtered views of the same card primitive"). Added a `badgeSlot` prop earlier so each card can show its status as a top-right colored chip.
+- Status badge colors derive from existing tokens — no new hex.
+- Empty states per-tab use distinct Lucide icons + headline + body + "Browse recommendations" CTA back to home.
+- Tab counts shown as small pills next to each label so the user can see at a glance what's in each bucket.
+
+**For review when you return:**
+- Library uses `useSearchParams` which forces a client wrapper — the page itself stays a server component with the grid in a Suspense boundary.
+
+**TODOs left for later:**
+- Real sort/filter (genre, year range, runtime) deferred — not in user's surface spec for surface 5.
