@@ -111,3 +111,21 @@ Append-only log. One section per surface (or major phase).
 
 **TODOs left for later:**
 - Real sort/filter (genre, year range, runtime) deferred — not in user's surface spec for surface 5.
+
+## Surface 6 — Onboarding rapid-rate
+
+**Decisions:**
+- Path: `app/(onboarding)/rate/page.tsx` per user's appended spec. Group `(onboarding)` has its own minimal layout — no app shell, so it's properly full-screen.
+- Used framer-motion for the card transition (slide-up + fade with `ease-expo` curve). This is one of the two framer-motion-allowed places per DESIGN.md.
+- Five-action row: Loved (celebration color) / Liked (primary) / Meh (muted) / Disliked (outline) / Haven't seen (ghost). Each is a real `<button>` with token-only styling.
+- Progress shown as segmented dots: filled (past) / accent (current) / outline (future). Plus a tabular "i of total · %" line above the poster.
+- Mobile swipe support: touch-x delta > 60px = right → liked, left → disliked. Y-dominant swipes ignored to avoid stealing scroll.
+- Skip → confirm dialog with destructive "Skip" button.
+- Completion screen reuses `AmbientBlobs` at high intensity, renders the tally, and routes to `/`.
+
+**For review when you return:**
+- Skipping a title with "Haven't seen" still advances the counter (intentional — it's a verdict of sorts). Could be argued differently.
+- Could surface what the user just rated in the completion summary (poster grid). Held back to keep it crisp.
+
+**TODOs left for later:**
+- Persist results when backend lands.
