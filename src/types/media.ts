@@ -1,5 +1,4 @@
 // Types aligned with the eventual Klyvi Go API response shape.
-// See klyvi/docs/API.md.
 
 export type WatchStatus =
   | 'planning'

@@ -1,6 +1,9 @@
 # Local agent + planning artifacts (never publish)
 .claude/
 docs/
+DESIGN.md
+NOTES.md
+STATUS.md
 
 # Dependencies
 node_modules/
