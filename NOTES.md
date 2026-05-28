@@ -44,3 +44,19 @@ Append-only log. One section per surface (or major phase).
 
 ## Build hygiene
 - Moved `themeColor` from `metadata` to `viewport` export in `app/layout.tsx` to satisfy Next.js 15.
+
+## Surface 2 — Home Feed
+
+**Decisions:**
+- Built `AmbientBlobs` as a CSS-only component (no framer-motion). Two purple radial blobs with `motion-safe:animate-drift-1/2`, mounted under a `-z-10` layer. Cheaper, SSR-safe, plenty "lit."
+- Built `FeaturedCard` as a 16:9 / 21:9 (md+) hero with a left-edge gradient that fades the text onto the backdrop image. Adds a "Featured" badge using `--accent` overlay color, plus star rating, and a "See details" pill that scales on hover.
+- Used the three rows the user's appended spec called out — Continue Watching / Because you liked Parasite / New to you — instead of my plan's two rows.
+- Stagger entrance: each card gets `animation-delay: i * 40ms` via inline style on top of `animate-fade-up`. Pure CSS, no client JS. Reduced-motion users get instant render via the global stylesheet rule.
+- Featured card uses `parasite.backdrop_path` for a wide image; falls back to poster_path if absent. Subsequent rows use `PosterCard` which is the primitive surface 1 introduced.
+
+**For review when you return:**
+- The hero copy is light on personalization signal — would feel cooler with real numbers ("23 new picks today"). Holding back since beta has no real state.
+- Drift animation runs continuously; on low-power devices this may show in dev tools. It's a 60-75s loop so should be fine.
+
+**TODOs left for later:**
+- Real "Continue Watching" needs to pull from actual user state — surfaces only one item currently.
