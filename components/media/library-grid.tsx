@@ -9,16 +9,35 @@ import {
   CheckCircle2,
   Pause,
   AlertTriangle,
+  ChevronDown,
+  Bookmark,
+  Play,
+  Check,
+  PauseCircle,
+  XCircle,
+  RotateCcw,
+  Trash2,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PosterCard } from '@/components/media/poster-card';
 import { useAccessToken, useSupabaseUser } from '@/lib/hooks/use-supabase-user';
-import { listTracking } from '@/lib/api/tracking';
+import { listTracking, updateTracking, deleteTracking } from '@/lib/api/tracking';
 import { getMovie } from '@/lib/api/movies';
 import { ApiError } from '@/lib/api/client';
+import { cn } from '@/lib/utils';
 import type { ApiTrackingEntry, TrackingStatus } from '@/lib/api/types';
 
 interface TabDef {
@@ -65,6 +84,15 @@ const TABS: TabDef[] = [
   },
 ];
 
+const STATUS_OPTIONS: Array<{ value: TrackingStatus; label: string; icon: LucideIcon }> = [
+  { value: 'planning', label: 'Planning', icon: Bookmark },
+  { value: 'watching', label: 'Watching', icon: Play },
+  { value: 'completed', label: 'Completed', icon: Check },
+  { value: 'rewatching', label: 'Rewatching', icon: RotateCcw },
+  { value: 'paused', label: 'Paused', icon: PauseCircle },
+  { value: 'dropped', label: 'Dropped', icon: XCircle },
+];
+
 function statusBadgeFor(status: TrackingStatus | undefined) {
   switch (status) {
     case 'watching':
@@ -94,10 +122,6 @@ interface ResolvedEntry {
 }
 
 async function resolveEntry(entry: ApiTrackingEntry): Promise<ResolvedEntry | null> {
-  // /v1/tracking returns internal media_id only. Resolve display data via the
-  // movies cache. Tracking API works for both movies and seasons; for seasons
-  // we'd need to join differently. For beta we resolve movies and fall back
-  // to a placeholder for seasons.
   if (entry.media_type === 'movie') {
     const movie = await getMovie(entry.media_id, { idType: 'media' }).catch(() => null);
     if (!movie) return null;
@@ -118,6 +142,112 @@ async function resolveEntry(entry: ApiTrackingEntry): Promise<ResolvedEntry | nu
   };
 }
 
+interface LibraryCardProps {
+  resolved: ResolvedEntry;
+  token: string;
+  onStatusChange: (mediaId: number, updated: ApiTrackingEntry) => void;
+  onRemove: (mediaId: number) => void;
+}
+
+function LibraryCard({ resolved, token, onStatusChange, onRemove }: LibraryCardProps) {
+  const { entry, tmdbId, title, year, posterPath, voteAverage } = resolved;
+  const [pending, setPending] = React.useState<TrackingStatus | 'remove' | null>(null);
+  const badge = statusBadgeFor(entry.status);
+
+  async function changeStatus(next: TrackingStatus) {
+    if (next === entry.status) return;
+    setPending(next);
+    try {
+      const updated = await updateTracking(token, entry.media_id, { status: next });
+      onStatusChange(entry.media_id, updated);
+      const label = STATUS_OPTIONS.find((o) => o.value === next)?.label ?? next;
+      toast.success(`Moved to ${label}`, { description: title });
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to update status.');
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function remove() {
+    setPending('remove');
+    try {
+      await deleteTracking(token, entry.media_id);
+      onRemove(entry.media_id);
+      toast(`Removed from library`, { description: title });
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to remove.');
+    } finally {
+      setPending(null);
+    }
+  }
+
+  return (
+    <li className="relative">
+      <PosterCard
+        id={tmdbId}
+        title={title}
+        year={year}
+        posterPath={posterPath}
+        voteAverage={voteAverage}
+        fill
+      />
+      {badge && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Change status — currently ${badge.label}`}
+              className={cn(
+                'absolute top-2 right-2 z-20 inline-flex items-center gap-1 rounded-full border backdrop-blur-md px-2 py-0.5 text-[10px] font-medium transition-colors duration-instant ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:scale-[0.95]',
+                badge.cn,
+                pending && 'opacity-80'
+              )}
+            >
+              {pending && pending !== 'remove' ? (
+                <Loader2 className="size-3 motion-safe:animate-spin" strokeWidth={2} />
+              ) : null}
+              <span>{pending && pending !== 'remove' ? 'Updating…' : badge.label}</span>
+              <ChevronDown className="size-3 opacity-70" strokeWidth={2} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Move to</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {STATUS_OPTIONS.map(({ value, label, icon: Icon }) => {
+              const current = value === entry.status;
+              return (
+                <DropdownMenuItem
+                  key={value}
+                  disabled={current || !!pending}
+                  onSelect={() => changeStatus(value)}
+                >
+                  <Icon className="size-4" strokeWidth={1.5} />
+                  <span>{label}</span>
+                  {current && <Check className="ml-auto size-3.5 text-accent" strokeWidth={2} />}
+                </DropdownMenuItem>
+              );
+            })}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              disabled={!!pending}
+              onSelect={remove}
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+            >
+              {pending === 'remove' ? (
+                <Loader2 className="size-4 motion-safe:animate-spin" strokeWidth={2} />
+              ) : (
+                <Trash2 className="size-4" strokeWidth={1.5} />
+              )}
+              <span>Remove from library</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </li>
+  );
+}
+
 export function LibraryGrid() {
   const router = useRouter();
   const params = useSearchParams();
@@ -135,11 +265,7 @@ export function LibraryGrid() {
       setLoading(false);
       return;
     }
-    if (!token) {
-      // Middleware should have already redirected to /signin, but render
-      // an inline state in case it didn't.
-      return;
-    }
+    if (!token) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -165,6 +291,16 @@ export function LibraryGrid() {
     const sp = new URLSearchParams(params);
     sp.set('tab', v);
     router.replace(`/library?${sp.toString()}`, { scroll: false });
+  }
+
+  function handleStatusChange(mediaId: number, updated: ApiTrackingEntry) {
+    setEntries((prev) =>
+      prev.map((r) => (r.entry.media_id === mediaId ? { ...r, entry: updated } : r))
+    );
+  }
+
+  function handleRemove(mediaId: number) {
+    setEntries((prev) => prev.filter((r) => r.entry.media_id !== mediaId));
   }
 
   const totals = React.useMemo(() => {
@@ -249,30 +385,15 @@ export function LibraryGrid() {
               </div>
             ) : (
               <ul className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-                {items.map((r) => {
-                  const badge = statusBadgeFor(r.entry.status);
-                  return (
-                    <li key={r.entry.id}>
-                      <PosterCard
-                        id={r.tmdbId}
-                        title={r.title}
-                        year={r.year}
-                        posterPath={r.posterPath}
-                        voteAverage={r.voteAverage}
-                        fill
-                        badgeSlot={
-                          badge && (
-                            <span
-                              className={`inline-flex items-center rounded-full border backdrop-blur-md px-2 py-0.5 text-[10px] font-medium ${badge.cn}`}
-                            >
-                              {badge.label}
-                            </span>
-                          )
-                        }
-                      />
-                    </li>
-                  );
-                })}
+                {items.map((r) => (
+                  <LibraryCard
+                    key={r.entry.id}
+                    resolved={r}
+                    token={token!}
+                    onStatusChange={handleStatusChange}
+                    onRemove={handleRemove}
+                  />
+                ))}
               </ul>
             )}
           </TabsContent>
