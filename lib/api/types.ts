@@ -269,29 +269,43 @@ export interface MediaFeatures {
 }
 
 /**
- * One ranked entry from `/v1/reco/feed`. Today's backend returns the minimal
- * fields below; Tasks 1 + 3 (in the backend agent prompt) will add `Title`,
- * `PosterPath`, etc. plus resolved Reasons. Frontend tolerates either shape.
+ * Structured explainability token attached to a feed item. `name` is the
+ * server-resolved human label, omitted when the catalog can't resolve the id.
+ */
+export interface Reason {
+  kind: 'keyword' | 'genre';
+  id: number;
+  name?: string;
+}
+
+/**
+ * One ranked entry from `/v1/reco/feed`. Backend inlines display fields so
+ * the frontend never needs a follow-up lookup per item.
+ * Empty strings for `Title` / `PosterPath` / `BackdropPath` when the catalog
+ * doesn't have them (rare); `ReleaseYear` is 0 in that case.
+ *
+ * `Reasons` is empty for Tier 0 (cold-start) feeds.
  */
 export interface Scored {
   MediaID: number;
   MediaType: 'movie' | 'season';
+  TMDBID: number;
+  Title: string;
+  PosterPath: string;
+  BackdropPath: string;
+  ReleaseYear: number;
+  VoteAverage: number;
   Features: MediaFeatures;
   Score: number;
-  Reasons: string[] | ResolvedReason[];
-
-  // Optional enrichment fields (Backend Task 1) — undefined until that lands.
-  TMDBID?: number;
-  Title?: string;
-  PosterPath?: string | null;
-  BackdropPath?: string | null;
-  ReleaseYear?: number;
-  VoteAverage?: number;
+  Reasons: Reason[];
 }
 
-/** Resolved reason shape after Backend Task 3. */
-export interface ResolvedReason {
-  kind: 'keyword' | 'genre';
-  id: number;
-  name?: string;
+// ---------- Onboarding ----------
+
+export interface EnrichedPoolEntry {
+  tmdb_id: number;
+  title: string;
+  poster_path: string;
+  release_year: number;
+  dimension: string;
 }

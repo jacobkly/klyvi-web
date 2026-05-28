@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import { useAccessToken, useSupabaseUser } from '@/lib/hooks/use-supabase-user';
-import { getRecoFeed, enrichScored } from '@/lib/api/reco';
+import { getRecoFeed } from '@/lib/api/reco';
 import { ApiError } from '@/lib/api/client';
 import { AmbientBlobs } from '@/components/motion/ambient-blobs';
 import { FeaturedCard } from '@/components/feed/featured-card';
@@ -16,13 +16,14 @@ import type { Scored } from '@/lib/api/types';
 import type { MediaCard } from '@/src/types/media';
 
 function scoredToCard(s: Scored): MediaCard | null {
+  // Backend inlines display fields. Filter out the rare cache-miss case.
   if (!s.Title || !s.PosterPath) return null;
   return {
-    id: s.TMDBID ?? s.MediaID,
+    id: s.TMDBID || s.MediaID,
     title: s.Title,
-    release_year: s.ReleaseYear ?? 0,
+    release_year: s.ReleaseYear,
     poster_path: s.PosterPath,
-    vote_average: s.VoteAverage ?? 0,
+    vote_average: s.VoteAverage,
     overview: '',
     type: s.MediaType === 'movie' ? 'movie' : 'tv',
   } as MediaCard;
@@ -63,12 +64,8 @@ export function HomeFeed() {
     setLoading(true);
     setError(null);
     getRecoFeed(token)
-      .then(async (raw) => {
-        // Enrich in parallel; tolerate partial failures.
-        const enriched = await Promise.all(
-          raw.map((s) => enrichScored(s).catch(() => s))
-        );
-        const cards = enriched
+      .then((raw) => {
+        const cards = raw
           .map((s) => scoredToCard(s))
           .filter((c): c is MediaCard => c !== null);
         if (!cancelled) setItems(cards);

@@ -29,15 +29,11 @@ import {
 } from '@/components/ui/dialog';
 import { AmbientBlobs } from '@/components/motion/ambient-blobs';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { pickOnboardingPool, type OnboardingPoolItem } from '@/lib/api/onboarding-pool';
+import { getOnboardingPool } from '@/lib/api/onboarding';
 import { recordInteraction } from '@/lib/api/interactions';
-import { getMovie } from '@/lib/api/movies';
 import { ApiError } from '@/lib/api/client';
 import { useAccessToken, useSupabaseUser } from '@/lib/hooks/use-supabase-user';
-
-interface OnboardingCard extends OnboardingPoolItem {
-  posterPath: string;
-}
+import type { EnrichedPoolEntry } from '@/lib/api/types';
 
 type Verdict = 'loved' | 'liked' | 'meh' | 'disliked' | 'skipped';
 
@@ -74,36 +70,28 @@ export default function RatePage() {
   const router = useRouter();
   const { user, loading: authLoading, unavailable } = useSupabaseUser();
   const token = useAccessToken();
-  const pool = React.useMemo(() => pickOnboardingPool(10, user?.id ?? 'beta'), [user?.id]);
-
-  const [titles, setTitles] = React.useState<OnboardingCard[]>([]);
+  const [titles, setTitles] = React.useState<EnrichedPoolEntry[]>([]);
   const [titlesLoading, setTitlesLoading] = React.useState(true);
   const [titlesError, setTitlesError] = React.useState<string | null>(null);
 
-  // Fetch poster paths from the catalog. Lands fast against the seeded cache.
+  // One request to the curated pool endpoint — backend inlines display fields.
   React.useEffect(() => {
     if (!user) return;
     let cancelled = false;
     setTitlesLoading(true);
     setTitlesError(null);
-    Promise.all(
-      pool.map((p) =>
-        getMovie(p.tmdb_id, { idType: 'tmdb' })
-          .then((m) =>
-            m && m.poster_path
-              ? ({ ...p, posterPath: m.poster_path } as OnboardingCard)
-              : null
-          )
-          .catch(() => null)
-      )
-    )
-      .then((cards) => {
+    getOnboardingPool({ limit: 10 })
+      .then((pool) => {
         if (cancelled) return;
-        const ok = cards.filter((c): c is OnboardingCard => c !== null);
-        setTitles(ok);
-        if (ok.length === 0) {
-          setTitlesError('Couldn\'t load the onboarding pool. Is the API running?');
+        const usable = pool.filter((p) => p.poster_path);
+        setTitles(usable);
+        if (usable.length === 0) {
+          setTitlesError('The onboarding pool is empty. Is the API running and seeded?');
         }
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setTitlesError(e instanceof ApiError ? e.message : 'Failed to load onboarding pool.');
       })
       .finally(() => {
         if (!cancelled) setTitlesLoading(false);
@@ -111,7 +99,7 @@ export default function RatePage() {
     return () => {
       cancelled = true;
     };
-  }, [pool, user]);
+  }, [user]);
 
   const total = titles.length;
 
@@ -312,7 +300,7 @@ export default function RatePage() {
             >
               <AspectRatio ratio={2 / 3}>
                 <Image
-                  src={tmdb(current.posterPath, 'w500')}
+                  src={tmdb(current.poster_path, 'w500')}
                   alt={`${current.title} poster`}
                   fill
                   sizes="(max-width: 768px) 80vw, 400px"
@@ -324,7 +312,7 @@ export default function RatePage() {
           </AnimatePresence>
           <div className="mt-4 text-center">
             <h2 className="text-xl md:text-2xl font-semibold tracking-tight">{current.title}</h2>
-            <div className="text-sm text-muted-foreground tabular-nums">{current.year}</div>
+            <div className="text-sm text-muted-foreground tabular-nums">{current.release_year}</div>
           </div>
         </div>
       </div>
