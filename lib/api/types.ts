@@ -284,7 +284,8 @@ export interface Reason {
  * Empty strings for `Title` / `PosterPath` / `BackdropPath` when the catalog
  * doesn't have them (rare); `ReleaseYear` is 0 in that case.
  *
- * `Reasons` is empty for Tier 0 (cold-start) feeds.
+ * `Reasons` is `null` for Tier 0 (cold-start) items — frontend should treat
+ * `null | []` the same.
  */
 export interface Scored {
   MediaID: number;
@@ -297,7 +298,7 @@ export interface Scored {
   VoteAverage: number;
   Features: MediaFeatures;
   Score: number;
-  Reasons: Reason[];
+  Reasons: Reason[] | null;
 }
 
 // ---------- Onboarding ----------

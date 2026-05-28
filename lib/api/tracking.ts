@@ -7,7 +7,7 @@ import type {
 } from './types';
 
 /** GET /v1/tracking?media_type=...&status=... */
-export function listTracking(
+export async function listTracking(
   token: string,
   opts: { mediaType?: 'movie' | 'season'; status?: TrackingStatus } = {}
 ): Promise<ApiTrackingEntry[]> {
@@ -15,7 +15,12 @@ export function listTracking(
   if (opts.mediaType) params.set('media_type', opts.mediaType);
   if (opts.status) params.set('status', opts.status);
   const qs = params.toString();
-  return apiFetch<ApiTrackingEntry[]>(`/v1/tracking${qs ? `?${qs}` : ''}`, { token });
+  // Backend returns `null` for empty results (Go nil-slice quirk). Coerce.
+  const rows = await apiFetch<ApiTrackingEntry[] | null>(
+    `/v1/tracking${qs ? `?${qs}` : ''}`,
+    { token }
+  );
+  return rows ?? [];
 }
 
 export function addTracking(

@@ -4,13 +4,16 @@
  *
  * In development a missing var logs a warning but doesn't crash — devs can
  * still poke around the public catalog without Supabase set up.
+ *
+ * IMPORTANT: Each `NEXT_PUBLIC_*` var must be referenced with its literal
+ * string key (`process.env.NEXT_PUBLIC_API_URL`, not `process.env[name]`)
+ * so Next.js's static analyzer inlines them into the browser bundle.
  */
 
 const isProd = process.env.NODE_ENV === 'production';
 
-function read(name: string, fallback?: string): string {
-  const v = process.env[name];
-  if (v && v.trim().length > 0) return v;
+function ensure(value: string | undefined, name: string, fallback?: string): string {
+  if (value && value.trim().length > 0) return value;
   if (fallback !== undefined) return fallback;
   if (isProd) {
     throw new Error(`Missing required env var: ${name}`);
@@ -23,9 +26,12 @@ function read(name: string, fallback?: string): string {
 }
 
 export const env = {
-  apiUrl: read('NEXT_PUBLIC_API_URL', 'http://localhost:8080'),
-  supabaseUrl: read('NEXT_PUBLIC_SUPABASE_URL'),
-  supabaseAnonKey: read('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  apiUrl: ensure(process.env.NEXT_PUBLIC_API_URL, 'NEXT_PUBLIC_API_URL', 'http://localhost:8080'),
+  supabaseUrl: ensure(process.env.NEXT_PUBLIC_SUPABASE_URL, 'NEXT_PUBLIC_SUPABASE_URL'),
+  supabaseAnonKey: ensure(
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY'
+  ),
 };
 
 /** True when Supabase is configured. Used to gate auth UI gracefully. */

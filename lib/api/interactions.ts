@@ -10,10 +10,12 @@ export function recordInteraction(
 }
 
 /** GET /v1/interactions?since_days=N */
-export function listInteractions(
+export async function listInteractions(
   token: string,
   opts: { sinceDays?: number } = {}
 ): Promise<ApiInteraction[]> {
   const qs = opts.sinceDays ? `?since_days=${opts.sinceDays}` : '';
-  return apiFetch<ApiInteraction[]>(`/v1/interactions${qs}`, { token });
+  // Backend returns `null` for empty results (Go nil-slice quirk). Coerce.
+  const rows = await apiFetch<ApiInteraction[] | null>(`/v1/interactions${qs}`, { token });
+  return rows ?? [];
 }
