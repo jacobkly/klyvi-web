@@ -150,3 +150,28 @@ Append-only log. One section per surface (or major phase).
 
 **TODOs left for later:**
 - Wire account/email/username edit dialogs (stubbed).
+
+## Polish pass
+
+**Decisions:**
+- Added `loading.tsx` skeletons for `/library`, `/search`, `/settings`, and `/media/[id]/season/[season]` so route transitions never flash blank. Each skeleton is layout-shaped (matches the eventual content's grid + cards), not generic bars.
+- Final production build: 9 static routes, all prerendered, no warnings. First Load JS shared baseline ~100 kB; heaviest page is /rate at 181 kB (framer-motion).
+- Stopped short of inventing new features per the autonomy rules.
+
+**Final shape — what was shipped:**
+- 8 surfaces + supporting routes (signin, 404, root error, per-surface loading.tsx).
+- ~27 hand-ported shadcn primitives in `components/ui/`.
+- Reusable media primitives in `components/media/`: BackdropHero, PosterCard, RatingPill, GenreBadgeRow, CastRow, FeedRow, MediaActions, EpisodeRow, SeasonDetail, LibraryGrid.
+- Composite components in `components/feed/`, `components/search/`, `components/settings/`, `components/shell/`, `components/motion/`.
+- Token-locked design system (DESIGN.md) with motion utilities (`drift-1`, `drift-2`, `fade-up`, `fade-in`, `shimmer`), the celebration color, glow shadow, glass utility, hairline border.
+- `prefers-reduced-motion` respected globally + the user-level `data-motion="reduced"` toggle wired through Settings.
+
+**For review when you return:**
+- All commits are local. No push.
+- Run `npm install` once if `node_modules/` was wiped between sessions. `npm run dev` then visit `/` to see everything.
+- All eight pages: `/`, `/media/496243`, `/media/95396/season/2`, `/search`, `/library`, `/rate` (under (onboarding) group), `/settings`, `/signin`. Plus `/not-a-route` to see the 404.
+
+**TODOs left for later:**
+- Real Supabase auth and Go API integration.
+- A few stubbed dialogs (account edit fields).
+- Optional: `loading.tsx` for `/signin` (page is so light it doesn't really need one).
