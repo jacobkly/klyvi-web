@@ -22,3 +22,25 @@ Append-only log. One section per surface (or major phase).
 **TODOs left for later (still in scope):**
 - Wire ⌘K / Ctrl-K global shortcut from the `(app)` layout — deferred until surface 3 (Search) lands.
 - The `(app)` header has nav links (Home/Search/Library) — surface 5 fills `/library`, surface 3 fills `/search`.
+
+## Surface 1 — Media Detail
+
+**Decisions:**
+- Built shared primitives in `components/media/` (BackdropHero, PosterCard, RatingPill, GenreBadgeRow, CastRow, FeedRow, MediaActions) so all subsequent surfaces compose from them — locks visual primitives early per PLAN.md.
+- Built the real `WhyThisRec` component now (surface 7's deliverable) instead of stubbing — the trigger lives on this page and full hover-card was small enough to ship correctly here. Has a tap-fallback to Popover for touch devices.
+- Page hardcoded to render `parasite` regardless of `[id]` param (per the surface prompt's "use Parasite as placeholder" line and the no-API rule).
+- `MediaActions` is a tiny client island so Log/Watchlist toasts can fire — the rest of the page stays static.
+- "Log" button uses an absolute blur layer behind it as the CTA glow per DESIGN.md §7. Toggles to "Logged" + secondary variant on click.
+- Star rating shown in poster + meta row uses `fill-accent` on Lucide Star.
+- `force-static` is set on the page so Vercel-style static export works.
+
+**For review when you return:**
+- The `[id]` param is currently ignored. When real catalog data is wired in, the page becomes data-driven.
+- TMDB profile/poster paths are real but TMDB sometimes updates them — if any 404, the Avatar falls back to initials and Image renders a broken-img placeholder gracefully.
+
+**TODOs left for later:**
+- Replace the hardcoded `parasite` lookup with a real fetch when backend integration starts.
+- Add a back-to-top affordance? Not in surface prompt, deferring.
+
+## Build hygiene
+- Moved `themeColor` from `metadata` to `viewport` export in `app/layout.tsx` to satisfy Next.js 15.
