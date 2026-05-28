@@ -76,3 +76,21 @@ Append-only log. One section per surface (or major phase).
 
 **TODOs left for later:**
 - Optional: wire ⌘K globally from `(app)/layout.tsx`. Logged here; not blocking.
+
+## Surface 4 — Season Detail
+
+**Decisions:**
+- Path follows the user's appended spec: `app/(app)/media/[id]/season/[season]/page.tsx` (not my plan's `tv/[id]/seasons/[seasonNum]`). Both params ignored — content is always Severance Season 2.
+- Built `SeasonDetail` as the orchestrator client component (watched state lives there) and `EpisodeRow` as a per-row child. State is a `Map<episodeId, boolean>` initialized from placeholder data.
+- Progress bar uses the shadcn `Progress` and animates on watched-count change via the indicator's `transition-transform duration-hero ease-expo`.
+- Per-episode rating is a 5-star inline row inside each episode card. Clicking the current rating clears it. Toasts fire on each change.
+- Breadcrumb at the top links back to the series via `/media/${series.id}` (the same demo media-detail page for now). Visual cues — chevron separator, current page styled `font-medium text-foreground`.
+- Stills use `next/image` with `w300` size, lazy-loaded by default.
+- AspectRatio components used on poster (2:3) and stills (16:9) to lock layout — zero CLS.
+
+**For review when you return:**
+- "Mark all watched" / "Clear all" affordance isn't here — small addition for surface polish later.
+- Episode overview is intentionally `line-clamp-1` to keep rows compact. A click-to-expand could come later but the surface prompt didn't ask.
+
+**TODOs left for later:**
+- Wire watched state to real persistence when backend lands. Currently lives in component state only.
