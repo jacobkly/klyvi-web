@@ -60,3 +60,19 @@ Append-only log. One section per surface (or major phase).
 
 **TODOs left for later:**
 - Real "Continue Watching" needs to pull from actual user state — surfaces only one item currently.
+
+## Surface 3 — Search
+
+**Decisions:**
+- Built `SearchResults` as the single client component, used in `page` and `dialog` variants. Page variant lives at `/search`; the dialog variant is wired up for ⌘K later (deferred — not in surface prompt, no current need).
+- Used `cmdk`'s built-in fuzzy via `shouldFilter={false}` and my own filter on title + keywords. Cleaner control over result count + grouping.
+- Recent / Trending shown when query is empty; live results when typing. No debouncing needed — filtering is in-memory and instant.
+- Each result row is a `CommandItem` with poster thumb (48×48 rounded) + title + year + first two genres + a tap-target log button on the right. Log button uses `e.stopPropagation` + `preventDefault` so it fires a toast without navigating.
+- Empty-state copy follows the ui-ux-pro-max rule: "Nothing found for X. Try a broader search." — never "0 results."
+- Kept the ⌘K dialog wiring out for now — surface prompt didn't request it and the dedicated page is the primary surface per the user's appended brief.
+
+**For review when you return:**
+- The keyboard shortcut hint at the bottom (Enter to open top result) is accurate — cmdk's selection runs `gotoMedia` via `onSelect`.
+
+**TODOs left for later:**
+- Optional: wire ⌘K globally from `(app)/layout.tsx`. Logged here; not blocking.
