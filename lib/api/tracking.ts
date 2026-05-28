@@ -15,7 +15,8 @@ export async function listTracking(
   if (opts.mediaType) params.set('media_type', opts.mediaType);
   if (opts.status) params.set('status', opts.status);
   const qs = params.toString();
-  // Backend returns `null` for empty results (Go nil-slice quirk). Coerce.
+  // Backend returns `[]` for empty results; coerce defensively in case the
+  // contract regresses (the old Go nil-slice quirk).
   const rows = await apiFetch<ApiTrackingEntry[] | null>(
     `/v1/tracking${qs ? `?${qs}` : ''}`,
     { token }

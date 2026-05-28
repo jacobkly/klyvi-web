@@ -215,6 +215,18 @@ export interface ApiTrackingEntry {
   is_deleted: boolean;
   created_at: string;
   updated_at: string;
+
+  // Enrichment fields from the LEFT JOIN against media_index/movies/tv_series.
+  // Populated when the cache has the corresponding row; null when not yet
+  // ingested (rare). For seasons, `title` is the parent series title and
+  // `season_name` is the season-specific name (e.g. "Season 2").
+  tmdb_id: number | null;
+  title: string | null;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_year: number | null;
+  season_number: number | null;
+  season_name: string | null;
 }
 
 export interface AddTrackingRequest {

@@ -15,7 +15,8 @@ export async function listInteractions(
   opts: { sinceDays?: number } = {}
 ): Promise<ApiInteraction[]> {
   const qs = opts.sinceDays ? `?since_days=${opts.sinceDays}` : '';
-  // Backend returns `null` for empty results (Go nil-slice quirk). Coerce.
+  // Backend returns `[]` for empty results; coerce defensively in case the
+  // contract regresses (the old Go nil-slice quirk).
   const rows = await apiFetch<ApiInteraction[] | null>(`/v1/interactions${qs}`, { token });
   return rows ?? [];
 }

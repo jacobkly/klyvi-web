@@ -20,7 +20,6 @@ import {
   Loader2,
   type LucideIcon,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,9 +34,9 @@ import {
 import { PosterCard } from '@/components/media/poster-card';
 import { useAccessToken, useSupabaseUser } from '@/lib/hooks/use-supabase-user';
 import { listTracking, updateTracking, deleteTracking } from '@/lib/api/tracking';
-import { getMovie } from '@/lib/api/movies';
 import { ApiError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { ApiTrackingEntry, TrackingStatus } from '@/lib/api/types';
 
 interface TabDef {
@@ -112,45 +111,57 @@ function statusBadgeFor(status: TrackingStatus | undefined) {
   }
 }
 
-interface ResolvedEntry {
+/**
+ * Render-ready view of a tracking entry. Pulls display fields directly from
+ * the enriched `/v1/tracking` response — no follow-up lookups.
+ */
+interface CardView {
   entry: ApiTrackingEntry;
-  tmdbId: number;
-  title: string;
+  href: string;
+  displayTitle: string;
+  subtitle?: string;
   year?: number;
   posterPath: string;
-  voteAverage?: number;
+  /** Stable id used for the PosterCard's `id` prop (not used for the link). */
+  cardId: number;
 }
 
-async function resolveEntry(entry: ApiTrackingEntry): Promise<ResolvedEntry | null> {
-  if (entry.media_type === 'movie') {
-    const movie = await getMovie(entry.media_id, { idType: 'media' }).catch(() => null);
-    if (!movie) return null;
+function viewFor(entry: ApiTrackingEntry): CardView {
+  const tmdbId = entry.tmdb_id ?? 0;
+
+  if (entry.media_type === 'season') {
     return {
       entry,
-      tmdbId: movie.movie_id,
-      title: movie.title ?? movie.original_title ?? 'Untitled',
-      year: movie.release_date ? new Date(movie.release_date).getFullYear() : undefined,
-      posterPath: movie.poster_path ?? '',
-      voteAverage: movie.vote_average,
+      href: tmdbId > 0 && entry.season_number != null
+        ? `/tv/${tmdbId}/season/${entry.season_number}`
+        : '#',
+      displayTitle: entry.title ?? 'Untitled series',
+      subtitle: entry.season_name ?? (entry.season_number != null ? `Season ${entry.season_number}` : undefined),
+      year: entry.release_year ?? undefined,
+      posterPath: entry.poster_path ?? '',
+      cardId: tmdbId || entry.media_id,
     };
   }
+
   return {
     entry,
-    tmdbId: entry.media_id,
-    title: 'TV Season',
-    posterPath: '',
+    href: tmdbId > 0 ? `/media/${tmdbId}` : '#',
+    displayTitle: entry.title ?? 'Untitled',
+    year: entry.release_year ?? undefined,
+    posterPath: entry.poster_path ?? '',
+    cardId: tmdbId || entry.media_id,
   };
 }
 
 interface LibraryCardProps {
-  resolved: ResolvedEntry;
+  view: CardView;
   token: string;
   onStatusChange: (mediaId: number, updated: ApiTrackingEntry) => void;
   onRemove: (mediaId: number) => void;
 }
 
-function LibraryCard({ resolved, token, onStatusChange, onRemove }: LibraryCardProps) {
-  const { entry, tmdbId, title, year, posterPath, voteAverage } = resolved;
+function LibraryCard({ view, token, onStatusChange, onRemove }: LibraryCardProps) {
+  const { entry } = view;
   const [pending, setPending] = React.useState<TrackingStatus | 'remove' | null>(null);
   const badge = statusBadgeFor(entry.status);
 
@@ -161,7 +172,7 @@ function LibraryCard({ resolved, token, onStatusChange, onRemove }: LibraryCardP
       const updated = await updateTracking(token, entry.media_id, { status: next });
       onStatusChange(entry.media_id, updated);
       const label = STATUS_OPTIONS.find((o) => o.value === next)?.label ?? next;
-      toast.success(`Moved to ${label}`, { description: title });
+      toast.success(`Moved to ${label}`, { description: view.displayTitle });
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to update status.');
     } finally {
@@ -174,7 +185,7 @@ function LibraryCard({ resolved, token, onStatusChange, onRemove }: LibraryCardP
     try {
       await deleteTracking(token, entry.media_id);
       onRemove(entry.media_id);
-      toast(`Removed from library`, { description: title });
+      toast('Removed from library', { description: view.displayTitle });
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Failed to remove.');
     } finally {
@@ -185,13 +196,18 @@ function LibraryCard({ resolved, token, onStatusChange, onRemove }: LibraryCardP
   return (
     <li className="relative">
       <PosterCard
-        id={tmdbId}
-        title={title}
-        year={year}
-        posterPath={posterPath}
-        voteAverage={voteAverage}
+        id={view.cardId}
+        title={view.displayTitle}
+        year={view.year}
+        posterPath={view.posterPath}
+        href={view.href}
         fill
       />
+      {view.subtitle && (
+        <div className="-mt-1 px-0.5 text-xs text-muted-foreground line-clamp-1">
+          {view.subtitle}
+        </div>
+      )}
       {badge && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -256,7 +272,7 @@ export function LibraryGrid() {
   const tabFromUrl = params.get('tab') ?? 'watchlist';
   const current = TABS.find((t) => t.value === tabFromUrl) ? tabFromUrl : 'watchlist';
 
-  const [entries, setEntries] = React.useState<ResolvedEntry[]>([]);
+  const [views, setViews] = React.useState<CardView[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -270,10 +286,9 @@ export function LibraryGrid() {
     setLoading(true);
     setError(null);
     listTracking(token)
-      .then(async (rows) => {
-        const resolved = await Promise.all(rows.map((r) => resolveEntry(r)));
+      .then((rows) => {
         if (cancelled) return;
-        setEntries(resolved.filter((r): r is ResolvedEntry => r !== null));
+        setViews(rows.map(viewFor));
       })
       .catch((e) => {
         if (cancelled) return;
@@ -294,22 +309,22 @@ export function LibraryGrid() {
   }
 
   function handleStatusChange(mediaId: number, updated: ApiTrackingEntry) {
-    setEntries((prev) =>
-      prev.map((r) => (r.entry.media_id === mediaId ? { ...r, entry: updated } : r))
+    setViews((prev) =>
+      prev.map((v) => (v.entry.media_id === mediaId ? viewFor(updated) : v))
     );
   }
 
   function handleRemove(mediaId: number) {
-    setEntries((prev) => prev.filter((r) => r.entry.media_id !== mediaId));
+    setViews((prev) => prev.filter((v) => v.entry.media_id !== mediaId));
   }
 
   const totals = React.useMemo(() => {
     const out: Record<string, number> = {};
     TABS.forEach((t) => {
-      out[t.value] = entries.filter((r) => t.statuses.includes(r.entry.status)).length;
+      out[t.value] = views.filter((v) => t.statuses.includes(v.entry.status)).length;
     });
     return out;
-  }, [entries]);
+  }, [views]);
 
   if (unavailable) {
     return (
@@ -350,7 +365,7 @@ export function LibraryGrid() {
       </TabsList>
 
       {TABS.map((t) => {
-        const items = entries.filter((r) => t.statuses.includes(r.entry.status));
+        const items = views.filter((v) => t.statuses.includes(v.entry.status));
         const Icon = t.emptyIcon;
         return (
           <TabsContent key={t.value} value={t.value}>
@@ -385,10 +400,10 @@ export function LibraryGrid() {
               </div>
             ) : (
               <ul className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-                {items.map((r) => (
+                {items.map((v) => (
                   <LibraryCard
-                    key={r.entry.id}
-                    resolved={r}
+                    key={v.entry.id}
+                    view={v}
                     token={token!}
                     onStatusChange={handleStatusChange}
                     onRemove={handleRemove}

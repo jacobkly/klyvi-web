@@ -2,10 +2,10 @@ import { apiFetch } from './client';
 import type { Scored } from './types';
 
 /**
- * GET /v1/reco/feed — personalized cascade. Each item is already enriched
+ * GET /v1/reco/feed — personalized cascade. Each item is enriched server-side
  * with display fields (Title, PosterPath, ReleaseYear, etc.) and resolved
- * Reasons by the backend. Empty array if the cascade returns no candidates;
- * `Reasons` is null on Tier 0 (cold-start) items.
+ * Reasons. Tier 0 (cold-start) items now return `Reasons: []`; older builds
+ * returned `null` — the `Reason[] | null` type covers both.
  */
 export async function getRecoFeed(token: string): Promise<Scored[]> {
   const rows = await apiFetch<Scored[] | null>('/v1/reco/feed', { token });
