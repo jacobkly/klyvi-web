@@ -99,19 +99,19 @@ export function SearchResults({ variant = 'page', onSelect }: SearchResultsProps
   function gotoMedia(item: TmdbListItem) {
     onSelect?.();
     const kind = typeOf(item);
-    if (kind === 'tv') {
-      // Backend's TV detail uses tmdb id as `id`; first nav lands on
-      // /media/[id] for now. (Could route to a TV series page later.)
-      router.push(`/media/${item.id}`);
-    } else {
-      router.push(`/media/${item.id}`);
-    }
+    router.push(kind === 'tv' ? `/tv/${item.id}` : `/media/${item.id}`);
   }
 
   async function quickLog(item: TmdbListItem, e: React.MouseEvent | React.KeyboardEvent) {
     e.stopPropagation();
     e.preventDefault();
     const title = titleOf(item);
+    // TV needs a season — defer to the series page where the user picks one.
+    if (typeOf(item) === 'tv') {
+      onSelect?.();
+      router.push(`/tv/${item.id}`);
+      return;
+    }
     if (!signedIn) {
       router.push(`/signin?next=${encodeURIComponent('/search')}`);
       return;
@@ -120,10 +120,9 @@ export function SearchResults({ variant = 'page', onSelect }: SearchResultsProps
     try {
       await recordInteraction(token, {
         tmdb_id: item.id,
-        media_type: typeOf(item) === 'tv' ? 'season' : 'movie',
+        media_type: 'movie',
         kind: 'logged',
         source: 'search',
-        season_number: typeOf(item) === 'tv' ? 1 : null,
       });
       toast.success('Logged.', { description: title });
     } catch (err) {

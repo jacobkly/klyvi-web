@@ -35,3 +35,10 @@ export function getTVList(
     next: opts.revalidate ? { revalidate: opts.revalidate } : undefined,
   });
 }
+
+/** GET /v1/tv/{id}/recommendations?type=external — TMDB passthrough. */
+export function getTVTmdbRecommendations(id: number | string): Promise<TmdbListResponse> {
+  return apiFetch<TmdbListResponse>(`/v1/tv/${id}/recommendations?type=external`, {
+    raw: true,
+  });
+}

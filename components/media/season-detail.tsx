@@ -96,7 +96,7 @@ export function SeasonDetail({ series, season }: SeasonDetailProps) {
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
                 <Link
-                  href={`/media/${series.id}`}
+                  href={`/tv/${series.id}`}
                   className="inline-flex items-center gap-1 hover:text-foreground"
                 >
                   <ArrowLeft className="size-3.5" strokeWidth={1.5} />

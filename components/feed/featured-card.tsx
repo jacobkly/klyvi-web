@@ -18,7 +18,7 @@ interface FeaturedCardProps {
 
 export function FeaturedCard({ item, backdropPath }: FeaturedCardProps) {
   const title = getTitle(item);
-  const linkHref = `/media/${item.id}`;
+  const linkHref = item.type === 'tv' ? `/tv/${item.id}` : `/media/${item.id}`;
   const heroPath = backdropPath ?? item.poster_path;
 
   return (

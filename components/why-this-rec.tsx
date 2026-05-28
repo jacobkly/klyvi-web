@@ -5,13 +5,13 @@ import { Info, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import type { RecommendationReason } from '@/src/types/media';
+import type { Reason } from '@/lib/api/types';
 
 interface WhyThisRecProps {
-  reason: RecommendationReason;
-  /** When true, render as a button-trigger (inline label). When false, an icon-only trigger (for cards). */
-  inline?: boolean;
+  /** Structured reasons from `/v1/reco/feed`. Empty/null → trigger hidden. */
+  reasons: Reason[] | null | undefined;
+  /** Optional title of the item — included in the headline copy. */
+  title?: string;
   className?: string;
 }
 
@@ -28,66 +28,62 @@ function useIsTouch() {
   return touch;
 }
 
-function ReasonContent({ reason }: { reason: RecommendationReason }) {
+function Content({ reasons, title }: { reasons: Reason[]; title?: string }) {
+  const genres = reasons.filter((r) => r.kind === 'genre');
+  const keywords = reasons.filter((r) => r.kind === 'keyword');
+  const ordered = [...genres, ...keywords];
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-3">
       <div className="flex items-center gap-1.5">
         <Sparkles className="size-3 text-accent" strokeWidth={1.5} />
         <span className="text-[11px] uppercase tracking-wider text-accent font-medium">
-          Paid feature preview
+          Why this is here
         </span>
       </div>
       <p className="text-sm leading-relaxed text-foreground">
-        {reason.headline}
+        {title ? <>“{title}” matches your taste for:</> : <>Matches your taste for:</>}
       </p>
       <ul className="flex flex-wrap gap-1.5">
-        {reason.matchedKeywords.map((k) => (
-          <li
-            key={k}
-            className="rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-xs"
-          >
-            {k}
+        {ordered.map((r) => (
+          <li key={`${r.kind}-${r.id}`}>
+            <span
+              className={cn(
+                'inline-flex rounded-full px-2 py-0.5 text-xs',
+                r.kind === 'genre'
+                  ? 'bg-accent/15 text-accent'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {r.name ?? `${r.kind}:${r.id}`}
+            </span>
           </li>
         ))}
       </ul>
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Match strength</span>
-          <span className="font-medium tabular-nums text-celebration">{reason.matchStrength}%</span>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-transform duration-hero ease-expo"
-            style={{ width: `${reason.matchStrength}%` }}
-          />
-        </div>
-      </div>
     </div>
   );
 }
 
-export function WhyThisRec({ reason, inline = false, className }: WhyThisRecProps) {
+export function WhyThisRec({ reasons, title, className }: WhyThisRecProps) {
   const isTouch = useIsTouch();
 
-  const Trigger = inline ? (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={cn('text-muted-foreground hover:text-foreground -ml-2', className)}
-    >
-      <Info className="size-3.5" strokeWidth={1.5} />
-      Why this rec?
-    </Button>
-  ) : (
+  if (!reasons || reasons.length === 0) return null;
+
+  const Trigger = (
     <button
       type="button"
       aria-label="Why this recommendation?"
+      onClick={(e) => {
+        // Don't navigate the wrapping Link.
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       className={cn(
-        'inline-grid place-items-center size-9 rounded-full bg-card/80 backdrop-blur-md hairline text-muted-foreground hover:text-foreground transition-colors duration-instant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'inline-grid place-items-center size-8 rounded-full bg-card/80 backdrop-blur-md hairline text-muted-foreground hover:text-foreground transition-colors duration-instant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:scale-[0.95]',
         className
       )}
     >
-      <Info className="size-4" strokeWidth={1.5} />
+      <Info className="size-3.5" strokeWidth={1.5} />
     </button>
   );
 
@@ -96,7 +92,7 @@ export function WhyThisRec({ reason, inline = false, className }: WhyThisRecProp
       <Popover>
         <PopoverTrigger asChild>{Trigger}</PopoverTrigger>
         <PopoverContent align="start" className="w-80 p-0 overflow-hidden">
-          <ReasonContent reason={reason} />
+          <Content reasons={reasons} title={title} />
         </PopoverContent>
       </Popover>
     );
@@ -106,7 +102,7 @@ export function WhyThisRec({ reason, inline = false, className }: WhyThisRecProp
     <HoverCard openDelay={300} closeDelay={150}>
       <HoverCardTrigger asChild>{Trigger}</HoverCardTrigger>
       <HoverCardContent align="start" className="w-80 p-0 overflow-hidden">
-        <ReasonContent reason={reason} />
+        <Content reasons={reasons} title={title} />
       </HoverCardContent>
     </HoverCard>
   );

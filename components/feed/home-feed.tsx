@@ -8,25 +8,34 @@ import { getRecoFeed } from '@/lib/api/reco';
 import { ApiError } from '@/lib/api/client';
 import { AmbientBlobs } from '@/components/motion/ambient-blobs';
 import { FeaturedCard } from '@/components/feed/featured-card';
+import { OnboardingNudge } from '@/components/feed/onboarding-nudge';
 import { FeedRow } from '@/components/media/feed-row';
 import { PosterCard } from '@/components/media/poster-card';
+import { WhyThisRec } from '@/components/why-this-rec';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import type { Scored } from '@/lib/api/types';
+import type { Reason, Scored } from '@/lib/api/types';
 import type { MediaCard } from '@/src/types/media';
 
-function scoredToCard(s: Scored): MediaCard | null {
-  // Backend inlines display fields. Filter out the rare cache-miss case.
+interface FeedItem {
+  card: MediaCard;
+  reasons: Reason[] | null;
+}
+
+function scoredToFeedItem(s: Scored): FeedItem | null {
   if (!s.Title || !s.PosterPath) return null;
   return {
-    id: s.TMDBID || s.MediaID,
-    title: s.Title,
-    release_year: s.ReleaseYear,
-    poster_path: s.PosterPath,
-    vote_average: s.VoteAverage,
-    overview: '',
-    type: s.MediaType === 'movie' ? 'movie' : 'tv',
-  } as MediaCard;
+    card: {
+      id: s.TMDBID || s.MediaID,
+      title: s.Title,
+      release_year: s.ReleaseYear,
+      poster_path: s.PosterPath,
+      vote_average: s.VoteAverage,
+      overview: '',
+      type: s.MediaType === 'movie' ? 'movie' : 'tv',
+    } as MediaCard,
+    reasons: s.Reasons,
+  };
 }
 
 function FeedSkeleton() {
@@ -45,12 +54,39 @@ function FeedSkeleton() {
   );
 }
 
+function titleOf(card: MediaCard) {
+  return card.type === 'movie' ? card.title : card.name;
+}
+
+function FeedCard({ item, fill }: { item: FeedItem; fill?: boolean }) {
+  const href = item.card.type === 'tv' ? `/tv/${item.card.id}` : `/media/${item.card.id}`;
+  return (
+    <div className="relative">
+      <PosterCard
+        id={item.card.id}
+        title={titleOf(item.card)}
+        year={item.card.release_year}
+        posterPath={item.card.poster_path}
+        voteAverage={item.card.vote_average}
+        href={href}
+        size="md"
+        fill={fill}
+      />
+      {item.reasons && item.reasons.length > 0 && (
+        <div className="absolute top-2 right-2 z-20">
+          <WhyThisRec reasons={item.reasons} title={titleOf(item.card)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function HomeFeed() {
   const { user, loading: authLoading, unavailable } = useSupabaseUser();
   const token = useAccessToken();
   const signedIn = !!user && !unavailable;
 
-  const [items, setItems] = React.useState<MediaCard[]>([]);
+  const [items, setItems] = React.useState<FeedItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -65,10 +101,10 @@ export function HomeFeed() {
     setError(null);
     getRecoFeed(token)
       .then((raw) => {
-        const cards = raw
-          .map((s) => scoredToCard(s))
-          .filter((c): c is MediaCard => c !== null);
-        if (!cancelled) setItems(cards);
+        const feedItems = raw
+          .map((s) => scoredToFeedItem(s))
+          .filter((c): c is FeedItem => c !== null);
+        if (!cancelled) setItems(feedItems);
       })
       .catch((e) => {
         if (cancelled) return;
@@ -82,7 +118,6 @@ export function HomeFeed() {
     };
   }, [authLoading, signedIn, token]);
 
-  // Signed-out marketing-style hero.
   if (!authLoading && !signedIn) {
     return <SignedOutHero unavailable={unavailable} />;
   }
@@ -121,7 +156,6 @@ export function HomeFeed() {
     );
   }
 
-  // Empty (cold-start with no items returned).
   if (items.length === 0) {
     return (
       <div className="px-4 md:px-8 pt-10 md:pt-16">
@@ -141,7 +175,6 @@ export function HomeFeed() {
   const featured = items[0];
   const rest = items.slice(1);
 
-  // Split the rest into two rows (heuristic — backend doesn't expose themes yet).
   const rowA = rest.slice(0, 8);
   const rowB = rest.slice(8, 16);
   const tail = rest.slice(16);
@@ -149,6 +182,8 @@ export function HomeFeed() {
   return (
     <div className="relative pb-16">
       <AmbientBlobs />
+
+      <OnboardingNudge />
 
       <section className="px-4 md:px-8 pt-10 md:pt-16">
         <div className="inline-flex items-center gap-2 rounded-full hairline bg-card/50 px-3 py-1 text-xs uppercase tracking-wider text-accent">
@@ -159,12 +194,12 @@ export function HomeFeed() {
           Recommended for you
         </h1>
         <p className="mt-3 max-w-prose text-muted-foreground">
-          A feed that gets sharper every time you rate, log, or dismiss. Tap anything to see why it&apos;s here.
+          A feed that gets sharper every time you rate, log, or dismiss. Tap the info chip on any card to see why it&apos;s here.
         </p>
       </section>
 
       <section className="px-4 md:px-8 mt-8">
-        <FeaturedCard item={featured} />
+        <FeaturedCard item={featured.card} />
       </section>
 
       {rowA.length > 0 && (
@@ -172,18 +207,11 @@ export function HomeFeed() {
           <FeedRow heading="Top picks for you">
             {rowA.map((item, i) => (
               <li
-                key={`a-${item.id}`}
+                key={`a-${item.card.id}`}
                 className="motion-safe:animate-fade-up"
                 style={{ animationDelay: `${i * 40}ms` }}
               >
-                <PosterCard
-                  id={item.id}
-                  title={item.type === 'movie' ? item.title : item.name}
-                  year={item.release_year}
-                  posterPath={item.poster_path}
-                  voteAverage={item.vote_average}
-                  size="md"
-                />
+                <FeedCard item={item} />
               </li>
             ))}
           </FeedRow>
@@ -195,18 +223,11 @@ export function HomeFeed() {
           <FeedRow heading="More you might like" subheading="Lower-confidence picks worth a look.">
             {rowB.map((item, i) => (
               <li
-                key={`b-${item.id}`}
+                key={`b-${item.card.id}`}
                 className="motion-safe:animate-fade-up"
                 style={{ animationDelay: `${i * 40}ms` }}
               >
-                <PosterCard
-                  id={item.id}
-                  title={item.type === 'movie' ? item.title : item.name}
-                  year={item.release_year}
-                  posterPath={item.poster_path}
-                  voteAverage={item.vote_average}
-                  size="md"
-                />
+                <FeedCard item={item} />
               </li>
             ))}
           </FeedRow>
@@ -218,16 +239,8 @@ export function HomeFeed() {
           <h2 className="text-xl md:text-2xl font-semibold tracking-tight">More for you</h2>
           <ul className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {tail.map((item) => (
-              <li key={`t-${item.id}`}>
-                <PosterCard
-                  id={item.id}
-                  title={item.type === 'movie' ? item.title : item.name}
-                  year={item.release_year}
-                  posterPath={item.poster_path}
-                  voteAverage={item.vote_average}
-                  size="md"
-                  fill
-                />
+              <li key={`t-${item.card.id}`}>
+                <FeedCard item={item} fill />
               </li>
             ))}
           </ul>
