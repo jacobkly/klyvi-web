@@ -1,102 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root,
-  .dark {
-    /* Surfaces */
-    --background: 258 100% 8%;            /* #10002b */
-    --card: 269 100% 14%;                  /* #240046 */
-    --card-foreground: 270 20% 98%;
-    --popover: 269 100% 14%;
-    --popover-foreground: 270 20% 98%;
-    --muted: 270 60% 18%;
-    --muted-foreground: 270 15% 70%;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
 
-    /* Text */
-    --foreground: 270 20% 98%;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
 
-    /* Brand */
-    --primary: 273 68% 58%;                /* #9d4edd */
-    --primary-foreground: 0 0% 100%;
-    --accent: 273 100% 74%;                /* #c77dff */
-    --accent-foreground: 270 100% 10%;
-    --secondary: 270 60% 18%;
-    --secondary-foreground: 270 20% 98%;
-    --celebration: 277 100% 84%;           /* #e0aaff */
-    --celebration-foreground: 270 100% 10%;
-
-    /* Lines */
-    --border: 270 50% 22%;
-    --input: 270 50% 22%;
-    --ring: 273 68% 58%;
-
-    /* Semantic */
-    --destructive: 0 70% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 142 60% 45%;
-    --success-foreground: 0 0% 98%;
-
-    --radius: 0.625rem;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  html {
-    @apply bg-background text-foreground;
-    color-scheme: dark;
-    scroll-behavior: smooth;
-  }
-  body {
-    @apply bg-background text-foreground antialiased;
-    text-rendering: optimizeLegibility;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-  ::selection {
-    background: hsl(var(--accent) / 0.35);
-    color: hsl(var(--foreground));
-  }
-  /* Reduced motion: hard-disable transitions/animations when user pref OR settings flag */
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
-  html[data-motion="reduced"] *,
-  html[data-motion="reduced"] *::before,
-  html[data-motion="reduced"] *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  /* Hide scrollbars where requested */
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-}
-
-@layer utilities {
-  .bg-glass {
-    background-color: hsl(var(--card) / 0.6);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-  }
-  .hairline {
-    border: 1px solid rgba(255, 255, 255, 0.06);
-  }
-  .hairline-b {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  }
-  .hairline-t {
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-  }
-  .text-balance {
-    text-wrap: balance;
-  }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
