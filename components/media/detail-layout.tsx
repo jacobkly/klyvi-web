@@ -7,6 +7,10 @@ import { toast } from "sonner";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { StatusControl } from "@/components/library/status-control";
+import {
+  TrackingDialog,
+  type TrackingEdit,
+} from "@/components/library/tracking-dialog";
 import { BackdropHero } from "@/components/media/backdrop-hero";
 import { CastChips } from "@/components/media/cast-chips";
 import { KeywordCard } from "@/components/media/keyword-card";
@@ -15,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import type { CastMember, Keyword } from "@/lib/mock-media";
 import {
   STATUS_VERBS,
+  type LibraryEntry,
   type MediaSummary,
   type TrackingStatus,
 } from "@/lib/types";
@@ -30,6 +35,8 @@ import {
  * be data. The average lives in the metadata rail instead.
  */
 function DetailLayout({
+  media,
+  episodeCount,
   backdropPath,
   posterPath,
   title,
@@ -44,6 +51,9 @@ function DetailLayout({
   related,
   extra,
 }: {
+  media: MediaSummary;
+  /** Total episodes, for the season progress field. */
+  episodeCount?: number | null;
   backdropPath: string | null;
   posterPath: string | null;
   title: string;
@@ -59,11 +69,36 @@ function DetailLayout({
   extra?: React.ReactNode;
 }) {
   const [status, setStatus] = React.useState<TrackingStatus | null>(null);
+  const [score, setScore] = React.useState<number | null>(null);
+  const [progress, setProgress] = React.useState<number | null>(null);
+  const [editing, setEditing] = React.useState(false);
   const [overviewOpen, setOverviewOpen] = React.useState(false);
 
+  /** The entry the dialog edits. Synthesised until the API client lands. */
+  const entry: LibraryEntry = {
+    ...media,
+    status: status ?? "planning",
+    score,
+    progress,
+    progressTotal: episodeCount ?? null,
+    updatedAt: "",
+  };
+
+  /**
+   * Picking a status is the one moment the user is already thinking about the
+   * title, so it opens the dialog rather than silently setting a value. It is
+   * also the only route to a score or progress from this page.
+   */
   function changeStatus(next: TrackingStatus) {
     setStatus(next);
     toast(STATUS_VERBS[next]);
+    setEditing(true);
+  }
+
+  function saveEdit(edit: TrackingEdit) {
+    setStatus(edit.status);
+    setScore(edit.score);
+    setProgress(edit.progress);
   }
 
   return (
@@ -89,13 +124,23 @@ function DetailLayout({
                   </div>
                 )}
               </div>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-col gap-2">
                 <StatusControl
                   status={status}
                   onChange={changeStatus}
                   size="touch"
                   className="w-full"
                 />
+                {status ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setEditing(true)}
+                  >
+                    {score != null ? `Your score: ${score}` : "Add a score"}
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -193,6 +238,22 @@ function DetailLayout({
           </div>
         </div>
       </BackdropHero>
+
+      {editing ? (
+        <TrackingDialog
+          entry={entry}
+          open
+          onOpenChange={(o) => !o && setEditing(false)}
+          onSave={saveEdit}
+          onDelete={() => {
+            setStatus(null);
+            setScore(null);
+            setProgress(null);
+            setEditing(false);
+            toast("Removed from your library");
+          }}
+        />
+      ) : null}
     </main>
   );
 }

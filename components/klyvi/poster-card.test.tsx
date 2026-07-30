@@ -85,4 +85,18 @@ describe("PosterCard", () => {
     );
     expect(screen.getByText("1026")).toBeInTheDocument();
   });
+  it("badges the season number so shared artwork is distinguishable", () => {
+    render(
+      <PosterCard
+        media={{ ...media, mediaType: "season", seasonNumber: 2 }}
+        variant="compact"
+      />
+    );
+    expect(screen.getByText("S2")).toBeInTheDocument();
+  });
+
+  it("shows no season badge for movies", () => {
+    render(<PosterCard media={media} variant="compact" />);
+    expect(screen.queryByText(/^S\d/)).not.toBeInTheDocument();
+  });
 });

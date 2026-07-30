@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import * as React from "react";
 
 import {
@@ -32,6 +33,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   STATUS_LABELS,
+  posterUrl,
   type LibraryEntry,
   type TrackingStatus,
 } from "@/lib/types";
@@ -116,15 +118,109 @@ function TrackingDialog({
     onOpenChange(false);
   }
 
+  const info: { label: string; value: string | number | null }[] = [
+    { label: "Type", value: isSeason ? "Season" : "Film" },
+    { label: "Year", value: entry.year },
+    isSeason
+      ? { label: "Season", value: entry.seasonNumber ?? null }
+      : { label: "Runtime", value: null },
+    {
+      label: "Episodes",
+      value: isSeason ? entry.progressTotal : null,
+    },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader className="sr-only">
           <DialogTitle>{displayTitle}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-1">
+        {/* Left third: what you are editing. Right two-thirds: the edit.
+            Seeing the poster while scoring is the whole point, so the
+            identity column is not decoration. */}
+        <div className="flex flex-col gap-6 sm:flex-row sm:gap-0">
+          <aside className="sm:w-1/3 sm:shrink-0 sm:pr-6">
+            <div className="flex gap-4 sm:block">
+              <div className="relative aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10 sm:w-full">
+                {entry.posterPath ? (
+                  <Image
+                    src={posterUrl(entry.posterPath, "w342") as string}
+                    alt=""
+                    fill
+                    sizes="200px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center p-2 text-center">
+                    <span className="text-xs text-muted-foreground">
+                      {entry.title}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 sm:mt-3">
+                <p className="text-[15px] leading-snug font-semibold text-foreground">
+                  {entry.title}
+                </p>
+                {isSeason ? (
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    Season {entry.seasonNumber}
+                  </p>
+                ) : null}
+
+                {entry.score != null ? (
+                  <p className="mt-2 flex items-baseline gap-1.5">
+                    <span
+                      data-numeric
+                      className="font-mono text-2xl text-violet-text"
+                    >
+                      {entry.score}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      your score
+                    </span>
+                  </p>
+                ) : (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Not rated yet
+                  </p>
+                )}
+
+                <dl className="mt-4 hidden flex-col gap-2 sm:flex">
+                  {info
+                    .filter((i) => i.value != null && i.value !== "")
+                    .map((i) => (
+                      <div
+                        key={i.label}
+                        className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5 last:border-b-0"
+                      >
+                        <dt className="text-xs text-muted-foreground">
+                          {i.label}
+                        </dt>
+                        <dd
+                          className={
+                            typeof i.value === "number"
+                              ? "font-mono text-xs text-foreground"
+                              : "text-xs text-foreground"
+                          }
+                          data-numeric={typeof i.value === "number" || undefined}
+                        >
+                          {i.value}
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
+              </div>
+            </div>
+          </aside>
+
+          {/* The divider doubles as the column boundary. */}
+          <div className="min-w-0 flex-1 sm:border-l sm:border-border sm:pl-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2 flex flex-col gap-1.5">
             <Label htmlFor="td-status">Status</Label>
             <Select
               value={status}
@@ -199,7 +295,7 @@ function TrackingDialog({
             />
           </div>
 
-          <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-3">
+          <div className="col-span-2 flex flex-col gap-1.5">
             <Label htmlFor="td-notes">Notes</Label>
             <Textarea
               id="td-notes"
@@ -213,11 +309,13 @@ function TrackingDialog({
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Score is out of 100. Leave blank if you would rather not rate it.
-        </p>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Score is out of 100. Leave blank if you would rather not rate it.
+            </p>
+          </div>
+        </div>
 
-        <div className="flex items-center justify-between gap-3 pt-2">
+        <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
           <AlertDialog>
             <AlertDialogTrigger
               render={

@@ -84,7 +84,7 @@ function FilterPanel({
               onClick={() => onFiltersChange({ ...filters, status: s })}
               aria-pressed={active}
               className={cn(
-                "flex min-h-9 items-center justify-between rounded-lg px-3 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30",
+                "tap-target flex min-h-9 items-center justify-between rounded-lg px-3 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30",
                 active
                   ? "bg-muted font-medium text-foreground"
                   : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"

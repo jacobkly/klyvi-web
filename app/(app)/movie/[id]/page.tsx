@@ -15,6 +15,14 @@ export default async function MoviePage() {
 
   return (
     <DetailLayout
+      media={{
+        mediaId: -1,
+        mediaType: "movie",
+        tmdbId: m.tmdbId,
+        title: m.title,
+        posterPath: m.posterPath,
+        year: m.year,
+      }}
       backdropPath={m.backdropPath}
       posterPath={m.posterPath}
       title={m.title}

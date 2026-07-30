@@ -61,9 +61,12 @@ export function HomeClient() {
         {greeting()}
       </h1>
 
+      {/* Action sits inline with the dismiss rather than stacked under the
+          copy: a nudge that costs three lines of the fold is working against
+          the screen it interrupts. */}
       {!nudgeDismissed ? (
-        <div className="mt-4 flex items-start justify-between gap-4 rounded-lg bg-card p-4 ring-1 ring-foreground/10">
-          <div>
+        <div className="mt-4 flex flex-col gap-3 rounded-lg bg-card px-4 py-3 ring-1 ring-foreground/10 sm:flex-row sm:items-center sm:gap-4">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">
               Klyvi does not know your taste yet
             </p>
@@ -71,22 +74,24 @@ export function HomeClient() {
               Rate 20 films, about 90 seconds, and recommendations get a lot
               better.
             </p>
+          </div>
+          <div className="flex shrink-0 items-center justify-between gap-1 sm:justify-end">
             <Link
               href="/onboarding/rate"
-              className={buttonVariants({ size: "sm" }) + " mt-3"}
+              className={buttonVariants({ size: "sm" })}
             >
               Start rating
             </Link>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Dismiss"
+              className="hit-44 relative shrink-0"
+              onClick={() => setNudgeDismissed(true)}
+            >
+              <X aria-hidden="true" className="size-4" strokeWidth={2} />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Dismiss"
-            className="hit-44 relative shrink-0"
-            onClick={() => setNudgeDismissed(true)}
-          >
-            <X aria-hidden="true" className="size-4" strokeWidth={2} />
-          </Button>
         </div>
       ) : null}
 
@@ -231,7 +236,7 @@ export function HomeClient() {
             </dl>
             <Link
               href="/library/stats"
-              className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-text hover:underline"
+              className="tap-target mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-text hover:underline"
             >
               <Sparkles aria-hidden="true" className="size-3.5" strokeWidth={2} />
               See your stats

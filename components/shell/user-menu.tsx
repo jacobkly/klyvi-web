@@ -39,7 +39,7 @@ function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-52">
         <DropdownMenuGroup>
-          <DropdownMenuItem render={<Link href="/settings" />}>
+          <DropdownMenuItem render={<Link href="/profile" />}>
             <User aria-hidden="true" data-icon="inline-start" />
             Profile
           </DropdownMenuItem>

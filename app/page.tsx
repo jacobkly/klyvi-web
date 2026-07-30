@@ -44,7 +44,7 @@ export default function MarketingPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/signin"
-              className="rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+              className="tap-target inline-flex items-center rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
             >
               Sign in
             </Link>
@@ -93,7 +93,7 @@ export default function MarketingPage() {
             </Link>
             <Link
               href="/signin"
-              className="text-sm text-muted-foreground hover:text-foreground"
+              className="tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
             >
               Sign in
             </Link>
@@ -181,7 +181,7 @@ export default function MarketingPage() {
                 <Link
                   key={href}
                   href={href}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="tap-target inline-flex items-center text-muted-foreground hover:text-foreground"
                 >
                   {label}
                 </Link>

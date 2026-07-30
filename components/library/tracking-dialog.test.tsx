@@ -19,7 +19,10 @@ describe("TrackingDialog", () => {
         onDelete={() => {}}
       />
     );
-    expect(screen.getByText(/Severance/)).toBeInTheDocument();
+    // The accessible dialog title plus the visible identity column both name
+    // the entry, which is intentional: the column is what you are editing.
+    expect(screen.getAllByText(/Severance/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Season 2")).toBeInTheDocument();
     for (const label of ["Status", "Score", "Episodes watched", "Started", "Finished", "Rewatches", "Notes"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }

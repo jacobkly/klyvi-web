@@ -35,7 +35,7 @@ function CastChips({ cast, initial = 10 }: { cast: CastMember[]; initial?: numbe
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="inline-flex h-5 items-center rounded-full bg-muted px-2 text-xs font-medium text-violet-text outline-none hover:bg-muted/70 focus-visible:ring-3 focus-visible:ring-ring/30"
+          className="tap-target inline-flex h-5 items-center rounded-full bg-muted px-2 text-xs font-medium text-violet-text outline-none hover:bg-muted/70 focus-visible:ring-3 focus-visible:ring-ring/30"
         >
           Show all ({cast.length})
         </button>

@@ -88,6 +88,22 @@ function PosterCard({
           />
         ) : null}
 
+        {/* Seasons of the same show usually share one poster, so the artwork
+            alone cannot say which season this is. The badge carries it in
+            every variant, including compact where there is no title at all.
+            Top-right rather than bottom-right: the bottom edge holds the
+            scrim (overlay) or the progress counter, and the badge would sit
+            on top of both. Top-right balances the status dot at top-left. */}
+        {media.mediaType === "season" && media.seasonNumber != null ? (
+          <span
+            aria-hidden="true"
+            data-numeric
+            className="absolute top-1 right-1 rounded-sm bg-black/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-medium text-white backdrop-blur-sm"
+          >
+            S{media.seasonNumber}
+          </span>
+        ) : null}
+
         {variant === "overlay" && src ? (
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-2">
             <p className="line-clamp-2 text-xs font-medium leading-snug text-white">

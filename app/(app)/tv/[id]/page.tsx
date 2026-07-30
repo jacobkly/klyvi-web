@@ -28,6 +28,14 @@ export default async function TvPage() {
 
   return (
     <DetailLayout
+      media={{
+        mediaId: -1,
+        mediaType: "movie",
+        tmdbId: t.tmdbId,
+        title: t.title,
+        posterPath: t.posterPath,
+        year: t.year,
+      }}
       backdropPath={t.backdropPath}
       posterPath={t.posterPath}
       title={t.title}

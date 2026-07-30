@@ -104,7 +104,9 @@ export function RateDeck() {
       ) : null}
 
       <div className="flex flex-1 flex-col items-center justify-center py-6">
-        <p className="mb-4 text-sm text-muted-foreground">Have you seen this?</p>
+        <h1 className="mb-4 text-sm font-normal text-muted-foreground">
+          Have you seen this?
+        </h1>
         <div
           className={
             "relative aspect-[2/3] w-64 overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10 transition-all duration-200 sm:w-72 " +
@@ -140,13 +142,15 @@ export function RateDeck() {
         </p>
       </div>
 
-      {/* The three verdicts, thumb zone, 44px. Opinions are parallel; the
-          fact ("Not seen") is quieter. */}
-      <div className="flex items-stretch justify-center gap-2 pb-4">
+      {/* The three verdicts, thumb zone, 44px tall. Opinions are parallel; the
+          fact ("Not seen") is quieter. Horizontal padding collapses at 320px
+          so all three fit; the 44px HEIGHT is the accessibility floor, the
+          padding is not, so padding is what gives. */}
+      <div className="flex items-stretch justify-center gap-1.5 pb-4 sm:gap-2">
         <Button
           variant="outline"
           size="touch"
-          className="flex-1 gap-1.5"
+          className="min-w-0 flex-1 gap-1 px-2 sm:gap-1.5 sm:px-5"
           onClick={() => advance("disliked")}
         >
           <X aria-hidden="true" data-icon="inline-start" />
@@ -155,7 +159,7 @@ export function RateDeck() {
         <Button
           variant="ghost"
           size="touch"
-          className="flex-1 gap-1.5 text-muted-foreground"
+          className="min-w-0 flex-1 gap-1 px-2 text-muted-foreground sm:gap-1.5 sm:px-5"
           onClick={() => advance("not_seen")}
         >
           <Minus aria-hidden="true" data-icon="inline-start" />
@@ -163,7 +167,7 @@ export function RateDeck() {
         </Button>
         <Button
           size="touch"
-          className="flex-1 gap-1.5"
+          className="min-w-0 flex-1 gap-1 px-2 sm:gap-1.5 sm:px-5"
           onClick={() => advance("liked")}
         >
           <Check aria-hidden="true" data-icon="inline-start" />

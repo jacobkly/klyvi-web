@@ -23,6 +23,16 @@ export default async function SeasonPage({
 
   return (
     <DetailLayout
+      media={{
+        mediaId: -1,
+        mediaType: "season",
+        tmdbId: t.tmdbId,
+        title: t.title,
+        posterPath: season.posterPath,
+        year: season.year,
+        seasonNumber: season.seasonNumber,
+      }}
+      episodeCount={season.episodeCount}
       backdropPath={t.backdropPath}
       posterPath={season.posterPath}
       title={`${t.title} · Season ${season.seasonNumber}`}

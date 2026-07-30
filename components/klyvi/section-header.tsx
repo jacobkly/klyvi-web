@@ -26,7 +26,7 @@ function SectionHeader({
       {action ? (
         <Link
           href={action.href}
-          className="shrink-0 rounded-full text-xs font-medium text-violet-text outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/30"
+          className="tap-target inline-flex shrink-0 items-center rounded-full text-xs font-medium text-violet-text outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/30"
         >
           {action.label}
         </Link>

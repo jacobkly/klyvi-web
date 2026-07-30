@@ -58,7 +58,7 @@ export function SettingsClient() {
                   onClick={() => setActive(item)}
                   aria-current={isActive ? "true" : undefined}
                   className={cn(
-                    "relative flex min-h-9 items-center rounded-lg px-3 text-left text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30",
+                    "tap-target relative flex min-h-9 w-full items-center rounded-lg px-3 text-left text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30",
                     isActive
                       ? "bg-muted font-medium text-foreground before:absolute before:top-1.5 before:bottom-1.5 before:-left-0 before:w-0.5 before:rounded-full before:bg-violet-text"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"

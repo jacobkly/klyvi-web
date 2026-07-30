@@ -208,6 +208,42 @@
       content: none;
     }
   }
+
+  /* Marks a standalone text link as a real control, so the coarse-pointer rule
+     below grows it. Not for links inside a sentence: WCAG 2.5.8 exempts those,
+     and padding them would wreck the paragraph.
+
+     Deliberately sets NO properties here. An earlier version set
+     `display: inline-flex`, which sits in the same layer as Tailwind's display
+     utilities and silently beat `lg:hidden` on every button that used it, so
+     responsive hiding stopped working app-wide. A marker class must stay a
+     marker. Elements needing flex layout declare it themselves. */
+}
+
+/* The 44px floor, applied once instead of at ~46 call sites.
+   The shadcn sizes top out at 40px, so every control built at the default 36px
+   or sm 32px missed the floor on a phone. Rather than passing size="touch"
+   everywhere (fragile, and wrong on desktop where 36px density is correct),
+   the floor is enforced only where the pointer is actually coarse.
+   See docs/planning/04-components.md §7. */
+@media (pointer: coarse) {
+  [data-slot="button"],
+  [data-slot="toggle"],
+  [data-slot="toggle-group-item"],
+  [data-slot="select-trigger"],
+  [data-slot="tabs-trigger"],
+  .tap-target {
+    min-height: 44px;
+  }
+  /* Icon-only controls need width too, not just height. */
+  [data-slot="button"]:not(:has(> :not(svg))) {
+    min-width: 44px;
+  }
+  /* Affordances that only make sense with a pointer. Touch users swipe rails
+     and would just lose poster width to arrows they never press. */
+  .fine-only {
+    display: none !important;
+  }
 }
 
 /* Non-negotiable, and it lives here rather than being bolted on per component. */

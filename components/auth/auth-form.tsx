@@ -92,7 +92,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
             {signin ? (
               <Link
                 href="/signin"
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="tap-target inline-flex items-center text-xs text-muted-foreground hover:text-foreground"
               >
                 Forgot password?
               </Link>

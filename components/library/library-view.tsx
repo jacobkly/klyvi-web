@@ -226,22 +226,35 @@ function LibraryView({
                 setFilters({ status: "all", type: "all", query: "" }),
             }}
           />
-        ) : filters.status === "all" && sortKey === "updated" ? (
+        ) : filters.status === "all" ? (
           // Grouped by status with quiet headers, the AniList structure.
+          // Grouping holds for EVERY sort, not just "last updated": the sort
+          // orders entries within each group. A flat list sorted by score
+          // mixes things you finished with things you have not started, which
+          // is precisely the distinction the library exists to keep.
           GROUP_ORDER.filter((s) => filtered.some((e) => e.status === s)).map(
-            (s) => (
-              <section key={s} className="mb-8">
-                <h2 className="mb-3 text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
-                  {STATUS_LABELS[s]}
-                </h2>
-                <EntryCollection
-                  entries={filtered.filter((e) => e.status === s)}
-                  view={view}
-                  onEdit={setEditing}
-                  onStatusChange={changeStatus}
-                />
-              </section>
-            )
+            (s) => {
+              const group = filtered.filter((e) => e.status === s);
+              return (
+                <section key={s} className="mb-8">
+                  <h2 className="mb-3 flex items-baseline gap-2 text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
+                    {STATUS_LABELS[s]}
+                    <span
+                      data-numeric
+                      className="font-mono text-[10px] tracking-normal normal-case"
+                    >
+                      {group.length}
+                    </span>
+                  </h2>
+                  <EntryCollection
+                    entries={group}
+                    view={view}
+                    onEdit={setEditing}
+                    onStatusChange={changeStatus}
+                  />
+                </section>
+              );
+            }
           )
         ) : (
           <EntryCollection
@@ -300,7 +313,9 @@ function LibraryFrame({
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
+      {/* Wraps rather than overflowing: at 320px the Filters button and the
+          view switcher together are wider than the title's remaining room. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Your library</h1>
           {total != null ? (
@@ -310,11 +325,16 @@ function LibraryFrame({
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          {/* Mobile: filters live in a bottom sheet (05-responsive.md). */}
+          {/* Mobile only: at lg+ the persistent sidebar is right there, so the
+              button is pure redundancy. Hidden on the WRAPPER, not the button:
+              utility classes passed through Base UI's `render` prop lose to the
+              component's own display rule, so `lg:hidden` on the Button itself
+              silently does nothing. */}
+          <div className="lg:hidden">
           <Sheet open={sheetOpen} onOpenChange={onSheetOpenChange}>
             <SheetTrigger
               render={
-                <Button variant="outline" size="touch" className="gap-2 lg:hidden">
+                <Button variant="outline" size="touch" className="gap-2">
                   <SlidersHorizontal aria-hidden="true" data-icon="inline-start" />
                   {activeFilterCount > 0
                     ? `Filters (${activeFilterCount})`
@@ -329,6 +349,7 @@ function LibraryFrame({
               {panel}
             </SheetContent>
           </Sheet>
+          </div>
           <ViewSwitcher value={view} onChange={onViewChange} />
         </div>
       </div>
