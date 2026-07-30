@@ -43,9 +43,15 @@
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* The Luma style reaches for the top of this ladder on every surface, which
+     shipped 17.6px cards and 20.8px dialogs. Klyvi's rule is: things you press
+     are pill, things that hold content are 8px, art is 5px. Flattening the top
+     three rungs to --radius makes every SURFACE 8px in one edit and survives
+     re-running `shadcn add`. The pill side is set per component (button, badge,
+     toggle, tabs) with rounded-full. See docs/planning/04-components.md. */
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
 
   /* Klyvi additions (see docs/planning/03-tokens.md) */
   --radius-art: var(--art-radius);
@@ -174,6 +180,34 @@
   .font-mono,
   [data-numeric] {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Grows the tap target to the 44px floor without changing how the control
+     looks. Use on small icon-only controls (the poster quick-add, rail arrows,
+     the progress stepper) where a 44px visual box would be too heavy.
+     The parent needs `position: relative` or its own stacking context. */
+  .hit-44 {
+    position: relative;
+  }
+  .hit-44::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    min-width: 44px;
+    min-height: 44px;
+    width: 100%;
+    height: 100%;
+  }
+  /* Touch devices only. On a mouse-driven desktop the visual box is the target
+     and expanding it would swallow clicks meant for neighbouring controls. */
+  @media (hover: hover) and (pointer: fine) {
+    .hit-44::after {
+      content: none;
+    }
   }
 }
 
