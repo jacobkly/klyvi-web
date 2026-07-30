@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,9 +38,11 @@ function EmptyState({
       {action ? (
         <div className="mt-5">
           {action.href ? (
-            <Button
-              render={<Link href={action.href}>{action.label}</Link>}
-            />
+            // A navigation action stays a real link (role and semantics),
+            // it only dresses as a button.
+            <Link href={action.href} className={buttonVariants()}>
+              {action.label}
+            </Link>
           ) : (
             <Button onClick={action.onClick}>{action.label}</Button>
           )}

@@ -187,10 +187,9 @@
   /* Grows the tap target to the 44px floor without changing how the control
      looks. Use on small icon-only controls (the poster quick-add, rail arrows,
      the progress stepper) where a 44px visual box would be too heavy.
-     The parent needs `position: relative` or its own stacking context. */
-  .hit-44 {
-    position: relative;
-  }
+     The ELEMENT must be positioned (relative, absolute, ...). The utility does
+     not set position itself: doing so silently overrode `absolute` on callers,
+     which is how the library edit button ended up below its card. */
   .hit-44::after {
     content: "";
     position: absolute;
