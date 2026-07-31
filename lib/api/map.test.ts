@@ -301,6 +301,7 @@ describe("mapUser + mapPoolEntry", () => {
     const u = mapUser({
       id: "uuid-1",
       username: "user_abc12345",
+      username_changed_at: null,
       bio: null,
       avatar_url: null,
       banner_url: null,

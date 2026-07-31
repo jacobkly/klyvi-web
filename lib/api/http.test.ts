@@ -47,9 +47,9 @@ describe("apiFetch", () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ error: "score must be 0..100" }, 400)
     );
-    const err = await apiFetch("/v1/tracking", { token: "t" }).catch(
+    const err = (await apiFetch("/v1/tracking", { token: "t" }).catch(
       (e) => e
-    );
+    )) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(400);
     expect(err.message).toBe("score must be 0..100");
@@ -80,9 +80,9 @@ describe("apiFetch", () => {
 
   it("wraps network failures in ApiError with status 0", async () => {
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
-    const err = await apiFetch("/v1/reco/feed", { token: "t" }).catch(
+    const err = (await apiFetch("/v1/reco/feed", { token: "t" }).catch(
       (e) => e
-    );
+    )) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(0);
   });
@@ -105,10 +105,10 @@ describe("apiFetch", () => {
   it("does not retry a 401 twice", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: "unauthorized" }, 401));
     const refresh = vi.fn().mockResolvedValue("fresh-token");
-    const err = await apiFetch("/v1/users/me", {
+    const err = (await apiFetch("/v1/users/me", {
       token: "stale",
       refreshToken: refresh,
-    }).catch((e) => e);
+    }).catch((e) => e)) as ApiError;
     expect(err.status).toBe(401);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });

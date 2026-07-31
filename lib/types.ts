@@ -96,6 +96,8 @@ export type Scored = MediaSummary & {
 export type UserProfile = {
   id: string;
   username: string;
+  /** Null when the name has never been changed, so the first change is free. */
+  usernameChangedAt: string | null;
   bio: string | null;
   avatarUrl: string | null;
   createdAt: string;

@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PRIMARY_NAV, isActive } from "@/lib/nav";
+import { modifierLabel, useIsMac } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./user-menu";
 
@@ -22,6 +23,7 @@ function TopBar({
   onOpenSearch?: () => void;
 }) {
   const pathname = usePathname();
+  const isMac = useIsMac();
 
   return (
     <header
@@ -71,9 +73,14 @@ function TopBar({
           >
             <Search aria-hidden="true" className="size-4" strokeWidth={2} />
             <span className="hidden lg:inline">Search</span>
-            <kbd className="hidden rounded-sm border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] lg:inline">
-              ⌘K
-            </kbd>
+            {/* Held back until the platform is known: rendering ⌘ to a
+                Windows user is worse than rendering nothing for a frame. */}
+            {isMac != null ? (
+              <kbd className="hidden rounded-sm border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] lg:inline">
+                {modifierLabel(isMac)}
+                {isMac ? "" : " "}K
+              </kbd>
+            ) : null}
           </Button>
           <UserMenu />
         </div>

@@ -30,7 +30,7 @@ import {
  * check resolves it shows nothing rather than flashing the wrong state.
  */
 function UserMenu() {
-  const { user, loading, signOut } = useSession();
+  const { user, profile, loading, signOut } = useSession();
 
   if (loading) {
     return <div aria-hidden="true" className="size-8" />;
@@ -44,9 +44,10 @@ function UserMenu() {
     );
   }
 
+  // The chosen username wins over the email: it is what the app greets by.
   const initial = (
+    profile?.username?.charAt(0) ??
     user.email?.charAt(0) ??
-    user.user_metadata?.username?.charAt(0) ??
     "K"
   ).toUpperCase();
 

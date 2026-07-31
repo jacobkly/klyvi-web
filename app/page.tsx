@@ -2,13 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ReasonChips } from "@/components/klyvi/reason-chips";
+import { SiteFooter } from "@/components/klyvi/site-footer";
 import { buttonVariants } from "@/components/ui/button";
 import { MOCK_POOL } from "@/lib/mock-onboarding";
 
 export const metadata = {
-  title: "Klyvi · Know what to watch tonight",
+  title: "Klyvi · Know what to watch right now",
   description:
-    "Klyvi learns what you actually like and tells you what to watch tonight, with the reason it picked it.",
+    "Klyvi learns what you actually like and tells you what to watch right now, with the reason it picked it.",
 };
 
 const STEPS = [
@@ -33,13 +34,15 @@ const STEPS = [
  * deliberately uneven.
  */
 export default function MarketingPage() {
-  const wall = MOCK_POOL.filter((p) => p.posterPath).slice(0, 12);
+  // Enough posters that the wall fills the taller hero even at 8 columns.
+  const wall = MOCK_POOL.filter((p) => p.posterPath).slice(0, 24);
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Floating pill nav */}
-      <header className="sticky top-4 z-40 mx-auto w-full max-w-3xl px-4">
-        <div className="flex h-12 items-center justify-between rounded-full border border-border bg-background/85 px-5 backdrop-blur-md">
+      {/* Floating pill nav: glass, not a bar. The collage should read
+          through it, so the fill is a light scrim + blur, not a background. */}
+      <header className="sticky top-4 z-40 mx-auto w-full max-w-6xl px-4">
+        <div className="flex h-14 items-center justify-between rounded-full border border-foreground/10 bg-background/30 px-6 backdrop-blur-lg">
           <span className="text-[15px] font-semibold tracking-tight">Klyvi</span>
           <div className="flex items-center gap-2">
             <Link
@@ -56,10 +59,10 @@ export default function MarketingPage() {
       </header>
 
       {/* Hero with the poster wall */}
-      <section className="relative -mt-16 overflow-hidden pt-16">
+      <section className="relative -mt-[4.5rem] overflow-hidden pt-[4.5rem]">
         <div
           aria-hidden="true"
-          className="absolute inset-0 grid grid-cols-4 gap-3 p-4 opacity-25 sm:grid-cols-6"
+          className="absolute inset-0 grid grid-cols-4 gap-3 p-4 opacity-45 sm:grid-cols-6 lg:grid-cols-8"
           style={{ transform: "rotate(-4deg) scale(1.15)" }}
         >
           {wall.map((p) => (
@@ -77,15 +80,17 @@ export default function MarketingPage() {
             </div>
           ))}
         </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/85 to-background" />
+        {/* Light enough that the artwork survives it; the copy sits in the
+            gradient's darker lower half so contrast holds. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/35 via-background/65 to-background" />
 
-        <div className="relative mx-auto w-full max-w-3xl px-4 pt-28 pb-24 sm:pt-36 sm:pb-32">
+        <div className="relative mx-auto w-full max-w-6xl px-4 pt-44 pb-28 sm:pt-60 sm:pb-40">
           <h1 className="max-w-xl text-4xl font-semibold tracking-tight sm:text-6xl">
             Stop scrolling. Start watching.
           </h1>
           <p className="mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
             Klyvi learns what you actually like and tells you what to watch
-            tonight, with the reason it picked it.
+            right now, with the reason it picked it.
           </p>
           <div className="mt-8 flex items-center gap-4">
             <Link href="/signup" className={buttonVariants({ size: "touch" })}>
@@ -105,7 +110,7 @@ export default function MarketingPage() {
       </section>
 
       {/* Why Klyvi */}
-      <section className="mx-auto w-full max-w-3xl px-4 py-16">
+      <section className="mx-auto w-full max-w-6xl px-4 py-16">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           Genre is a terrible way to pick a film
         </h2>
@@ -127,7 +132,7 @@ export default function MarketingPage() {
       </section>
 
       {/* How it works */}
-      <section className="mx-auto w-full max-w-3xl px-4 py-10">
+      <section className="mx-auto w-full max-w-6xl px-4 py-10">
         <div className="grid gap-8 sm:grid-cols-3">
           {STEPS.map((s, i) => (
             <div key={s.heading}>
@@ -142,7 +147,7 @@ export default function MarketingPage() {
       </section>
 
       {/* Track it properly */}
-      <section className="mx-auto w-full max-w-3xl px-4 py-16">
+      <section className="mx-auto w-full max-w-6xl px-4 py-16">
         <h2 className="text-2xl font-semibold tracking-tight">
           Track it properly, season by season
         </h2>
@@ -154,46 +159,13 @@ export default function MarketingPage() {
       </section>
 
       {/* Quiet proof */}
-      <section className="mx-auto w-full max-w-3xl px-4 pt-4 pb-24">
+      <section className="mx-auto w-full max-w-6xl px-4 pt-4 pb-24">
         <p className="text-sm text-muted-foreground">
           Free to use. No ads, no tracking pixels, no selling your data.
         </p>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="mx-auto w-full max-w-3xl px-4 py-10">
-          <div className="flex flex-wrap gap-x-12 gap-y-6 text-sm">
-            <div>
-              <p className="font-semibold">Klyvi</p>
-              <p className="mt-1 text-muted-foreground">
-                Find what to watch tonight.
-              </p>
-            </div>
-            <nav aria-label="Legal" className="flex flex-col gap-1.5">
-              {[
-                ["Terms of use", "/terms"],
-                ["Privacy policy", "/privacy"],
-                ["Copyright", "/copyright"],
-                ["Attribution", "/attribution"],
-                ["Donate", "/donate"],
-              ].map(([label, href]) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="tap-target inline-flex items-center text-muted-foreground hover:text-foreground"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <p className="mt-8 text-xs text-muted-foreground">
-            This product uses the TMDB API but is not endorsed or certified by
-            TMDB.
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -216,6 +216,7 @@ export function mapUser(w: WireUser): UserProfile {
   return {
     id: w.id,
     username: w.username,
+    usernameChangedAt: w.username_changed_at ?? null,
     bio: orNull(w.bio),
     avatarUrl: orNull(w.avatar_url),
     createdAt: w.created_at,

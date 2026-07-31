@@ -54,9 +54,9 @@ export function StatsClient() {
 
   if (state.kind === "error") {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-10 md:px-6">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-10 md:px-6">
         <h1 className="text-3xl font-semibold tracking-tight">Your stats</h1>
-        <div className="py-20 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
           <p className="text-[15px] font-semibold text-foreground">
             Could not load your stats.
           </p>
@@ -76,15 +76,16 @@ export function StatsClient() {
 
   if (rated.length < 10) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-10 md:px-6">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-10 md:px-6">
         <h1 className="text-3xl font-semibold tracking-tight">Your stats</h1>
-        <EmptyState
-          icon={BarChart3}
-          title="Your stats need more data"
-          body="Rate about 10 titles and this page starts filling in. The more you track, the more it can tell you."
-          action={{ label: "Find something to watch", href: "/find" }}
-          className="py-20"
-        />
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState
+            icon={BarChart3}
+            title="Your stats need more data"
+            body="Rate about 10 titles and this page starts filling in. The more you track, the more it can tell you."
+            action={{ label: "Find something to watch", href: "/find" }}
+          />
+        </div>
       </main>
     );
   }

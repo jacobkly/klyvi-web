@@ -15,6 +15,7 @@ function entry(over: Partial<LibraryEntry>): LibraryEntry {
     score: 95,
     progress: null,
     progressTotal: null,
+    notes: null,
     updatedAt: "2026-07-01T00:00:00Z",
     ...over,
   };

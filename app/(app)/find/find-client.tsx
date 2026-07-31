@@ -28,6 +28,7 @@ import { addTracking } from "@/lib/api/tracking";
 import { listInteractions } from "@/lib/api/interactions";
 import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
 import { formatRuntime, type MovieDetail } from "@/lib/mock-media";
+import { watchWindowPhrase } from "@/lib/time-of-day";
 import { posterUrl, type Scored } from "@/lib/types";
 
 const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
@@ -295,13 +296,13 @@ export function FindClient({ simulate }: { simulate?: string }) {
   // ---------- idle ----------
   if (phase.kind === "idle") {
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-col justify-center px-4 py-16 md:px-6">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-16 md:px-6">
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           What are you in the mood for?
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Pick a shape, or do not. Klyvi will find one thing worth your
-          evening.
+          time.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-2">
@@ -362,7 +363,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
   // ---------- loading ----------
   if (phase.kind === "loading") {
     return (
-      <main className="mx-auto w-full max-w-4xl px-4 py-10 md:px-6">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-4 py-10 md:px-6">
         <Skeleton className="aspect-[16/9] w-full rounded-lg" />
         <Skeleton className="mt-6 h-8 w-2/3 rounded-lg" />
         <Skeleton className="mt-3 h-5 w-1/3 rounded-lg" />
@@ -373,7 +374,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
   // ---------- error ----------
   if (phase.kind === "error") {
     return (
-      <main className="mx-auto w-full max-w-2xl px-4 py-24 text-center md:px-6">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-24 text-center md:px-6">
         <p className="text-[15px] font-semibold text-foreground">
           Could not get your recommendations.
         </p>
@@ -390,7 +391,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
   // ---------- exhausted / empty ----------
   if (phase.picks.length === 0) {
     return (
-      <main className="mx-auto w-full max-w-2xl px-4 py-10 md:px-6">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-10 md:px-6">
         {mood !== "any" ? (
           <EmptyState
             icon={Sparkles}
@@ -429,147 +430,133 @@ export function FindClient({ simulate }: { simulate?: string }) {
   const overview = pick.overview ?? detail?.overview ?? null;
   const runtime = pick.runtime ?? detail?.runtime ?? null;
   const genres = pick.genres.length > 0 ? pick.genres : (detail?.genres ?? []);
-  const backdropPath = pick.backdropPath ?? detail?.backdropPath ?? null;
-  const poster = posterUrl(pick.posterPath, "w500");
+  // Read at render, which only ever happens on the client here: the pick
+  // view appears after the user asks for a set, so there is no server pass
+  // to disagree with about the hour.
+  const timePhrase = watchWindowPhrase();
+  const prev = phase.index > 0 ? phase.picks[phase.index - 1] : null;
+  const next =
+    phase.index < phase.picks.length - 1 ? phase.picks[phase.index + 1] : null;
+  const total = phase.picks.length;
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 md:px-6">
-      {/* Backdrop-led hero: one title, full attention. */}
-      <div className="relative overflow-hidden rounded-lg ring-1 ring-foreground/10">
-        <div className="relative aspect-[16/10] sm:aspect-[16/7]">
-          {backdropPath ? (
-            <Image
-              src={`https://image.tmdb.org/t/p/w1280${backdropPath}`}
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover"
-            />
-          ) : poster ? (
-            <Image
-              src={poster}
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover object-top blur-2xl"
-            />
-          ) : (
-            <div className="h-full bg-muted" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/20" />
-        </div>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-8 md:px-6">
+      <header className="text-center">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          {total === 1
+            ? `Your pick for ${timePhrase}`
+            : `Your ${total} picks for ${timePhrase}`}
+        </h1>
+        <p data-numeric className="mt-1 font-mono text-xs text-muted-foreground">
+          {phase.index + 1} of {total}
+        </p>
+      </header>
 
-        <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4 sm:gap-5 sm:p-6">
-          <Link
-            href={`/movie/${pick.tmdbId}`}
-            aria-label={pick.title}
-            className="hidden w-24 shrink-0 rounded-art outline-none focus-visible:ring-3 focus-visible:ring-ring/30 sm:block"
-          >
-            <div className="relative aspect-[2/3] overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
-              {poster ? (
-                <Image src={poster} alt="" fill sizes="96px" className="object-cover" />
-              ) : null}
+      {/* The stage. The current pick sits on top at two thirds of the width;
+          each neighbour is the same card, behind it, centred on the same
+          line and pushed out far enough to leave only a sliver overlapping.
+          Stacking rather than a three-column grid on purpose: in a grid the
+          side tracks size to their content, so the neighbours refuse to
+          shrink and crush the centre column instead of being clipped. */}
+      <div className="mt-6 overflow-hidden">
+        <div className="relative mx-auto w-full lg:w-2/3">
+          {prev ? (
+            <NeighbourPick pick={prev} side="left" onClick={() => step(-1)} />
+          ) : null}
+          {next ? (
+            <NeighbourPick pick={next} side="right" onClick={() => step(1)} />
+          ) : null}
+
+          <div className="relative z-10">
+            <PickHero pick={pick} detail={detail} priority />
+
+            {/* Fixed height, because this is the only part of the card whose
+                size follows the film. Letting it size to the synopsis moved
+                the buttons and the pager every time the user stepped from a
+                terse film to a wordy one, which made them hard to hit. */}
+            <div className="flex min-h-[15.5rem] flex-col justify-start">
+          {/* Why. The differentiator, given real room rather than a corner. */}
+          <div className="mt-6 text-center">
+            {pick.reasons.length > 0 ? (
+              <>
+                <h2 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
+                  Why this one
+                </h2>
+                <ReasonChips
+                  reasons={pick.reasons}
+                  max={4}
+                  className="mt-2.5 justify-center"
+                />
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                This is a pick people tend to agree on. Rate a few and Klyvi
+                starts explaining why it picked things for you specifically.
+              </p>
+            )}
+          </div>
+
+          {/* What it actually is: the synopsis sits with the reasons, not a
+              click away on the detail page. Clamped so a long one cannot
+              outgrow the reserved space; "More about it" has the rest. */}
+          {overview ? (
+            <p className="mx-auto mt-5 line-clamp-5 max-w-[60ch] text-center text-[15px] leading-relaxed text-foreground/90">
+              {overview}
+            </p>
+          ) : null}
+
+          {genres.length > 0 || runtime != null ? (
+            <p className="mt-3 text-center text-sm text-muted-foreground">
+              {[
+                genres.join(" · "),
+                runtime != null ? formatRuntime(runtime) : null,
+              ]
+                .filter(Boolean)
+                .join("  •  ")}
+            </p>
+          ) : null}
             </div>
-          </Link>
 
-          <div className="min-w-0 flex-1">
+          {/* Decide. */}
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
+            <Button size="touch" className="gap-2" onClick={() => act("save")}>
+              <Bookmark aria-hidden="true" data-icon="inline-start" />
+              Add to watchlist
+            </Button>
             <Link
               href={`/movie/${pick.tmdbId}`}
-              className="rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+              className={buttonVariants({ variant: "outline", size: "touch" })}
             >
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                {pick.title}{" "}
-                {pick.year != null ? (
-                  <span
-                    data-numeric
-                    className="align-middle font-mono text-sm font-normal text-muted-foreground"
-                  >
-                    {pick.year}
-                  </span>
-                ) : null}
-              </h1>
+              More about it
             </Link>
-            {pick.voteAverage != null ? (
-              <p
-                data-numeric
-                className="mt-1 font-mono text-xs text-muted-foreground"
-              >
-                {Math.round(pick.voteAverage * 10)}
-              </p>
-            ) : null}
+            <Button
+              variant="ghost"
+              size="touch"
+              className="gap-2"
+              onClick={() => act("seen")}
+            >
+              <Check aria-hidden="true" data-icon="inline-start" />
+              Seen it
+            </Button>
+            <Button
+              variant="ghost"
+              size="touch"
+              className="gap-2 text-muted-foreground"
+              onClick={() => act("dismiss")}
+            >
+              <EyeOff aria-hidden="true" data-icon="inline-start" />
+              Not interested
+            </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Why. The differentiator, given real room rather than a corner. */}
-      <div className="mt-6">
-        {pick.reasons.length > 0 ? (
-          <>
-            <h2 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
-              Why this one
-            </h2>
-            <ReasonChips reasons={pick.reasons} max={4} className="mt-2.5" />
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            This is a pick people tend to agree on. Rate a few and Klyvi starts
-            explaining why it picked things for you specifically.
-          </p>
-        )}
-      </div>
-
-      {/* What it actually is: synopsis with the reasons, not a click away. */}
-      {overview ? (
-        <p className="mt-5 max-w-[68ch] text-[15px] leading-relaxed text-foreground/90">
-          {overview}
-        </p>
-      ) : null}
-
-      {genres.length > 0 || runtime != null ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          {[genres.join(" · "), runtime != null ? formatRuntime(runtime) : null]
-            .filter(Boolean)
-            .join("  •  ")}
-        </p>
-      ) : null}
-
-      {/* Decide. */}
-      <div className="mt-7 flex flex-wrap items-center gap-2">
-        <Button size="touch" className="gap-2" onClick={() => act("save")}>
-          <Bookmark aria-hidden="true" data-icon="inline-start" />
-          Add to watchlist
-        </Button>
-        <Link
-          href={`/movie/${pick.tmdbId}`}
-          className={buttonVariants({ variant: "outline", size: "touch" })}
-        >
-          More about it
-        </Link>
-        <Button
-          variant="ghost"
-          size="touch"
-          className="gap-2"
-          onClick={() => act("seen")}
-        >
-          <Check aria-hidden="true" data-icon="inline-start" />
-          Seen it
-        </Button>
-        <Button
-          variant="ghost"
-          size="touch"
-          className="gap-2 text-muted-foreground"
-          onClick={() => act("dismiss")}
-        >
-          <EyeOff aria-hidden="true" data-icon="inline-start" />
-          Not interested
-        </Button>
-      </div>
-
-      {/* The rest of the set, present but subordinate. */}
-      <div className="mt-8 flex items-center justify-between gap-4 border-t border-border pt-5">
-        <div className="flex items-center gap-2">
+      {/* Moving between picks, centred under the card. Its position never
+          depends on the film, which is the point: the pager sits in the
+          same place whichever pick is showing. */}
+      <div className="mx-auto mt-8 flex max-w-[44rem] flex-col items-center gap-3 border-t border-border pt-5">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="icon"
@@ -580,13 +567,13 @@ export function FindClient({ simulate }: { simulate?: string }) {
             <ChevronLeft aria-hidden="true" className="size-4" strokeWidth={2} />
           </Button>
           <span data-numeric className="font-mono text-xs text-muted-foreground">
-            {phase.index + 1} / {phase.picks.length}
+            {phase.index + 1} / {total}
           </span>
           <Button
             variant="outline"
             size="icon"
             aria-label="Next pick"
-            disabled={phase.index >= phase.picks.length - 1}
+            disabled={phase.index >= total - 1}
             onClick={() => step(1)}
           >
             <ChevronRight aria-hidden="true" className="size-4" strokeWidth={2} />
@@ -605,7 +592,10 @@ export function FindClient({ simulate }: { simulate?: string }) {
       </div>
 
       {remaining != null && remaining > 0 && interactions !== 0 ? (
-        <p data-numeric className="mt-5 text-sm text-muted-foreground">
+        <p
+          data-numeric
+          className="mx-auto mt-5 max-w-[44rem] text-sm text-muted-foreground"
+        >
           {remaining} more {remaining === 1 ? "rating" : "ratings"} and Klyvi
           switches to your full taste profile.
         </p>
@@ -622,5 +612,160 @@ export function FindClient({ simulate }: { simulate?: string }) {
         />
       ) : null}
     </main>
+  );
+}
+
+/**
+ * The backdrop-led hero: one title, full attention. Shared by the current
+ * pick and by its neighbours, so a peek is visually the same object rather
+ * than a different card that happens to sit beside it.
+ */
+function PickHero({
+  pick,
+  detail,
+  priority,
+}: {
+  pick: Scored;
+  detail?: MovieDetail | null;
+  priority?: boolean;
+}) {
+  const backdropPath = pick.backdropPath ?? detail?.backdropPath ?? null;
+  const poster = posterUrl(pick.posterPath, "w500");
+
+  return (
+    <div className="relative overflow-hidden rounded-lg ring-1 ring-foreground/10">
+      <div className="relative aspect-[16/10] sm:aspect-[16/7]">
+        {backdropPath ? (
+          <Image
+            src={`https://image.tmdb.org/t/p/w1280${backdropPath}`}
+            alt=""
+            fill
+            priority={priority}
+            sizes="(max-width: 1024px) 100vw, 704px"
+            className="object-cover"
+          />
+        ) : poster ? (
+          <Image
+            src={poster}
+            alt=""
+            fill
+            priority={priority}
+            sizes="(max-width: 1024px) 100vw, 704px"
+            className="object-cover object-top blur-2xl"
+          />
+        ) : (
+          <div className="h-full bg-muted" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/20" />
+      </div>
+
+      <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4 sm:gap-5 sm:p-6">
+        <Link
+          href={`/movie/${pick.tmdbId}`}
+          aria-label={pick.title}
+          className="hidden w-24 shrink-0 rounded-art outline-none focus-visible:ring-3 focus-visible:ring-ring/30 sm:block"
+        >
+          <div className="relative aspect-[2/3] overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
+            {poster ? (
+              <Image
+                src={poster}
+                alt=""
+                fill
+                sizes="96px"
+                className="object-cover"
+              />
+            ) : null}
+          </div>
+        </Link>
+
+        <div className="min-w-0 flex-1">
+          <Link
+            href={`/movie/${pick.tmdbId}`}
+            className="rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              {pick.title}
+            </h2>
+          </Link>
+          {/* Year and score share a line under the title: both are numbers
+              about the film, and stacking them cost a row for no reason. */}
+          {pick.year != null || pick.voteAverage != null ? (
+            <p
+              data-numeric
+              className="mt-1.5 flex items-baseline gap-4 font-mono text-sm text-muted-foreground"
+            >
+              {pick.year != null ? <span>{pick.year}</span> : null}
+              {pick.voteAverage != null ? (
+                <span>
+                  <span className="text-foreground">
+                    {Math.round(pick.voteAverage * 10)}
+                  </span>{" "}
+                  / 100
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The pick on either side, as its poster.
+ *
+ * A poster rather than the backdrop card: at this size the artwork is the
+ * only part that reads, and a poster is the shape the eye already treats as
+ * "another film" everywhere else in the app.
+ *
+ * `right-full` / `left-full` pin it just outside the centre card's edge, so
+ * the gap is a margin rather than a percentage guess, and nothing overlaps.
+ * Being absolutely positioned it adds no height, which is what keeps the
+ * pager from moving when the neighbours change.
+ *
+ * The whole poster is one button, so a peek is a shortcut rather than
+ * decoration. Its interior is inert and hidden from screen readers, which
+ * reach the same picks through the Previous and Next controls.
+ */
+function NeighbourPick({
+  pick,
+  side,
+  onClick,
+}: {
+  pick: Scored;
+  side: "left" | "right";
+  onClick: () => void;
+}) {
+  const poster = posterUrl(pick.posterPath, "w342");
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`${side === "left" ? "Previous" : "Next"} pick: ${pick.title}`}
+      className={
+        "absolute top-1/2 hidden w-32 -translate-y-1/2 cursor-pointer rounded-art opacity-40 transition-opacity duration-(--dur-base) outline-none hover:opacity-75 focus-visible:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/30 lg:block xl:w-36 " +
+        (side === "left" ? "right-full mr-6" : "left-full ml-6")
+      }
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none relative aspect-[2/3] overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10"
+      >
+        {poster ? (
+          <Image
+            src={poster}
+            alt=""
+            fill
+            sizes="144px"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center p-2 text-center">
+            <span className="text-xs text-muted-foreground">{pick.title}</span>
+          </div>
+        )}
+      </div>
+    </button>
   );
 }

@@ -159,11 +159,21 @@ export type WireScored = {
 export type WireUser = {
   id: string;
   username: string;
+  /** Null until the user renames away from the auto-generated name, which
+   *  is what makes their first change free. */
+  username_changed_at: string | null;
   bio: string | null;
   avatar_url: string | null;
   banner_url: string | null;
   is_active: boolean;
   created_at: string;
+};
+
+/** GET /v1/users/username-available. Reason is null when available. */
+export type WireUsernameAvailability = {
+  username: string;
+  available: boolean;
+  reason: "invalid" | "reserved" | "taken" | null;
 };
 
 // ---------- onboarding ----------

@@ -202,7 +202,7 @@ function LibraryView({
 
   if (state.phase === "error") {
     return (
-      <div className="mx-auto max-w-md py-24 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-24 text-center">
         <p className="text-[15px] font-semibold text-foreground">
           Could not load your library.
         </p>
@@ -216,16 +216,28 @@ function LibraryView({
     );
   }
 
-  // Never tracked anything at all.
+  // Never tracked anything at all. Rendered INSIDE the frame rather than
+  // instead of it: dropping the sidebar left a new user staring at a lone
+  // paragraph on an empty page, with no sign of what the library will look
+  // like once it has something in it.
   if (entries.length === 0) {
     return (
-      <EmptyState
-        icon={LibraryIcon}
-        title="Nothing tracked yet"
-        body="Log something you have watched and Klyvi starts learning what you like."
-        action={{ label: "Find something to watch", href: "/find" }}
-        className="py-24"
-      />
+      <LibraryFrame counts={counts} filters={filters} onFiltersChange={setFilters}
+        sortKey={sortKey} sortOrder={sortOrder}
+        onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }}
+        view={view} onViewChange={setView} onSurprise={surprise}
+        activeFilterCount={activeFilterCount} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen}
+        total={0}
+      >
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState
+            icon={LibraryIcon}
+            title="Nothing tracked yet"
+            body="Log something you have watched and Klyvi starts learning what you like."
+            action={{ label: "Find something to watch", href: "/find" }}
+          />
+        </div>
+      </LibraryFrame>
     );
   }
 
@@ -343,7 +355,10 @@ function LibraryFrame({
   );
 
   return (
-    <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
+    // flex-1 so the content column has real height to centre an empty state
+    // against. A percentage would resolve to zero here: the shell wrapper
+    // gets its own height from flex-grow, not a height property.
+    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 py-8 md:px-6">
       {/* Wraps rather than overflowing: at 320px the Filters button and the
           view switcher together are wider than the title's remaining room. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
@@ -385,10 +400,10 @@ function LibraryFrame({
         </div>
       </div>
 
-      <div className="flex gap-8">
+      <div className="flex flex-1 gap-8">
         {/* Desktop: persistent sidebar, the long-dwell pattern. */}
         <aside className="hidden w-60 shrink-0 lg:block">{panel}</aside>
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       </div>
     </main>
   );

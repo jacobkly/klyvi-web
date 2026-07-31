@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import type { ReactNode } from "react";
 
+import { SiteFooter } from "@/components/klyvi/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BottomTabBar } from "./bottom-tab-bar";
@@ -38,9 +39,25 @@ function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider delay={300}>
-      <div className="flex min-h-full flex-col">
+      {/* min-h-dvh, not min-h-full: `min-height: 100%` needs a parent with a
+          DEFINITE height, and body only carries a min-height, so it resolved
+          to auto and the shell just wrapped its content. That left the footer
+          floating mid-screen on short pages. Viewport units cannot collapse. */}
+      <div className="flex min-h-dvh flex-col">
         <TopBar onOpenSearch={openSearch} />
-        <div className="flex-1 pb-20 md:pb-0">{children}</div>
+        {/* Footer inside the padded wrapper so it clears the mobile tab bar.
+            flex-1 on the content region pushes the footer to the bottom of the
+            viewport when a page is short, and lets it sit directly under the
+            content when the page is tall enough to scroll. */}
+        <div className="flex flex-1 flex-col pb-20 md:pb-0">
+          {/* A flex column, not a plain block: a page that wants to centre
+              itself vertically can then be a flex-1 child. Percentage
+              heights are no use here, because this wrapper's own height
+              comes from flex-grow rather than a height property, so a child
+              asking for `min-height: 100%` resolves it to zero. */}
+          <div className="flex flex-1 flex-col">{children}</div>
+          <SiteFooter wide />
+        </div>
         <BottomTabBar />
       </div>
       <Toaster position="bottom-center" />

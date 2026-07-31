@@ -16,17 +16,18 @@ export default function FavoritesPage() {
   const favorites = MOCK_LIBRARY.filter((e) => (e.score ?? 0) >= 90);
 
   return (
-    <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
+    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 py-8 md:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">Favorites</h1>
 
       {favorites.length === 0 ? (
-        <EmptyState
-          icon={Star}
-          title="No favorites yet"
-          body="Star a film, show, or person and it lands here."
-          action={{ label: "Explore", href: "/explore" }}
-          className="py-20"
-        />
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState
+            icon={Star}
+            title="No favorites yet"
+            body="Star a film, show, or person and it lands here."
+            action={{ label: "Explore", href: "/explore" }}
+          />
+        </div>
       ) : (
         <section className="mt-8">
           <SectionHeader title="Your highest rated" className="mb-4" />

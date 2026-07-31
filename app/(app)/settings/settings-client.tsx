@@ -4,15 +4,29 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { useSession } from "@/components/auth/auth-provider";
+import { FormField } from "@/components/klyvi/form-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getMe, updateMe } from "@/lib/api/users";
 import type { UserProfile } from "@/lib/types";
+import {
+  USERNAME_COOLDOWN_DAYS,
+  USERNAME_MAX,
+  USERNAME_MIN,
+  formatRetryDate,
+  readUsernameRejection,
+  usernameUnlocksAt,
+  validateUsername,
+} from "@/lib/username";
+import {
+  availabilityMessage,
+  useUsernameAvailability,
+} from "@/lib/use-username-availability";
+import { validateOnBlur } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 
 const SECTIONS = [
@@ -28,13 +42,24 @@ const SECTIONS = [
  * rail to horizontal scrolling tabs.
  */
 export function SettingsClient() {
-  const { user, signOut } = useSession();
+  const { user, signOut, setProfile } = useSession();
   const [active, setActive] = React.useState("Profile");
   const [me, setMe] = React.useState<UserProfile | null>(null);
   const [username, setUsername] = React.useState("");
   const [bio, setBio] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [fieldError, setFieldError] = React.useState<string | null>(null);
+
+  // Locked until this date when the name was changed inside the cooldown.
+  // Derived from the profile so the field is honest before the user tries,
+  // rather than only after the API refuses the write.
+  const unlocksAt = usernameUnlocksAt(me?.usernameChangedAt ?? null);
+  const locked = unlocksAt != null;
+  // Skip the user's own name: settings must not call it taken.
+  const availability = useUsernameAvailability(locked ? "" : username, {
+    skip: me?.username,
+  });
+  const availabilityNote = availabilityMessage(availability, username);
 
   React.useEffect(() => {
     getMe()
@@ -48,9 +73,10 @@ export function SettingsClient() {
 
   function save() {
     const name = username.trim();
-    // Mirror the API's rule so the round trip cannot fail on length.
-    if (name.length < 3 || name.length > 40) {
-      setFieldError("Usernames need 3 to 40 characters.");
+    // Mirror the API's rule so the round trip cannot fail on format.
+    const formatError = validateUsername(name);
+    if (formatError) {
+      setFieldError(formatError);
       return;
     }
     setFieldError(null);
@@ -58,9 +84,21 @@ export function SettingsClient() {
     updateMe({ username: name, bio })
       .then((u) => {
         setMe(u);
+        // Push it into the session so greetings update without a reload.
+        setProfile(u);
         toast("Saved");
       })
-      .catch(() => toast("Could not update that. Try again"))
+      .catch((err: unknown) => {
+        // The live check is only an assist. The write is what decides, and
+        // it can still refuse: someone may have taken the name in between,
+        // or the cooldown may have started on another device.
+        const rejection = readUsernameRejection(err);
+        if (rejection) {
+          setFieldError(rejection.message);
+          return;
+        }
+        toast("Could not update that. Try again");
+      })
       .finally(() => setSaving(false));
   }
 
@@ -137,34 +175,55 @@ export function SettingsClient() {
             <section>
               <h1 className="text-xl font-semibold tracking-tight">Profile</h1>
               <div className="mt-6 flex max-w-[440px] flex-col gap-5">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="st-username">Username</Label>
-                  <Input
-                    id="st-username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Auto-generated on first sign-in. 3 to 40 characters.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="st-bio">Bio</Label>
-                  <Textarea
-                    id="st-bio"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    A line about your taste. Shown on your profile.
-                  </p>
-                </div>
-                {fieldError ? (
-                  <p role="alert" className="text-sm text-destructive">
-                    {fieldError}
-                  </p>
-                ) : null}
+                <FormField
+                  id="st-username"
+                  label="Username"
+                  error={
+                    fieldError ??
+                    (availabilityNote?.tone === "error"
+                      ? availabilityNote.text
+                      : undefined)
+                  }
+                  hint={
+                    locked
+                      ? `Changed recently. You can change it again on ${formatRetryDate(unlocksAt)}.`
+                      : availabilityNote?.tone === "hint"
+                        ? availabilityNote.text
+                        : `${USERNAME_MIN} to ${USERNAME_MAX} characters. This is the name Klyvi greets you by, and it can be changed once every ${USERNAME_COOLDOWN_DAYS} days.`
+                  }
+                >
+                  {(field) => (
+                    <Input
+                      {...field}
+                      value={username}
+                      disabled={locked}
+                      onChange={(e) => {
+                        setUsername(e.target.value);
+                        if (fieldError)
+                          setFieldError(validateUsername(e.target.value));
+                      }}
+                      onBlur={(e) =>
+                        setFieldError(
+                          validateOnBlur(e.target.value, validateUsername)
+                        )
+                      }
+                    />
+                  )}
+                </FormField>
+                <FormField
+                  id="st-bio"
+                  label="Bio"
+                  hint="A line about your taste. Shown on your profile."
+                >
+                  {(field) => (
+                    <Textarea
+                      {...field}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      rows={3}
+                    />
+                  )}
+                </FormField>
                 <div>
                   <Button onClick={save} disabled={saving}>
                     {saving ? "Saving" : "Save"}
@@ -178,18 +237,20 @@ export function SettingsClient() {
             <section>
               <h1 className="text-xl font-semibold tracking-tight">Account</h1>
               <div className="mt-6 flex max-w-[440px] flex-col gap-5">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="st-email">Email</Label>
-                  <Input
-                    id="st-email"
-                    type="email"
-                    disabled
-                    value={user?.email ?? ""}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Managed through your sign-in provider.
-                  </p>
-                </div>
+                <FormField
+                  id="st-email"
+                  label="Email"
+                  hint="Managed through your sign-in provider."
+                >
+                  {(field) => (
+                    <Input
+                      {...field}
+                      type="email"
+                      disabled
+                      value={user?.email ?? ""}
+                    />
+                  )}
+                </FormField>
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     Sign out

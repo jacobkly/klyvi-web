@@ -5,26 +5,44 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Eye, EyeOff, MailCheck } from "lucide-react";
 
+import {
+  AppleMark,
+  GoogleMark,
+  MicrosoftMark,
+} from "@/components/auth/provider-logos";
+import { FormField } from "@/components/klyvi/form-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
+import { USERNAME_MAX, USERNAME_MIN, validateUsername } from "@/lib/username";
+import {
+  availabilityMessage,
+  useUsernameAvailability,
+} from "@/lib/use-username-availability";
+import {
+  validateEmail,
+  validateOnBlur,
+  validatePassword,
+  validatePasswordConfirm,
+} from "@/lib/validation";
 
 /**
- * OAuth is configured off for now; the buttons stay visible so the option
- * reads as coming, not missing. Flip a provider on here once it is enabled
- * in the Supabase project.
+ * OAuth is configured off for now; the buttons stay visible with their real
+ * brand marks so the option reads as coming, not missing. Flip `enabled`
+ * once the provider is turned on in the Supabase project.
  */
-const PROVIDERS: { name: string; enabled: boolean }[] = [
-  { name: "Google", enabled: false },
-  { name: "Microsoft", enabled: false },
-  { name: "Apple", enabled: false },
+const PROVIDERS: {
+  name: string;
+  enabled: boolean;
+  Mark: (p: { className?: string }) => React.ReactElement;
+}[] = [
+  { name: "Google", enabled: false, Mark: GoogleMark },
+  { name: "Microsoft", enabled: false, Mark: MicrosoftMark },
+  { name: "Apple", enabled: false, Mark: AppleMark },
 ];
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Error strings per 06-copy.md. The collision is deliberate: an already
+/** Form-level copy per 06-copy.md. The collision is deliberate: an already
  *  registered email returns the SAME string as a failed sign-in, so the form
  *  never confirms to a stranger that an address has an account. */
 const COPY = {
@@ -33,8 +51,6 @@ const COPY = {
   rateLimited: "Too many attempts. Wait a minute and try again.",
   network: "No connection. Check your network and try again.",
   server: "Sign-in is not responding. Something went wrong on Klyvi's end.",
-  weakPassword: "Passwords need at least 8 characters.",
-  badEmail: "That does not look like an email address.",
   notConfigured: "Sign-in is not available right now.",
 };
 
@@ -44,22 +60,77 @@ type FormError = {
   action?: "signin" | "resend";
 };
 
+type FieldName = "username" | "email" | "password" | "confirm";
+type FieldErrors = Partial<Record<FieldName, string>>;
+
 /**
  * Shared sign-in / sign-up form. Providers first (the path people expect),
- * then email. Email is controlled so it survives a failed attempt; the
- * password intentionally does not.
+ * then email. Sign-up collects a username, which rides along in the
+ * Supabase user metadata and is claimed against the Klyvi API on first
+ * sign-in (see auth-provider).
+ *
+ * Fields validate on blur and re-validate on change once they carry an
+ * error, so a mistake surfaces next to the field that caused it and clears
+ * the moment it is fixed. The submit button stays enabled throughout: a
+ * disabled button cannot explain what is wrong, and "every field filled" is
+ * not the same as "every field valid" anyway.
  */
 export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const router = useRouter();
   const signin = mode === "signin";
 
+  const [username, setUsername] = React.useState("");
   const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [confirm, setConfirm] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [showPassword, setShowPassword] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<FormError | null>(null);
   /** Set after a signup that needs email confirmation. */
   const [confirmSent, setConfirmSent] = React.useState(false);
   const [resent, setResent] = React.useState(false);
+
+  // Live availability, sign-up only. The claim itself happens after email
+  // confirmation, so this is the only chance to warn before the name is
+  // gone; the unique index is still what actually decides.
+  const availability = useUsernameAvailability(signin ? "" : username);
+  const availabilityNote = availabilityMessage(availability, username);
+
+  /** Every field's rule in one place, so blur and submit cannot disagree. */
+  const rules: Record<FieldName, (v: string) => string | null> =
+    React.useMemo(
+      () => ({
+        username: validateUsername,
+        email: validateEmail,
+        password: validatePassword,
+        confirm: (v) => validatePasswordConfirm(password, v),
+      }),
+      [password]
+    );
+
+  function setFieldError(name: FieldName, message: string | null) {
+    setFieldErrors((prev) => {
+      if (!message) {
+        if (!(name in prev)) return prev;
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      }
+      if (prev[name] === message) return prev;
+      return { ...prev, [name]: message };
+    });
+  }
+
+  /** Re-check a field the user has already been told about, so the error
+   *  disappears as soon as the value is good rather than on the next blur. */
+  function revalidate(name: FieldName, value: string) {
+    if (fieldErrors[name]) setFieldError(name, rules[name](value));
+  }
+
+  function handleBlur(name: FieldName, value: string) {
+    setFieldError(name, validateOnBlur(value, rules[name]));
+  }
 
   function nextPath(): string {
     const n = new URLSearchParams(window.location.search).get("next");
@@ -78,19 +149,28 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
     e.preventDefault();
     setError(null);
 
-    const form = e.currentTarget;
-    const password =
-      (form.elements.namedItem("auth-password") as HTMLInputElement)?.value ??
-      "";
-
-    if (!EMAIL_RE.test(email.trim())) {
-      setError({ message: COPY.badEmail });
+    // Empty fields are only a problem here, which is why blur stays quiet
+    // about them. Collect every failure at once rather than stopping at the
+    // first, so the form does not reveal its problems one at a time.
+    const checks: FieldName[] = signin
+      ? ["email", "password"]
+      : ["username", "email", "password", "confirm"];
+    const values: Record<FieldName, string> = {
+      username,
+      email,
+      password,
+      confirm,
+    };
+    const found: FieldErrors = {};
+    for (const name of checks) {
+      const message = rules[name](values[name]);
+      if (message) found[name] = message;
+    }
+    if (Object.keys(found).length > 0) {
+      setFieldErrors(found);
       return;
     }
-    if (!signin && password.length < 8) {
-      setError({ message: COPY.weakPassword });
-      return;
-    }
+    setFieldErrors({});
 
     const sb = getBrowserSupabase();
     if (!sb) {
@@ -107,6 +187,9 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         });
         if (err) {
           setError(mapAuthError(err.status, err.message));
+          // The credentials were rejected, so the password is worth
+          // retyping. The email is not.
+          setPassword("");
           return;
         }
         router.push(nextPath());
@@ -116,6 +199,10 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
           email: email.trim(),
           password,
           options: {
+            // Claimed against the Klyvi API on first sign-in. There is no
+            // availability endpoint to check it against here, and no session
+            // yet to check with, so the claim happens once one exists.
+            data: { username: username.trim() },
             emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
           },
         });
@@ -151,9 +238,6 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
     }
     if (status === 429) return { message: COPY.rateLimited };
     if (status != null && status >= 500) return { message: COPY.server };
-    if (/password should be at least/i.test(message)) {
-      return { message: COPY.weakPassword };
-    }
     if (/invalid login credentials/i.test(message) || status === 400) {
       return { message: COPY.noMatch };
     }
@@ -218,14 +302,15 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       </p>
 
       <div className="mt-7 flex flex-col gap-2.5">
-        {PROVIDERS.map(({ name, enabled }) => (
+        {PROVIDERS.map(({ name, enabled, Mark }) => (
           <Button
             key={name}
             variant="outline"
             size="touch"
-            className="relative w-full"
+            className="relative w-full gap-2.5"
             disabled={!enabled}
           >
+            <Mark className="size-[18px]" />
             Continue with {name}
             {!enabled ? (
               <Badge
@@ -246,52 +331,128 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       </div>
 
       <form onSubmit={submitEmail} className="flex flex-col gap-4" noValidate>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="auth-email">Email</Label>
-          <Input
-            id="auth-email"
-            name="auth-email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+        {!signin ? (
+          <FormField
+            id="auth-username"
+            label="Username"
+            error={
+              fieldErrors.username ??
+              (availabilityNote?.tone === "error"
+                ? availabilityNote.text
+                : undefined)
+            }
+            hint={
+              availabilityNote?.tone === "hint"
+                ? availabilityNote.text
+                : `${USERNAME_MIN} to ${USERNAME_MAX} characters. Letters, numbers, underscores, and hyphens.`
+            }
+          >
+            {(field) => (
+              <Input
+                {...field}
+                name="auth-username"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  revalidate("username", e.target.value);
+                }}
+                onBlur={(e) => handleBlur("username", e.target.value)}
+              />
+            )}
+          </FormField>
+        ) : null}
 
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-baseline justify-between">
-            <Label htmlFor="auth-password">Password</Label>
-            {signin ? (
+        <FormField id="auth-email" label="Email" error={fieldErrors.email}>
+          {(field) => (
+            <Input
+              {...field}
+              name="auth-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                revalidate("email", e.target.value);
+              }}
+              onBlur={(e) => handleBlur("email", e.target.value)}
+            />
+          )}
+        </FormField>
+
+        <FormField
+          id="auth-password"
+          label="Password"
+          error={fieldErrors.password}
+          hint={signin ? undefined : "At least 8 characters."}
+          action={
+            signin ? (
               <Link
                 href="/reset-password"
                 className="tap-target inline-flex items-center text-xs text-muted-foreground hover:text-foreground"
               >
                 Forgot password?
               </Link>
-            ) : null}
-          </div>
-          <div className="relative">
-            <Input
-              id="auth-password"
-              name="auth-password"
-              type={showPassword ? "text" : "password"}
-              autoComplete={signin ? "current-password" : "new-password"}
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              className="hit-44 absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
-            >
-              {showPassword ? (
-                <EyeOff aria-hidden="true" className="size-4" strokeWidth={2} />
-              ) : (
-                <Eye aria-hidden="true" className="size-4" strokeWidth={2} />
-              )}
-            </button>
-          </div>
-        </div>
+            ) : undefined
+          }
+        >
+          {(field) => (
+            <div className="relative">
+              <Input
+                {...field}
+                name="auth-password"
+                type={showPassword ? "text" : "password"}
+                autoComplete={signin ? "current-password" : "new-password"}
+                className="pr-10"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  revalidate("password", e.target.value);
+                }}
+                onBlur={(e) => handleBlur("password", e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="hit-44 absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+              >
+                {showPassword ? (
+                  <EyeOff
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={2}
+                  />
+                ) : (
+                  <Eye aria-hidden="true" className="size-4" strokeWidth={2} />
+                )}
+              </button>
+            </div>
+          )}
+        </FormField>
+
+        {!signin ? (
+          <FormField
+            id="auth-confirm"
+            label="Confirm password"
+            error={fieldErrors.confirm}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                name="auth-confirm"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => {
+                  setConfirm(e.target.value);
+                  revalidate("confirm", e.target.value);
+                }}
+                onBlur={(e) => handleBlur("confirm", e.target.value)}
+              />
+            )}
+          </FormField>
+        ) : null}
 
         {error ? (
           <p role="alert" className="text-sm text-destructive">

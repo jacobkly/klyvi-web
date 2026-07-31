@@ -6,12 +6,15 @@ import * as React from "react";
 import { KeyRound, MailCheck } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
+import { FormField } from "@/components/klyvi/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import {
+  validateEmail,
+  validateOnBlur,
+  validatePassword,
+} from "@/lib/validation";
 
 /**
  * Both halves of the reset flow on one route:
@@ -30,6 +33,8 @@ export function ResetPasswordForm() {
   const { user, loading } = useSession();
 
   const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [fieldError, setFieldError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
   const [sent, setSent] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -37,10 +42,12 @@ export function ResetPasswordForm() {
   async function requestReset(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!EMAIL_RE.test(email.trim())) {
-      setError("That does not look like an email address.");
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setFieldError(emailError);
       return;
     }
+    setFieldError(null);
     const sb = getBrowserSupabase();
     if (!sb) {
       setError("Password reset is not available right now.");
@@ -63,14 +70,12 @@ export function ResetPasswordForm() {
   async function setNewPassword(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    const form = e.currentTarget;
-    const password =
-      (form.elements.namedItem("new-password") as HTMLInputElement)?.value ??
-      "";
-    if (password.length < 8) {
-      setError("Passwords need at least 8 characters.");
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setFieldError(passwordError);
       return;
     }
+    setFieldError(null);
     const sb = getBrowserSupabase();
     if (!sb) {
       setError("Password reset is not available right now.");
@@ -118,18 +123,29 @@ export function ResetPasswordForm() {
           className="mt-7 flex flex-col gap-4"
           noValidate
         >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-password">New password</Label>
-            <Input
-              id="new-password"
-              name="new-password"
-              type="password"
-              autoComplete="new-password"
-            />
-            <p className="text-xs text-muted-foreground">
-              At least 8 characters.
-            </p>
-          </div>
+          <FormField
+            id="new-password"
+            label="New password"
+            error={fieldError}
+            hint="At least 8 characters."
+          >
+            {(field) => (
+              <Input
+                {...field}
+                name="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldError) setFieldError(validatePassword(e.target.value));
+                }}
+                onBlur={(e) =>
+                  setFieldError(validateOnBlur(e.target.value, validatePassword))
+                }
+              />
+            )}
+          </FormField>
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}
@@ -188,17 +204,24 @@ export function ResetPasswordForm() {
         className="mt-7 flex flex-col gap-4"
         noValidate
       >
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="reset-email">Email</Label>
-          <Input
-            id="reset-email"
-            name="reset-email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+        <FormField id="reset-email" label="Email" error={fieldError}>
+          {(field) => (
+            <Input
+              {...field}
+              name="reset-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldError) setFieldError(validateEmail(e.target.value));
+              }}
+              onBlur={(e) =>
+                setFieldError(validateOnBlur(e.target.value, validateEmail))
+              }
+            />
+          )}
+        </FormField>
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}

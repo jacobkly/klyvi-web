@@ -4,6 +4,7 @@ import Link from "next/link";
 import * as React from "react";
 import { ArrowRight, Sparkles, X } from "lucide-react";
 
+import { useSession } from "@/components/auth/auth-provider";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { SectionHeader } from "@/components/klyvi/section-header";
@@ -68,6 +69,7 @@ type State =
  */
 export function HomeClient({ simulate }: { simulate?: string }) {
   const mock = simulate != null;
+  const { profile } = useSession();
   const [nudgeDismissed, setNudgeDismissed] = React.useState(true);
   const [state, setState] = React.useState<State>({ kind: "loading" });
 
@@ -164,7 +166,11 @@ export function HomeClient({ simulate }: { simulate?: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{greeting()}</h1>
+      {/* The name is appended only once it is known, so the greeting never
+          flashes a placeholder or a trailing comma. */}
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {profile?.username ? `${greeting()}, ${profile.username}` : greeting()}
+      </h1>
 
       {/* Action sits inline with the dismiss rather than stacked under the
           copy: a nudge that costs three lines of the fold is working against
