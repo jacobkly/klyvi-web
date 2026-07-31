@@ -1,22 +1,15 @@
-import type { MediaSummary, Reason } from "./types";
+import type { Reason, Scored } from "./types";
 
 /**
  * Mock recommendation feed matching GET /v1/reco/feed (klyvi/docs/API.md):
  * enriched display fields plus Reasons. Tier is a parameter so every copy
  * path renders: Tier 0 has no reasons at all, and one Tier 1 entry carries a
  * nameless reason to exercise the null-render rule.
+ *
+ * The Scored type now lives in lib/types.ts; re-exported here so existing
+ * imports keep working.
  */
-export type Scored = MediaSummary & {
-  backdropPath: string | null;
-  voteAverage: number | null;
-  /** Synopsis. The feed endpoint does not return it today; the client will
-   *  hydrate it from /v1/movies/{id}. Present here so the card is built for
-   *  the real shape rather than retrofitted later. */
-  overview: string | null;
-  runtime: number | null;
-  genres: string[];
-  reasons: Reason[];
-};
+export type { Scored } from "./types";
 
 const BASE: Omit<Scored, "reasons">[] = [
   {

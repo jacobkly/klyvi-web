@@ -21,6 +21,7 @@ import {
   STATUS_VERBS,
   type LibraryEntry,
   type MediaSummary,
+  type TrackableSummary,
   type TrackingStatus,
 } from "@/lib/types";
 
@@ -51,7 +52,7 @@ function DetailLayout({
   related,
   extra,
 }: {
-  media: MediaSummary;
+  media: TrackableSummary;
   /** Total episodes, for the season progress field. */
   episodeCount?: number | null;
   backdropPath: string | null;

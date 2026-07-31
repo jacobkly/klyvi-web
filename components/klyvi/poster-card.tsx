@@ -39,7 +39,9 @@ function PosterCard({
   const href =
     media.mediaType === "season"
       ? `/tv/${media.tmdbId}/season/${media.seasonNumber ?? 1}`
-      : `/movie/${media.tmdbId}`;
+      : media.mediaType === "tv"
+        ? `/tv/${media.tmdbId}`
+        : `/movie/${media.tmdbId}`;
   const src = posterUrl(media.posterPath);
   const seasonSuffix =
     media.mediaType === "season" && media.seasonNumber != null

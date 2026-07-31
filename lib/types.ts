@@ -41,10 +41,18 @@ export type Reason = {
   name?: string;
 };
 
+/**
+ * What a poster card can point at. Tracking knows only movie | season, but
+ * catalog surfaces (search, TV rails) also show series-level cards, which
+ * link to /tv/{id}.
+ */
+export type SummaryKind = MediaType | "tv";
+
 /** The minimum a poster card needs to render. */
 export type MediaSummary = {
+  /** Internal media_index id. 0 for catalog cards that never carried one. */
   mediaId: number;
-  mediaType: MediaType;
+  mediaType: SummaryKind;
   tmdbId: number;
   title: string;
   posterPath: string | null;
@@ -53,8 +61,13 @@ export type MediaSummary = {
   seasonNumber?: number;
 };
 
+/** A summary that can actually be tracked: movie or season, never series. */
+export type TrackableSummary = Omit<MediaSummary, "mediaType"> & {
+  mediaType: MediaType;
+};
+
 /** A tracked library entry, enriched server-side. */
-export type LibraryEntry = MediaSummary & {
+export type LibraryEntry = TrackableSummary & {
   status: TrackingStatus;
   /** 0 to 100, null when unrated. */
   score: number | null;
@@ -63,6 +76,57 @@ export type LibraryEntry = MediaSummary & {
   /** Total episodes; null for movies or unknown. */
   progressTotal: number | null;
   updatedAt: string;
+};
+
+/** One item from GET /v1/reco/feed, enriched server-side. Overview, runtime,
+ *  and genres are NOT in the feed payload; the client hydrates them from
+ *  /v1/movies/{id} for the pick being shown. */
+export type Scored = MediaSummary & {
+  backdropPath: string | null;
+  voteAverage: number | null;
+  overview: string | null;
+  runtime: number | null;
+  genres: string[];
+  reasons: Reason[];
+};
+
+/** The authenticated user's row from GET /v1/users/me. */
+export type UserProfile = {
+  id: string;
+  username: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+};
+
+export type InteractionKind =
+  | "logged"
+  | "rated"
+  | "dismissed"
+  | "saved"
+  | "impression"
+  | "clicked";
+
+export type InteractionSource = "search" | "detail" | "feed" | "onboarding";
+
+/** One recommender signal event from GET /v1/interactions. */
+export type Interaction = {
+  id: number;
+  mediaId: number;
+  mediaType: MediaType;
+  kind: InteractionKind;
+  rating: number | null;
+  source: string | null;
+  createdAt: string;
+};
+
+/** A person from search results. Not a MediaSummary: people have no year,
+ *  no tracking, and no detail page yet. */
+export type PersonResult = {
+  tmdbId: number;
+  name: string;
+  profilePath: string | null;
+  knownFor: string[];
 };
 
 /** TMDB image base. Sizes per TMDB's configuration documentation. */
