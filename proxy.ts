@@ -39,12 +39,51 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // The getUser() call is what triggers the token refresh; gating arrives
-  // with the auth vertical once sign-in works end to end.
-  await supabase.auth.getUser();
+  // getUser() both refreshes the token and answers who this is.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path = request.nextUrl.pathname;
+  const isProtected = PROTECTED_PREFIXES.some(
+    (p) => path === p || path.startsWith(`${p}/`)
+  );
+  const isAuthScreen = AUTH_SCREENS.some(
+    (p) => path === p || path.startsWith(`${p}/`)
+  );
+
+  if (!user && isProtected) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/signin";
+    url.search = "";
+    url.searchParams.set("next", path);
+    return NextResponse.redirect(url);
+  }
+
+  // Signed-in users skip the marketing root and the auth screens, except
+  // /reset-password, which doubles as the signed-in change-password form
+  // (the recovery link produces exactly that state).
+  if (user && (path === "/" || isAuthScreen)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/home";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
 
   return response;
 }
+
+const PROTECTED_PREFIXES = [
+  "/home",
+  "/find",
+  "/library",
+  "/profile",
+  "/settings",
+  "/notifications",
+  "/onboarding",
+];
+
+const AUTH_SCREENS = ["/signin", "/signup"];
 
 export const config = {
   // Skip static assets and images; everything else refreshes the session.

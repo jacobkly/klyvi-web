@@ -11,7 +11,9 @@ import {
   User,
 } from "lucide-react";
 
+import { useSession } from "@/components/auth/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,9 +26,30 @@ import {
 /**
  * The avatar dropdown, structured per 06-copy.md §3: primary rows, then
  * Donate in its own group with the accent heart, then legal and sign out.
- * Runs on a placeholder identity until auth lands.
+ * Signed out it collapses to a Sign in button; while the first session
+ * check resolves it shows nothing rather than flashing the wrong state.
  */
 function UserMenu() {
+  const { user, loading, signOut } = useSession();
+
+  if (loading) {
+    return <div aria-hidden="true" className="size-8" />;
+  }
+
+  if (!user) {
+    return (
+      <Link href="/signin" className={buttonVariants({ size: "sm" })}>
+        Sign in
+      </Link>
+    );
+  }
+
+  const initial = (
+    user.email?.charAt(0) ??
+    user.user_metadata?.username?.charAt(0) ??
+    "K"
+  ).toUpperCase();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -34,7 +57,7 @@ function UserMenu() {
         className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
       >
         <Avatar className="size-8">
-          <AvatarFallback className="text-xs">K</AvatarFallback>
+          <AvatarFallback className="text-xs">{initial}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-52">
@@ -71,7 +94,7 @@ function UserMenu() {
             <Shield aria-hidden="true" data-icon="inline-start" />
             Privacy
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => void signOut()}>
             <LogOut aria-hidden="true" data-icon="inline-start" />
             Sign out
           </DropdownMenuItem>
