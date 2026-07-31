@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import { FirstPicksPreview } from "./preview";
 
 export const metadata = { title: "Ready · Klyvi" };
 
@@ -30,6 +31,7 @@ export default async function DonePage({
       <Link href="/find" className={buttonVariants({ size: "touch" }) + " mt-6"}>
         See your recommendations
       </Link>
+      <FirstPicksPreview />
     </main>
   );
 }
