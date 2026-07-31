@@ -93,6 +93,7 @@ function DetailLayout({
   const [status, setStatus] = React.useState<TrackingStatus | null>(null);
   const [score, setScore] = React.useState<number | null>(null);
   const [progress, setProgress] = React.useState<number | null>(null);
+  const [notes, setNotes] = React.useState<string | null>(null);
   /** Internal media_id, learned from the tracking list or the first POST.
    *  PATCH and DELETE address this, so writes queue behind knowing it. */
   const [mediaId, setMediaId] = React.useState<number | null>(null);
@@ -119,6 +120,7 @@ function DetailLayout({
           setStatus(mine.status);
           setScore(mine.score);
           setProgress(mine.progress);
+          setNotes(mine.notes);
         }
       })
       .catch(() => {});
@@ -135,6 +137,7 @@ function DetailLayout({
     score,
     progress,
     progressTotal: episodeCount ?? null,
+    notes,
     updatedAt: "",
   };
 
@@ -174,10 +177,11 @@ function DetailLayout({
   }
 
   function saveEdit(edit: TrackingEdit) {
-    const prev = { status, score, progress };
+    const prev = { status, score, progress, notes };
     setStatus(edit.status);
     setScore(edit.score);
     setProgress(edit.progress);
+    setNotes(edit.notes);
 
     const write =
       mediaId != null
@@ -185,6 +189,7 @@ function DetailLayout({
             status: edit.status,
             score: edit.score,
             episodeProgress: edit.progress,
+            notes: edit.notes,
           })
         : addTracking({
             tmdbId: media.tmdbId,
@@ -193,6 +198,7 @@ function DetailLayout({
             status: edit.status,
             score: edit.score,
             episodeProgress: edit.progress,
+            notes: edit.notes,
           });
     write
       .then((saved) => {
@@ -214,6 +220,7 @@ function DetailLayout({
         setStatus(prev.status);
         setScore(prev.score);
         setProgress(prev.progress);
+        setNotes(prev.notes);
         toast("Could not update that. Try again");
       });
   }
@@ -369,10 +376,11 @@ function DetailLayout({
           onOpenChange={(o) => !o && setEditing(false)}
           onSave={saveEdit}
           onDelete={() => {
-            const prev = { status, score, progress, mediaId };
+            const prev = { status, score, progress, notes, mediaId };
             setStatus(null);
             setScore(null);
             setProgress(null);
+            setNotes(null);
             setEditing(false);
             toast("Removed from your library");
             if (prev.mediaId != null) {
@@ -387,6 +395,7 @@ function DetailLayout({
                   setStatus(prev.status);
                   setScore(prev.score);
                   setProgress(prev.progress);
+                  setNotes(prev.notes);
                   toast("Could not update that. Try again");
                 });
             }

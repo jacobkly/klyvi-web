@@ -93,6 +93,7 @@ export function mapTrackingEntry(w: WireTrackingEntry): LibraryEntry {
     // The list payload does not carry episode totals; the season detail
     // call does. Progress renders bare until then.
     progressTotal: null,
+    notes: w.notes,
     updatedAt: w.updated_at,
   };
 }

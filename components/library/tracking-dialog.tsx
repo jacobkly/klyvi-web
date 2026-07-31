@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { getTvSeason } from "@/lib/api/catalog";
 import {
   STATUS_LABELS,
   posterUrl,
@@ -47,14 +48,16 @@ const STATUS_ORDER: TrackingStatus[] = [
   "dropped",
 ];
 
+/**
+ * What the dialog can actually persist. Start/finish dates and rewatch
+ * counts exist as columns server-side but no request accepts them yet, so
+ * the form does not offer them: a field that saves nothing is a lie.
+ */
 export type TrackingEdit = {
   status: TrackingStatus;
   score: number | null;
   progress: number | null;
-  startDate: string;
-  finishDate: string;
-  rewatches: number;
-  notes: string;
+  notes: string | null;
 };
 
 /**
@@ -82,16 +85,40 @@ function TrackingDialog({
   const [progress, setProgress] = React.useState(
     entry.progress?.toString() ?? ""
   );
-  const [startDate, setStartDate] = React.useState("");
-  const [finishDate, setFinishDate] = React.useState("");
-  const [rewatches, setRewatches] = React.useState("0");
-  const [notes, setNotes] = React.useState("");
+  const [notes, setNotes] = React.useState(entry.notes ?? "");
+  const [fetchedTotal, setFetchedTotal] = React.useState<number | null>(null);
 
   // Reset the form when a different entry opens.
   React.useEffect(() => {
     setStatus(entry.status);
     setScore(entry.score?.toString() ?? "");
     setProgress(entry.progress?.toString() ?? "");
+    setNotes(entry.notes ?? "");
+  }, [entry]);
+
+  // The tracking list carries no episode totals; the season detail call
+  // does. Fetch lazily so "Episodes watched" gets an "of N", failing quietly
+  // when offline or in mock mode.
+  const total = entry.progressTotal ?? fetchedTotal;
+  React.useEffect(() => {
+    setFetchedTotal(null);
+    if (
+      entry.mediaType !== "season" ||
+      entry.progressTotal != null ||
+      entry.tmdbId <= 0 ||
+      entry.seasonNumber == null
+    )
+      return;
+    let cancelled = false;
+    getTvSeason(entry.tmdbId, entry.seasonNumber)
+      .then((s) => {
+        if (!cancelled && s?.episodeCount != null)
+          setFetchedTotal(s.episodeCount);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [entry]);
 
   const displayTitle = isSeason
@@ -110,10 +137,7 @@ function TrackingDialog({
         progress.trim() === "" || Number.isNaN(Number(progress))
           ? null
           : Number(progress),
-      startDate,
-      finishDate,
-      rewatches: Number(rewatches) || 0,
-      notes,
+      notes: notes.trim() === "" ? null : notes,
     });
     onOpenChange(false);
   }
@@ -126,7 +150,7 @@ function TrackingDialog({
       : { label: "Runtime", value: null },
     {
       label: "Episodes",
-      value: isSeason ? entry.progressTotal : null,
+      value: isSeason ? total : null,
     },
   ];
 
@@ -261,39 +285,17 @@ function TrackingDialog({
                 onChange={(e) => setProgress(e.target.value)}
                 className="font-mono"
               />
+              {total != null ? (
+                <p data-numeric className="font-mono text-xs text-muted-foreground">
+                  of {total}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="td-start">Started</Label>
-            <Input
-              id="td-start"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="td-finish">Finished</Label>
-            <Input
-              id="td-finish"
-              type="date"
-              value={finishDate}
-              onChange={(e) => setFinishDate(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="td-rewatches">Rewatches</Label>
-            <Input
-              id="td-rewatches"
-              inputMode="numeric"
-              value={rewatches}
-              onChange={(e) => setRewatches(e.target.value)}
-              className="font-mono"
-            />
-          </div>
+          {/* Started / Finished dates and a rewatch counter belong here and
+              are deliberately absent: the API cannot store them yet. They
+              return the day the request structs accept them. */}
 
           <div className="col-span-2 flex flex-col gap-1.5">
             <Label htmlFor="td-notes">Notes</Label>

@@ -23,8 +23,13 @@ describe("TrackingDialog", () => {
     // the entry, which is intentional: the column is what you are editing.
     expect(screen.getAllByText(/Severance/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Season 2")).toBeInTheDocument();
-    for (const label of ["Status", "Score", "Episodes watched", "Started", "Finished", "Rewatches", "Notes"]) {
+    for (const label of ["Status", "Score", "Episodes watched", "Notes"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    // Dates and rewatches are deliberately absent: no API write path exists
+    // for them yet, and a field that saves nothing is a lie.
+    for (const label of ["Started", "Finished", "Rewatches"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
     }
     expect(screen.getByText(/Only you can see these/)).toBeInTheDocument();
     expect(
@@ -92,5 +97,43 @@ describe("TrackingDialog", () => {
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ score: 91 })
     );
+  });
+
+  it("prefills notes from the entry and returns them on save", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const noted = MOCK_LIBRARY.find((e) => e.notes != null)!;
+    render(
+      <TrackingDialog
+        entry={noted}
+        open
+        onOpenChange={() => {}}
+        onSave={onSave}
+        onDelete={() => {}}
+      />
+    );
+    const notes = screen.getByLabelText("Notes");
+    expect(notes).toHaveValue(noted.notes);
+    await user.type(notes, " Done.");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave.mock.calls[0][0].notes).toBe(`${noted.notes} Done.`);
+  });
+
+  it("returns null notes when the field is cleared", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const noted = MOCK_LIBRARY.find((e) => e.notes != null)!;
+    render(
+      <TrackingDialog
+        entry={noted}
+        open
+        onOpenChange={() => {}}
+        onSave={onSave}
+        onDelete={() => {}}
+      />
+    );
+    await user.clear(screen.getByLabelText("Notes"));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave.mock.calls[0][0].notes).toBeNull();
   });
 });

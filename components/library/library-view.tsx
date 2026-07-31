@@ -140,7 +140,13 @@ function LibraryView({
       phase: "ready",
       entries: prev.map((e) =>
         e.mediaId === entry.mediaId
-          ? { ...e, status: edit.status, score: edit.score, progress: edit.progress }
+          ? {
+              ...e,
+              status: edit.status,
+              score: edit.score,
+              progress: edit.progress,
+              notes: edit.notes,
+            }
           : e
       ),
     });

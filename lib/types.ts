@@ -75,6 +75,8 @@ export type LibraryEntry = TrackableSummary & {
   progress: number | null;
   /** Total episodes; null for movies or unknown. */
   progressTotal: number | null;
+  /** Private free text; null when empty. */
+  notes: string | null;
   updatedAt: string;
 };
 
