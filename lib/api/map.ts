@@ -60,6 +60,14 @@ function languageLabel(code: string | null | undefined): string {
   }
 }
 
+function keywordList(
+  kw: WireMovie["keywords"] | null | undefined
+): { id: number; name: string }[] {
+  if (!kw) return [];
+  if (Array.isArray(kw)) return kw;
+  return kw.keywords ?? kw.results ?? [];
+}
+
 function topCast(credits: WireMovie["credits"], limit = 12): CastMember[] {
   const cast = credits?.cast ?? [];
   return [...cast]
@@ -135,7 +143,7 @@ export function mapMovie(w: WireMovie): MovieDetail {
     studio: w.production_companies?.[0]?.name ?? null,
     voteAverage: w.vote_average > 0 ? w.vote_average : null,
     genres: (w.genres ?? []).map((g) => g.name),
-    keywords: w.keywords?.keywords ?? w.keywords?.results ?? [],
+    keywords: keywordList(w.keywords),
     cast: topCast(w.credits),
     director,
   };
@@ -165,7 +173,7 @@ export function mapTvSeries(w: WireTvSeries): TvDetail {
     studio: null,
     voteAverage: w.vote_average > 0 ? w.vote_average : null,
     genres: (w.genres ?? []).map((g) => g.name),
-    keywords: w.keywords?.results ?? w.keywords?.keywords ?? [],
+    keywords: keywordList(w.keywords),
     cast: topCast(w.credits),
     seasons,
     // Not stored by the catalog; the metadata list skips nulls.

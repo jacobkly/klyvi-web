@@ -22,11 +22,15 @@ export type WireCredits = {
   crew?: { id: number; name: string; job?: string }[];
 };
 
-/** Movie keywords arrive as {keywords: []}, TV keywords as {results: []}. */
-export type WireKeywords = {
-  keywords?: WireKeyword[];
-  results?: WireKeyword[];
-};
+/**
+ * Keywords: the live API stores the EXTRACTED array (verified against a
+ * running instance), but TMDB's own wrappers ({keywords: []} for movies,
+ * {results: []} for TV) are kept accepted in case older cache rows carry
+ * them.
+ */
+export type WireKeywords =
+  | WireKeyword[]
+  | { keywords?: WireKeyword[]; results?: WireKeyword[] };
 
 // ---------- catalog ----------
 

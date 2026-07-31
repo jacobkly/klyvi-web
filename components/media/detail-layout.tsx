@@ -1,8 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
+
+import { useSession } from "@/components/auth/auth-provider";
+import { recordInteraction } from "@/lib/api/interactions";
+import {
+  addTracking,
+  deleteTracking,
+  listTracking,
+  updateTracking,
+} from "@/lib/api/tracking";
 
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
@@ -76,15 +86,51 @@ function DetailLayout({
   related?: { heading: string; items: MediaSummary[] };
   extra?: React.ReactNode;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useSession();
+
   const [status, setStatus] = React.useState<TrackingStatus | null>(null);
   const [score, setScore] = React.useState<number | null>(null);
   const [progress, setProgress] = React.useState<number | null>(null);
+  /** Internal media_id, learned from the tracking list or the first POST.
+   *  PATCH and DELETE address this, so writes queue behind knowing it. */
+  const [mediaId, setMediaId] = React.useState<number | null>(null);
   const [editing, setEditing] = React.useState(false);
   const [overviewOpen, setOverviewOpen] = React.useState(false);
 
-  /** The entry the dialog edits. Synthesised until the API client lands. */
+  // Hydrate any existing entry so the control reflects reality on load.
+  // Signed out (or API down) this fails quietly; browsing stays public.
+  React.useEffect(() => {
+    if (!trackable || !user) return;
+    let cancelled = false;
+    listTracking()
+      .then((entries) => {
+        if (cancelled) return;
+        const mine = entries.find(
+          (e) =>
+            e.tmdbId === media.tmdbId &&
+            e.mediaType === media.mediaType &&
+            (media.mediaType === "movie" ||
+              e.seasonNumber === media.seasonNumber)
+        );
+        if (mine) {
+          setMediaId(mine.mediaId);
+          setStatus(mine.status);
+          setScore(mine.score);
+          setProgress(mine.progress);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [trackable, user, media.tmdbId, media.mediaType, media.seasonNumber]);
+
+  /** The entry the dialog edits. */
   const entry: LibraryEntry = {
     ...media,
+    mediaId: mediaId ?? 0,
     status: status ?? "planning",
     score,
     progress,
@@ -98,15 +144,78 @@ function DetailLayout({
    * also the only route to a score or progress from this page.
    */
   function changeStatus(next: TrackingStatus) {
+    // Tracking needs an account; the catalog does not. Send the signed-out
+    // user to sign in and bring them straight back here.
+    if (!user) {
+      router.push(`/signin?next=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    const prev = status;
     setStatus(next);
     toast(STATUS_VERBS[next]);
     setEditing(true);
+
+    const write =
+      mediaId != null
+        ? updateTracking(mediaId, { status: next })
+        : addTracking({
+            tmdbId: media.tmdbId,
+            mediaType: media.mediaType,
+            seasonNumber: media.seasonNumber,
+            status: next,
+          });
+    write
+      .then((saved) => setMediaId(saved.mediaId))
+      .catch(() => {
+        setStatus(prev);
+        setEditing(false);
+        toast("Could not update that. Try again");
+      });
   }
 
   function saveEdit(edit: TrackingEdit) {
+    const prev = { status, score, progress };
     setStatus(edit.status);
     setScore(edit.score);
     setProgress(edit.progress);
+
+    const write =
+      mediaId != null
+        ? updateTracking(mediaId, {
+            status: edit.status,
+            score: edit.score,
+            episodeProgress: edit.progress,
+          })
+        : addTracking({
+            tmdbId: media.tmdbId,
+            mediaType: media.mediaType,
+            seasonNumber: media.seasonNumber,
+            status: edit.status,
+            score: edit.score,
+            episodeProgress: edit.progress,
+          });
+    write
+      .then((saved) => {
+        setMediaId(saved.mediaId);
+        // The score is recommender signal too; tracking and interactions
+        // are separate pillars server-side, so rating writes both.
+        if (edit.score != null && edit.score !== prev.score) {
+          recordInteraction({
+            tmdbId: media.tmdbId,
+            mediaType: media.mediaType,
+            seasonNumber: media.seasonNumber,
+            kind: "rated",
+            rating: edit.score,
+            source: "detail",
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {
+        setStatus(prev.status);
+        setScore(prev.score);
+        setProgress(prev.progress);
+        toast("Could not update that. Try again");
+      });
   }
 
   return (
@@ -260,11 +369,27 @@ function DetailLayout({
           onOpenChange={(o) => !o && setEditing(false)}
           onSave={saveEdit}
           onDelete={() => {
+            const prev = { status, score, progress, mediaId };
             setStatus(null);
             setScore(null);
             setProgress(null);
             setEditing(false);
             toast("Removed from your library");
+            if (prev.mediaId != null) {
+              deleteTracking(prev.mediaId)
+                .then(() => setMediaId(null))
+                .catch((err: unknown) => {
+                  // Already gone server-side: silence, per the copy doc.
+                  if ((err as { status?: number })?.status === 404) {
+                    setMediaId(null);
+                    return;
+                  }
+                  setStatus(prev.status);
+                  setScore(prev.score);
+                  setProgress(prev.progress);
+                  toast("Could not update that. Try again");
+                });
+            }
           }}
         />
       ) : null}

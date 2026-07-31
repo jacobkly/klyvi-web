@@ -57,8 +57,17 @@ type LoadState =
  */
 function LibraryView({
   load,
+  onStatusChange,
+  onSave,
+  onDelete,
 }: {
   load: () => Promise<LibraryEntry[]>;
+  /** Persist a quick status change. Absent = optimistic-only (mock mode). */
+  onStatusChange?: (e: LibraryEntry, next: TrackingStatus) => Promise<void>;
+  /** Persist a dialog edit. Absent = optimistic-only (mock mode). */
+  onSave?: (e: LibraryEntry, edit: TrackingEdit) => Promise<void>;
+  /** Persist a removal. Throw with { status: 404 } and it stays silent. */
+  onDelete?: (e: LibraryEntry) => Promise<void>;
 }) {
   const [state, setState] = React.useState<LoadState>({ phase: "loading" });
   const [filters, setFilters] = React.useState<LibraryFilters>({
@@ -117,30 +126,46 @@ function LibraryView({
         e.mediaId === entry.mediaId ? { ...e, status: next } : e
       ),
     });
-    // API write lands here; on failure: setState(prev) and the failure toast.
     toast(`${STATUS_VERBS[next]}`);
+    onStatusChange?.(entry, next).catch(() => {
+      setState({ phase: "ready", entries: prev });
+      toast("Could not update that. Try again");
+    });
   }
 
   function saveEdit(entry: LibraryEntry, edit: TrackingEdit) {
     if (state.phase !== "ready") return;
+    const prev = state.entries;
     setState({
       phase: "ready",
-      entries: state.entries.map((e) =>
+      entries: prev.map((e) =>
         e.mediaId === entry.mediaId
           ? { ...e, status: edit.status, score: edit.score, progress: edit.progress }
           : e
       ),
     });
+    onSave?.(entry, edit).catch(() => {
+      setState({ phase: "ready", entries: prev });
+      toast("Could not update that. Try again");
+    });
   }
 
   function deleteEntry(entry: LibraryEntry) {
     if (state.phase !== "ready") return;
+    const prev = state.entries;
     setState({
       phase: "ready",
-      entries: state.entries.filter((e) => e.mediaId !== entry.mediaId),
+      entries: prev.filter((e) => e.mediaId !== entry.mediaId),
     });
     setEditing(null);
     toast("Removed from your library");
+    onDelete?.(entry).catch((err: unknown) => {
+      // Already gone server-side: the optimistic removal was right, stay
+      // silent (06-copy.md, the 404-on-delete rule).
+      if ((err as { status?: number })?.status === 404) return;
+      setState({ phase: "ready", entries: prev });
+      toast("Could not update that. Try again");
+    });
   }
 
   function surprise() {

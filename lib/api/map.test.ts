@@ -212,6 +212,14 @@ describe("mapMovie", () => {
     expect(m.releaseDate).toBe("2019-05-30T00:00:00Z");
   });
 
+  it("accepts keywords as a bare array (what the live API stores)", () => {
+    const m = mapMovie({
+      ...WIRE,
+      keywords: [{ id: 99, name: "heist" }],
+    });
+    expect(m.keywords).toEqual([{ id: 99, name: "heist" }]);
+  });
+
   it("handles a bare cache row with null JSONB fields", () => {
     const m = mapMovie({
       ...WIRE,
