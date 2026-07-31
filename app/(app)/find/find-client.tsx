@@ -14,29 +14,68 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useSession } from "@/components/auth/auth-provider";
 import { EmptyState } from "@/components/klyvi/empty-state";
+import { RatingDialog } from "@/components/media/rating-dialog";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  mockFeed,
-  mockInteractionCount,
-  type RecoTier,
-  type Scored,
-} from "@/lib/mock-reco";
-import { formatRuntime } from "@/lib/mock-media";
-import { posterUrl } from "@/lib/types";
+import { getMovie } from "@/lib/api/catalog";
+import { recordInteraction } from "@/lib/api/interactions";
+import { getFeed } from "@/lib/api/reco";
+import { addTracking } from "@/lib/api/tracking";
+import { listInteractions } from "@/lib/api/interactions";
+import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
+import { formatRuntime, type MovieDetail } from "@/lib/mock-media";
+import { posterUrl, type Scored } from "@/lib/types";
 
 const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
 
-const MOODS = [
-  { id: "any", label: "Anything" },
-  { id: "short", label: "Under 2 hours" },
-  { id: "slow", label: "Slow burn" },
-  { id: "light", label: "Something light" },
-  { id: "heavy", label: "Heavy" },
-  { id: "old", label: "Older than me" },
+/**
+ * Moods are honest client-side lenses over the feed, not server queries.
+ * Each one names the data it reads; anything it cannot see passes through.
+ */
+const MOODS: {
+  id: string;
+  label: string;
+  fits: (s: Scored, d: MovieDetail | null) => boolean;
+}[] = [
+  { id: "any", label: "Anything", fits: () => true },
+  {
+    id: "short",
+    label: "Under 2 hours",
+    fits: (_s, d) => d?.runtime != null && d.runtime <= 120,
+  },
+  {
+    id: "slow",
+    label: "Slow burn",
+    fits: (_s, d) =>
+      d != null &&
+      (d.keywords.some((k) => /slow.?burn|psychological/i.test(k.name)) ||
+        (d.genres.includes("Drama") && !d.genres.includes("Action"))),
+  },
+  {
+    id: "light",
+    label: "Something light",
+    fits: (_s, d) =>
+      d != null &&
+      d.genres.some((g) => ["Comedy", "Romance", "Family", "Animation"].includes(g)) &&
+      !d.genres.includes("Horror"),
+  },
+  {
+    id: "heavy",
+    label: "Heavy",
+    fits: (_s, d) =>
+      d != null &&
+      d.genres.some((g) => ["Drama", "War", "Crime", "Thriller"].includes(g)) &&
+      !d.genres.includes("Comedy"),
+  },
+  {
+    id: "old",
+    label: "Twentieth century",
+    fits: (s) => s.year != null && s.year < 2000,
+  },
 ];
 
 type Phase =
@@ -46,33 +85,107 @@ type Phase =
   | { kind: "ready"; picks: Scored[]; index: number };
 
 /**
- * Find Next, built as a decision surface rather than a list. The north star
- * from phase1 is a calm, high-trust "here is the answer" moment, which a
- * scrollable column of equal cards does not produce: five equal options is
- * the same paralysis the product exists to end.
- *
- * So it shows ONE pick at a time, full-bleed backdrop, reasons prominent,
- * with the set behind it reachable. Deciding between one thing and "next" is
- * a far easier decision than ranking five.
+ * Find Next, built as a decision surface rather than a list: ONE pick at a
+ * time, full-bleed backdrop, reasons prominent, the rest of the set behind
+ * arrows. Live data comes from /v1/reco/feed; the synopsis, runtime, and
+ * genres are hydrated per pick from /v1/movies/{id} because the feed does
+ * not carry them.
  */
 export function FindClient({ simulate }: { simulate?: string }) {
-  const tier: RecoTier =
-    simulate === "tier0" ? 0 : simulate === "tier2" ? 2 : 1;
+  const { user } = useSession();
+  const mock = simulate != null;
+
   const [mood, setMood] = React.useState("any");
   const [count, setCount] = React.useState<3 | 5 | 7>(5);
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
+  const [interactions, setInteractions] = React.useState<number | null>(null);
+  const [rating, setRating] = React.useState<Scored | null>(null);
+  /** tmdbId → detail; session-lived hydration cache. */
+  const detailsRef = React.useRef(new Map<number, MovieDetail | null>());
+  const [, forceRender] = React.useReducer((n: number) => n + 1, 0);
 
-  const interactions = mockInteractionCount(tier);
-  const remaining = Math.max(0, TIER_THRESHOLD - interactions);
+  const mockTier: RecoTier =
+    simulate === "tier0" ? 0 : simulate === "tier2" ? 2 : 1;
 
-  function fetchPicks() {
+  // Real interaction count drives the tier copy.
+  React.useEffect(() => {
+    if (mock) {
+      setInteractions(mockInteractionCount(mockTier));
+      return;
+    }
+    if (!user) return;
+    listInteractions()
+      .then((list) =>
+        setInteractions(list.filter((i) => i.kind === "rated").length)
+      )
+      .catch(() => setInteractions(null));
+  }, [mock, mockTier, user]);
+
+  const remaining =
+    interactions != null ? Math.max(0, TIER_THRESHOLD - interactions) : null;
+
+  async function hydrate(pick: Scored | undefined) {
+    if (!pick || pick.mediaType !== "movie") return;
+    if (detailsRef.current.has(pick.tmdbId)) return;
+    try {
+      const d = await getMovie(pick.tmdbId);
+      detailsRef.current.set(pick.tmdbId, d);
+    } catch {
+      detailsRef.current.set(pick.tmdbId, null);
+    }
+    forceRender();
+  }
+
+  async function fetchPicks() {
     setPhase({ kind: "loading" });
-    setTimeout(() => {
-      if (simulate === "error") setPhase({ kind: "error" });
-      else if (simulate === "exhausted")
-        setPhase({ kind: "ready", picks: [], index: 0 });
-      else setPhase({ kind: "ready", picks: mockFeed(tier, count), index: 0 });
-    }, 550);
+
+    if (mock) {
+      setTimeout(() => {
+        if (simulate === "error") setPhase({ kind: "error" });
+        else if (simulate === "exhausted")
+          setPhase({ kind: "ready", picks: [], index: 0 });
+        else
+          setPhase({
+            kind: "ready",
+            picks: mockFeed(mockTier, count),
+            index: 0,
+          });
+      }, 550);
+      return;
+    }
+
+    try {
+      let feed = await getFeed();
+
+      // A chosen mood needs the details to judge, so hydrate the whole feed
+      // (bounded: the feed caps at 30, and the catalog cache makes repeats
+      // cheap), then filter. "Anything" skips straight through.
+      const m = MOODS.find((x) => x.id === mood) ?? MOODS[0];
+      if (m.id !== "any") {
+        await Promise.all(feed.map((p) => hydrate(p)));
+        feed = feed.filter((p) =>
+          m.fits(p, detailsRef.current.get(p.tmdbId) ?? null)
+        );
+      }
+
+      const picks = feed.slice(0, count).map((p) => {
+        const d = detailsRef.current.get(p.tmdbId);
+        return d
+          ? {
+              ...p,
+              overview: d.overview,
+              runtime: d.runtime,
+              genres: d.genres,
+              backdropPath: p.backdropPath ?? d.backdropPath,
+            }
+          : p;
+      });
+      setPhase({ kind: "ready", picks, index: 0 });
+      void hydrate(picks[0]);
+      void hydrate(picks[1]);
+    } catch {
+      setPhase({ kind: "error" });
+    }
   }
 
   function step(dir: 1 | -1) {
@@ -80,17 +193,12 @@ export function FindClient({ simulate }: { simulate?: string }) {
     const next = phase.index + dir;
     if (next < 0 || next >= phase.picks.length) return;
     setPhase({ ...phase, index: next });
+    void hydrate(phase.picks[next + 1]);
   }
 
-  function act(kind: "save" | "seen" | "dismiss") {
+  function removeCurrent() {
     if (phase.kind !== "ready") return;
     const cur = phase.picks[phase.index];
-    // TODO(auth): "Seen it" on an unrated title should open the rating step
-    // rather than silently consuming the pick. A watched-but-unrated signal is
-    // the weakest kind the recommender can get, and this is the one moment the
-    // user is already thinking about the film. Needs the tracking write path.
-    if (kind === "save") toast("Added to your watchlist");
-    if (kind === "dismiss") toast("Hidden from your recommendations");
     const picks = phase.picks.filter((p) => p.mediaId !== cur.mediaId);
     setPhase({
       kind: "ready",
@@ -99,9 +207,84 @@ export function FindClient({ simulate }: { simulate?: string }) {
     });
   }
 
+  function act(kind: "save" | "seen" | "dismiss") {
+    if (phase.kind !== "ready") return;
+    const cur = phase.picks[phase.index];
+
+    if (kind === "seen") {
+      // The one moment the user is already thinking about the film is the
+      // moment to ask how it was: a watched-but-unrated title is the weakest
+      // signal the recommender can get.
+      setRating(cur);
+      return;
+    }
+
+    if (kind === "save") {
+      toast("Added to your watchlist");
+      if (!mock) {
+        addTracking({
+          tmdbId: cur.tmdbId,
+          mediaType: "movie",
+          status: "planning",
+        }).catch(() => toast("Could not update that. Try again"));
+        recordInteraction({
+          tmdbId: cur.tmdbId,
+          mediaType: "movie",
+          kind: "saved",
+          source: "feed",
+        }).catch(() => {});
+      }
+    }
+    if (kind === "dismiss") {
+      toast("Hidden from your recommendations");
+      if (!mock) {
+        recordInteraction({
+          tmdbId: cur.tmdbId,
+          mediaType: "movie",
+          kind: "dismissed",
+          source: "feed",
+        }).catch(() => {});
+      }
+    }
+    removeCurrent();
+  }
+
+  function submitRating(score: number | null) {
+    const cur = rating;
+    setRating(null);
+    if (!cur) return;
+    toast(score != null ? "Rated" : "Marked as seen");
+    if (!mock) {
+      if (score != null) {
+        recordInteraction({
+          tmdbId: cur.tmdbId,
+          mediaType: "movie",
+          kind: "rated",
+          rating: score,
+          source: "feed",
+        }).catch(() => {});
+        setInteractions((n) => (n != null ? n + 1 : n));
+      } else {
+        recordInteraction({
+          tmdbId: cur.tmdbId,
+          mediaType: "movie",
+          kind: "logged",
+          source: "feed",
+        }).catch(() => {});
+      }
+      addTracking({
+        tmdbId: cur.tmdbId,
+        mediaType: "movie",
+        status: "completed",
+        score,
+      }).catch(() => {});
+    }
+    removeCurrent();
+  }
+
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (phase.kind !== "ready") return;
+      if (phase.kind !== "ready" || rating) return;
       if (e.key === "ArrowRight") step(1);
       if (e.key === "ArrowLeft") step(-1);
     };
@@ -160,7 +343,11 @@ export function FindClient({ simulate }: { simulate?: string }) {
           </ToggleGroup>
         </div>
 
-        <Button size="touch" onClick={fetchPicks} className="mt-6 gap-2 self-start">
+        <Button
+          size="touch"
+          onClick={() => void fetchPicks()}
+          className="mt-6 gap-2 self-start"
+        >
           <Sparkles aria-hidden="true" data-icon="inline-start" />
           Find something
         </Button>
@@ -193,7 +380,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
         <p className="mt-1 text-sm text-muted-foreground">
           Something went wrong on Klyvi&apos;s end.
         </p>
-        <Button className="mt-5" onClick={fetchPicks}>
+        <Button className="mt-5" onClick={() => void fetchPicks()}>
           Try again
         </Button>
       </main>
@@ -204,7 +391,20 @@ export function FindClient({ simulate }: { simulate?: string }) {
   if (phase.picks.length === 0) {
     return (
       <main className="mx-auto w-full max-w-2xl px-4 py-10 md:px-6">
-        {interactions === 0 ? (
+        {mood !== "any" ? (
+          <EmptyState
+            icon={Sparkles}
+            title="Nothing fits that mood right now"
+            body="The current picks do not match this lens. Loosen it and something surfaces."
+            action={{
+              label: "Show anything",
+              onClick: () => {
+                setMood("any");
+                setPhase({ kind: "idle" });
+              },
+            }}
+          />
+        ) : interactions === 0 ? (
           <EmptyState
             icon={Sparkles}
             title="Not enough to go on yet"
@@ -225,6 +425,11 @@ export function FindClient({ simulate }: { simulate?: string }) {
 
   // ---------- the pick ----------
   const pick = phase.picks[phase.index];
+  const detail = detailsRef.current.get(pick.tmdbId) ?? null;
+  const overview = pick.overview ?? detail?.overview ?? null;
+  const runtime = pick.runtime ?? detail?.runtime ?? null;
+  const genres = pick.genres.length > 0 ? pick.genres : (detail?.genres ?? []);
+  const backdropPath = pick.backdropPath ?? detail?.backdropPath ?? null;
   const poster = posterUrl(pick.posterPath, "w500");
 
   return (
@@ -232,9 +437,9 @@ export function FindClient({ simulate }: { simulate?: string }) {
       {/* Backdrop-led hero: one title, full attention. */}
       <div className="relative overflow-hidden rounded-lg ring-1 ring-foreground/10">
         <div className="relative aspect-[16/10] sm:aspect-[16/7]">
-          {pick.backdropPath ? (
+          {backdropPath ? (
             <Image
-              src={`https://image.tmdb.org/t/p/w1280${pick.backdropPath}`}
+              src={`https://image.tmdb.org/t/p/w1280${backdropPath}`}
               alt=""
               fill
               priority
@@ -315,21 +520,16 @@ export function FindClient({ simulate }: { simulate?: string }) {
         )}
       </div>
 
-      {/* What it actually is. A recommendation you cannot evaluate is not a
-          recommendation, so the synopsis sits with the reasons, not a click
-          away on the detail page. */}
-      {pick.overview ? (
+      {/* What it actually is: synopsis with the reasons, not a click away. */}
+      {overview ? (
         <p className="mt-5 max-w-[68ch] text-[15px] leading-relaxed text-foreground/90">
-          {pick.overview}
+          {overview}
         </p>
       ) : null}
 
-      {(pick.genres.length > 0 || pick.runtime != null) ? (
+      {genres.length > 0 || runtime != null ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          {[
-            pick.genres.join(" · "),
-            pick.runtime != null ? formatRuntime(pick.runtime) : null,
-          ]
+          {[genres.join(" · "), runtime != null ? formatRuntime(runtime) : null]
             .filter(Boolean)
             .join("  •  ")}
         </p>
@@ -393,17 +593,33 @@ export function FindClient({ simulate }: { simulate?: string }) {
           </Button>
         </div>
 
-        <Button variant="ghost" size="sm" className="gap-2" onClick={fetchPicks}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2"
+          onClick={() => void fetchPicks()}
+        >
           <RotateCcw aria-hidden="true" data-icon="inline-start" />
           New set
         </Button>
       </div>
 
-      {tier === 1 ? (
+      {remaining != null && remaining > 0 && interactions !== 0 ? (
         <p data-numeric className="mt-5 text-sm text-muted-foreground">
           {remaining} more {remaining === 1 ? "rating" : "ratings"} and Klyvi
           switches to your full taste profile.
         </p>
+      ) : null}
+
+      {rating ? (
+        <RatingDialog
+          title={rating.title}
+          year={rating.year}
+          posterPath={rating.posterPath}
+          open
+          onOpenChange={(o) => !o && setRating(null)}
+          onSubmit={submitRating}
+        />
       ) : null}
     </main>
   );
