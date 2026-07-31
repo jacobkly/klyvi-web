@@ -119,6 +119,22 @@ describe("TrackingDialog", () => {
     expect(onSave.mock.calls[0][0].notes).toBe(`${noted.notes} Done.`);
   });
 
+  it("hides Remove from library for a fresh, never-tracked entry", () => {
+    render(
+      <TrackingDialog
+        entry={parasite}
+        isNew
+        open
+        onOpenChange={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: "Remove from library" })
+    ).not.toBeInTheDocument();
+  });
+
   it("returns null notes when the field is cleared", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();

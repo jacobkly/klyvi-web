@@ -184,6 +184,17 @@
 }
 
 @layer utilities {
+  /* Hides the scrollbar on carousel tracks (MediaRail): the arrows and
+     snap points ARE the scroll affordance there, and a bar under a paged
+     row reads as a broken layout rather than a control. Scrolling itself
+     is untouched. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Grows the tap target to the 44px floor without changing how the control
      looks. Use on small icon-only controls (the poster quick-add, rail arrows,
      the progress stepper) where a 44px visual box would be too heavy.

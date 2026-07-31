@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { SectionHeader } from "./section-header";
 
 /**
- * Horizontal rail with scroll arrows. Arrows appear only when there is
- * actually something to scroll to and only on pointer devices, since touch
- * users swipe and would just lose poster width to buttons they never press.
- * The rail keeps its overflow scroll at every width (05-responsive.md §4).
+ * Paged carousel rail. The row always shows a whole number of cards (the
+ * rail owns item widths as exact fractions per breakpoint), the scrollbar is
+ * hidden, and the arrows slide one full row at a time with scroll-snap
+ * keeping pages aligned. Touch users swipe the same track; the arrows stay
+ * pointer-only since fingers never press them.
  */
 function MediaRail({
   title,
@@ -41,10 +42,12 @@ function MediaRail({
     return () => ro.disconnect();
   }, [update]);
 
-  function scrollBy(dir: 1 | -1) {
+  function page(dir: 1 | -1) {
     const el = ref.current;
     if (!el) return;
-    el.scrollBy({ left: dir * Math.round(el.clientWidth * 0.8), behavior: "smooth" });
+    // Items are exact fractions of (100% minus gaps), so one page is the
+    // visible width plus one gap; snap tidies any rounding.
+    el.scrollBy({ left: dir * (el.clientWidth + GAP_PX), behavior: "smooth" });
   }
 
   return (
@@ -59,7 +62,7 @@ function MediaRail({
             size="icon-sm"
             aria-label={`Scroll ${title} left`}
             disabled={!canLeft}
-            onClick={() => scrollBy(-1)}
+            onClick={() => page(-1)}
           >
             <ChevronLeft aria-hidden="true" className="size-4" strokeWidth={2} />
           </Button>
@@ -68,7 +71,7 @@ function MediaRail({
             size="icon-sm"
             aria-label={`Scroll ${title} right`}
             disabled={!canRight}
-            onClick={() => scrollBy(1)}
+            onClick={() => page(1)}
           >
             <ChevronRight aria-hidden="true" className="size-4" strokeWidth={2} />
           </Button>
@@ -78,12 +81,21 @@ function MediaRail({
       <div
         ref={ref}
         onScroll={update}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]"
+        className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [--rail-n:3] sm:[--rail-n:4] md:[--rail-n:5] lg:[--rail-n:6] xl:[--rail-n:7]"
       >
-        {children}
+        {React.Children.map(children, (child) =>
+          child == null ? null : (
+            <div className="w-[calc((100%-(var(--rail-n)-1)*0.75rem)/var(--rail-n))] shrink-0 snap-start">
+              {child}
+            </div>
+          )
+        )}
       </div>
     </section>
   );
 }
+
+/** Matches the track's gap-3. */
+const GAP_PX = 12;
 
 export { MediaRail };

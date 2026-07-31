@@ -68,12 +68,16 @@ export type TrackingEdit = {
  */
 function TrackingDialog({
   entry,
+  isNew = false,
   open,
   onOpenChange,
   onSave,
   onDelete,
 }: {
   entry: LibraryEntry;
+  /** True when nothing is committed yet: there is no entry to remove, so
+   *  the delete affordance would be a lie and is hidden. */
+  isNew?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (edit: TrackingEdit) => void;
@@ -318,6 +322,9 @@ function TrackingDialog({
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
+          {isNew ? (
+            <span aria-hidden="true" />
+          ) : (
           <AlertDialog>
             <AlertDialogTrigger
               render={
@@ -347,6 +354,7 @@ function TrackingDialog({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          )}
 
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>

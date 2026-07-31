@@ -374,12 +374,11 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
             {rails.rails.map((rail) => (
               <MediaRail key={rail.title} title={rail.title}>
                 {rail.items.map((m) => (
-                  <div
+                  <PosterCard
                     key={`${m.mediaType}-${m.tmdbId}`}
-                    className="w-28 shrink-0 snap-start sm:w-36 lg:w-40"
-                  >
-                    <PosterCard media={m} variant="below" />
-                  </div>
+                    media={m}
+                    variant="below"
+                  />
                 ))}
               </MediaRail>
             ))}

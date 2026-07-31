@@ -94,6 +94,11 @@ function DetailLayout({
   const [score, setScore] = React.useState<number | null>(null);
   const [progress, setProgress] = React.useState<number | null>(null);
   const [notes, setNotes] = React.useState<string | null>(null);
+  /** Status picked from the dropdown but not yet saved. The dialog opens
+   *  preset to it; Cancel throws it away, only Save commits. */
+  const [pendingStatus, setPendingStatus] = React.useState<TrackingStatus | null>(
+    null
+  );
   /** Internal media_id, learned from the tracking list or the first POST.
    *  PATCH and DELETE address this, so writes queue behind knowing it. */
   const [mediaId, setMediaId] = React.useState<number | null>(null);
@@ -129,11 +134,12 @@ function DetailLayout({
     };
   }, [trackable, user, media.tmdbId, media.mediaType, media.seasonNumber]);
 
-  /** The entry the dialog edits. */
+  /** The entry the dialog edits: committed state, with any pending status
+   *  the user just picked layered on top. */
   const entry: LibraryEntry = {
     ...media,
     mediaId: mediaId ?? 0,
-    status: status ?? "planning",
+    status: pendingStatus ?? status ?? "planning",
     score,
     progress,
     progressTotal: episodeCount ?? null,
@@ -143,8 +149,9 @@ function DetailLayout({
 
   /**
    * Picking a status is the one moment the user is already thinking about the
-   * title, so it opens the dialog rather than silently setting a value. It is
-   * also the only route to a score or progress from this page.
+   * title, so it opens the dialog preset to that status rather than writing
+   * anything. Nothing is tracked until Save: Cancel on a fresh title leaves
+   * the library untouched.
    */
   function changeStatus(next: TrackingStatus) {
     // Tracking needs an account; the catalog does not. Send the signed-out
@@ -153,35 +160,18 @@ function DetailLayout({
       router.push(`/signin?next=${encodeURIComponent(pathname)}`);
       return;
     }
-    const prev = status;
-    setStatus(next);
-    toast(STATUS_VERBS[next]);
+    setPendingStatus(next);
     setEditing(true);
-
-    const write =
-      mediaId != null
-        ? updateTracking(mediaId, { status: next })
-        : addTracking({
-            tmdbId: media.tmdbId,
-            mediaType: media.mediaType,
-            seasonNumber: media.seasonNumber,
-            status: next,
-          });
-    write
-      .then((saved) => setMediaId(saved.mediaId))
-      .catch(() => {
-        setStatus(prev);
-        setEditing(false);
-        toast("Could not update that. Try again");
-      });
   }
 
   function saveEdit(edit: TrackingEdit) {
     const prev = { status, score, progress, notes };
+    setPendingStatus(null);
     setStatus(edit.status);
     setScore(edit.score);
     setProgress(edit.progress);
     setNotes(edit.notes);
+    toast(STATUS_VERBS[edit.status]);
 
     const write =
       mediaId != null
@@ -372,8 +362,15 @@ function DetailLayout({
       {editing ? (
         <TrackingDialog
           entry={entry}
+          isNew={status == null}
           open
-          onOpenChange={(o) => !o && setEditing(false)}
+          onOpenChange={(o) => {
+            if (!o) {
+              // Cancel: the picked status was never committed, drop it.
+              setPendingStatus(null);
+              setEditing(false);
+            }
+          }}
           onSave={saveEdit}
           onDelete={() => {
             const prev = { status, score, progress, notes, mediaId };
