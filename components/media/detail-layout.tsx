@@ -37,6 +37,7 @@ import {
  */
 function DetailLayout({
   media,
+  trackable = true,
   episodeCount,
   backdropPath,
   posterPath,
@@ -53,6 +54,12 @@ function DetailLayout({
   extra,
 }: {
   media: TrackableSummary;
+  /**
+   * False on the series overview: only movies and seasons are trackable
+   * units, so the series page points at its seasons instead of offering a
+   * status control that would write a bogus entry.
+   */
+  trackable?: boolean;
   /** Total episodes, for the season progress field. */
   episodeCount?: number | null;
   backdropPath: string | null;
@@ -125,24 +132,30 @@ function DetailLayout({
                   </div>
                 )}
               </div>
-              <div className="mt-3 flex flex-col gap-2">
-                <StatusControl
-                  status={status}
-                  onChange={changeStatus}
-                  size="touch"
-                  className="w-full"
-                />
-                {status ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
+              {trackable ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  <StatusControl
+                    status={status}
+                    onChange={changeStatus}
+                    size="touch"
                     className="w-full"
-                    onClick={() => setEditing(true)}
-                  >
-                    {score != null ? `Your score: ${score}` : "Add a score"}
-                  </Button>
-                ) : null}
-              </div>
+                  />
+                  {status ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setEditing(true)}
+                    >
+                      {score != null ? `Your score: ${score}` : "Add a score"}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Track this show season by season below.
+                </p>
+              )}
             </div>
 
             {/* Title block: the Letterboxd hierarchy trick. */}

@@ -237,9 +237,15 @@ export function mapPoolEntry(w: WirePoolEntry): PoolEntry {
 
 // ---------- search ----------
 
+/** A search/list card plus what Explore's client-side filters need. */
+export type SearchMedia = MediaSummary & {
+  genreIds: number[];
+  voteAverage: number | null;
+};
+
 export type SearchResults = {
-  movies: MediaSummary[];
-  tv: MediaSummary[];
+  movies: SearchMedia[];
+  tv: SearchMedia[];
   people: PersonResult[];
 };
 
@@ -263,6 +269,8 @@ export function mapSearchResults(
         title: r.title ?? "Untitled",
         posterPath: orNull(r.poster_path),
         year: yearOf(r.release_date),
+        genreIds: r.genre_ids ?? [],
+        voteAverage: r.vote_average && r.vote_average > 0 ? r.vote_average : null,
       });
     } else if (kind === "tv") {
       out.tv.push({
@@ -272,6 +280,8 @@ export function mapSearchResults(
         title: r.name ?? "Untitled",
         posterPath: orNull(r.poster_path),
         year: yearOf(r.first_air_date),
+        genreIds: r.genre_ids ?? [],
+        voteAverage: r.vote_average && r.vote_average > 0 ? r.vote_average : null,
       });
     } else {
       out.people.push({

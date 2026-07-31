@@ -1,22 +1,49 @@
-import { DetailLayout } from "@/components/media/detail-layout";
-import {
-  MOCK_MOVIE,
-  formatDate,
-  formatRuntime,
-} from "@/lib/mock-media";
+import { cache } from "react";
 
-export async function generateMetadata() {
-  return { title: `${MOCK_MOVIE.title} · Klyvi` };
+import { DetailError, DetailNotFound } from "@/components/media/detail-states";
+import { DetailLayout } from "@/components/media/detail-layout";
+import { getMovie, getMovieCollection } from "@/lib/api/catalog";
+import { formatDate, formatRuntime } from "@/lib/mock-media";
+
+/** Deduped across generateMetadata and the page render. */
+const load = cache(async (id: number) => {
+  try {
+    return { movie: await getMovie(id), failed: false };
+  } catch {
+    return { movie: null, failed: true };
+  }
+});
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const { movie } = await load(Number(id));
+  return { title: movie ? `${movie.title} · Klyvi` : "Klyvi" };
 }
 
-/** Movie detail. Serves the mock payload for any id until the API client lands. */
-export default async function MoviePage() {
-  const m = MOCK_MOVIE;
+export default async function MoviePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const tmdbId = Number(id);
+  if (!Number.isFinite(tmdbId) || tmdbId <= 0) return <DetailNotFound />;
+
+  const { movie: m, failed } = await load(tmdbId);
+  if (failed) return <DetailError />;
+  if (!m) return <DetailNotFound />;
+
+  const collection = await getMovieCollection(tmdbId).catch(() => []);
+  const related = collection.filter((c) => c.tmdbId !== tmdbId);
 
   return (
     <DetailLayout
       media={{
-        mediaId: -1,
+        mediaId: 0,
         mediaType: "movie",
         tmdbId: m.tmdbId,
         title: m.title,
@@ -44,6 +71,11 @@ export default async function MoviePage() {
       ]}
       keywords={m.keywords}
       cast={m.cast}
+      related={
+        related.length > 0
+          ? { heading: "In the same collection", items: related }
+          : undefined
+      }
     />
   );
 }
