@@ -3,9 +3,14 @@
 import * as React from "react";
 import { Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 
+import Link from "next/link";
+
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { MediaRail } from "@/components/klyvi/media-rail";
+import { SectionHeader } from "@/components/klyvi/section-header";
+import { RankedRow } from "@/components/explore/ranked-row";
+import { placeholderRanking, TOP_100_NOTE } from "@/lib/mock-top100";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +65,10 @@ type ResultTab = "all" | "movie" | "tv" | "person";
 type RailsState =
   | { kind: "loading" }
   | { kind: "error" }
-  | { kind: "ready"; rails: { title: string; items: MediaSummary[] }[] };
+  | {
+      kind: "ready";
+      rails: { title: string; slug: string; items: MediaSummary[] }[];
+    };
 
 type SearchState =
   | { kind: "idle" }
@@ -107,10 +115,14 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
         setRails({
           kind: "ready",
           rails: [
-            { title: "Trending this week", items: trending },
-            { title: "Popular films", items: popular },
-            { title: "Top rated", items: top },
-            { title: "Popular TV", items: tv },
+            {
+              title: "Trending this week",
+              slug: "trending-films",
+              items: trending,
+            },
+            { title: "Popular films", slug: "popular-films", items: popular },
+            { title: "Top rated", slug: "top-rated-films", items: top },
+            { title: "Popular TV", slug: "popular-tv", items: tv },
           ],
         });
       })
@@ -372,7 +384,14 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
         ) : (
           <div className="mt-10 flex flex-col gap-10">
             {rails.rails.map((rail) => (
-              <MediaRail key={rail.title} title={rail.title}>
+              <MediaRail
+                key={rail.title}
+                title={rail.title}
+                action={{
+                  label: "View more",
+                  href: `/explore/browse/${rail.slug}`,
+                }}
+              >
                 {rail.items.map((m) => (
                   <PosterCard
                     key={`${m.mediaType}-${m.tmdbId}`}
@@ -382,6 +401,30 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
                 ))}
               </MediaRail>
             ))}
+
+            {/* Top 100: structure now, ranking when the backend ships it. */}
+            <section>
+              <SectionHeader
+                title="Top 100 films"
+                action={{ label: "View all", href: "/explore/top-100-films" }}
+                className="mb-4"
+              />
+              <ol className="flex flex-col gap-2">
+                {placeholderRanking(10).map((item) => (
+                  <RankedRow key={item.rank} item={item} />
+                ))}
+              </ol>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {TOP_100_NOTE}{" "}
+                <Link
+                  href="/explore/top-100-tv"
+                  className="text-violet-text hover:underline"
+                >
+                  Top 100 series
+                </Link>{" "}
+                waits on the same list.
+              </p>
+            </section>
           </div>
         )
       ) : (

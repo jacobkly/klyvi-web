@@ -56,24 +56,32 @@ export async function getMovieCollection(
     }));
 }
 
-/** TMDB list passthrough for browse rails. */
+/**
+ * TMDB list passthrough for browse rails and pages. The API pins page 1
+ * server-side today; the client sends `page` anyway so pagination lights
+ * up the moment the passthrough honors it (contract item, phase 9).
+ */
 export async function getMovieList(
   type: ListType,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  page = 1
 ): Promise<MediaSummary[]> {
-  const w = await apiFetch<WireSearchResponse>(`/v1/movies/?type=${type}`, {
-    signal,
-  });
+  const w = await apiFetch<WireSearchResponse>(
+    `/v1/movies/?type=${type}&page=${page}`,
+    { signal }
+  );
   return mapSearchResults(w, "movie").movies;
 }
 
 export async function getTvList(
   type: ListType,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  page = 1
 ): Promise<MediaSummary[]> {
-  const w = await apiFetch<WireSearchResponse>(`/v1/tv/?type=${type}`, {
-    signal,
-  });
+  const w = await apiFetch<WireSearchResponse>(
+    `/v1/tv/?type=${type}&page=${page}`,
+    { signal }
+  );
   return mapSearchResults(w, "tv").tv;
 }
 
