@@ -56,6 +56,12 @@
   /* Klyvi additions (see docs/planning/03-tokens.md) */
   --radius-art: var(--art-radius);
   --color-violet-text: var(--violet-text);
+  --color-theme-violet: var(--theme-violet);
+  --color-theme-blue: var(--theme-blue);
+  --color-theme-green: var(--theme-green);
+  --color-theme-orange: var(--theme-orange);
+  --color-theme-pink: var(--theme-pink);
+  --color-theme-red: var(--theme-red);
   --color-status-watching: var(--status-watching);
   --color-status-completed: var(--status-completed);
   --color-status-planning: var(--status-planning);
@@ -103,6 +109,14 @@
   --status-planning: oklch(0.552 0.016 285.938);
   --status-paused: oklch(0.52 0.12 75);
   --status-dropped: oklch(0.55 0.2 25);
+  /* Accent theme previews (settings > appearance). Preview swatches only
+     until user-selectable theming ships; the app accent stays violet. */
+  --theme-violet: oklch(0.541 0.281 293.009);
+  --theme-blue: oklch(0.585 0.2 260);
+  --theme-green: oklch(0.6 0.15 162);
+  --theme-orange: oklch(0.646 0.16 60);
+  --theme-pink: oklch(0.656 0.211 354);
+  --theme-red: oklch(0.577 0.215 27);
   /* Motion */
   --dur-press: 120ms;
   --dur-base: 200ms;

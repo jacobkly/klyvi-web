@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useLocalAvatar } from "@/lib/local-profile";
 import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,6 +32,9 @@ import {
  */
 function UserMenu() {
   const { user, profile, loading, signOut } = useSession();
+  // Device-local upload wins until the API can store one.
+  const localAvatar = useLocalAvatar();
+  const avatarSrc = localAvatar ?? profile?.avatarUrl ?? null;
 
   if (loading) {
     return <div aria-hidden="true" className="size-8" />;
@@ -58,6 +62,7 @@ function UserMenu() {
         className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
       >
         <Avatar className="size-8">
+          {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
           <AvatarFallback className="text-xs">{initial}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
