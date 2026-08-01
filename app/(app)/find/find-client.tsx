@@ -27,6 +27,7 @@ import { recordInteraction } from "@/lib/api/interactions";
 import { getFeed } from "@/lib/api/reco";
 import { addTracking } from "@/lib/api/tracking";
 import { listInteractions } from "@/lib/api/interactions";
+import { queueSignal } from "@/lib/interactions-batch";
 import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
 import { formatRuntime, type MovieDetail } from "@/lib/mock-media";
 import { watchWindowPhrase } from "@/lib/time-of-day";
@@ -126,6 +127,21 @@ export function FindClient({ simulate }: { simulate?: string }) {
   const remaining =
     interactions != null ? Math.max(0, TIER_THRESHOLD - interactions) : null;
 
+  // A pick the user is actually looking at is an impression; the batcher
+  // dedupes and holds them, so stepping back and forth costs nothing.
+  const sawPick = React.useCallback(
+    (p: Scored | undefined) => {
+      if (!p || mock) return;
+      queueSignal({
+        tmdbId: p.tmdbId,
+        mediaType: "movie",
+        kind: "impression",
+        source: "feed",
+      });
+    },
+    [mock]
+  );
+
   async function hydrate(pick: Scored | undefined) {
     if (!pick || pick.mediaType !== "movie") return;
     if (detailsRef.current.has(pick.tmdbId)) return;
@@ -183,6 +199,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
           : p;
       });
       setPhase({ kind: "ready", picks, index: 0 });
+      sawPick(picks[0]);
       void hydrate(picks[0]);
       void hydrate(picks[1]);
     } catch {
@@ -195,6 +212,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
     const next = phase.index + dir;
     if (next < 0 || next >= phase.picks.length) return;
     setPhase({ ...phase, index: next });
+    sawPick(phase.picks[next]);
     void hydrate(phase.picks[next + 1]);
   }
 
@@ -527,6 +545,15 @@ export function FindClient({ simulate }: { simulate?: string }) {
             <Link
               href={`/movie/${pick.tmdbId}`}
               className={buttonVariants({ variant: "outline", size: "touch" })}
+              onClick={() => {
+                if (!mock)
+                  queueSignal({
+                    tmdbId: pick.tmdbId,
+                    mediaType: "movie",
+                    kind: "clicked",
+                    source: "feed",
+                  });
+              }}
             >
               More about it
             </Link>

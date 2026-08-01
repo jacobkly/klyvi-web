@@ -12,6 +12,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listInteractions } from "@/lib/api/interactions";
 import { getFeed } from "@/lib/api/reco";
+import { queueSignal } from "@/lib/interactions-batch";
 import { listTracking } from "@/lib/api/tracking";
 import { mockFeed } from "@/lib/mock-reco";
 import { MOCK_LIBRARY } from "@/lib/mock-library";
@@ -107,6 +108,20 @@ export function HomeClient({ simulate }: { simulate?: string }) {
   }, [mock]);
 
   React.useEffect(load, [load]);
+
+  // The two picks on screen are impressions; batched and deduped in the
+  // signal queue, so a revisit or re-render cannot double-count.
+  React.useEffect(() => {
+    if (mock || state.kind !== "ready") return;
+    for (const p of (state.data.picks ?? []).slice(0, 2)) {
+      queueSignal({
+        tmdbId: p.tmdbId,
+        mediaType: "movie",
+        kind: "impression",
+        source: "feed",
+      });
+    }
+  }, [mock, state]);
 
   function dismissNudge() {
     setNudgeDismissed(true);
@@ -229,6 +244,15 @@ export function HomeClient({ simulate }: { simulate?: string }) {
                   <Link
                     key={p.mediaId}
                     href={`/movie/${p.tmdbId}`}
+                    onClick={() => {
+                      if (!mock)
+                        queueSignal({
+                          tmdbId: p.tmdbId,
+                          mediaType: "movie",
+                          kind: "clicked",
+                          source: "feed",
+                        });
+                    }}
                     className="group flex items-center gap-4 rounded-lg bg-card p-3 ring-1 ring-foreground/10 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/30"
                   >
                     <div className="relative aspect-[2/3] w-14 shrink-0 overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
