@@ -1,7 +1,6 @@
-import { StatsClient } from "./stats-client";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Your stats · Klyvi" };
-
-export default function StatsPage() {
-  return <StatsClient />;
+/** Stats moved into the profile. The old URL keeps working. */
+export default function LegacyStatsPage() {
+  redirect("/profile/stats");
 }

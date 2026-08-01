@@ -29,7 +29,7 @@ describe("BottomTabBar", () => {
   });
 
   it("treats subroutes as active", () => {
-    mockUsePathname.mockReturnValue("/library/stats");
+    mockUsePathname.mockReturnValue("/library/favorites");
     render(<BottomTabBar />);
     expect(screen.getByRole("link", { name: "Library" })).toHaveAttribute(
       "aria-current",

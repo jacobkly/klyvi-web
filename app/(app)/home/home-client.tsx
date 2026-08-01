@@ -392,7 +392,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
               ))}
             </dl>
             <Link
-              href="/library/stats"
+              href="/profile/stats"
               className="tap-target mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-text hover:underline"
             >
               <Sparkles

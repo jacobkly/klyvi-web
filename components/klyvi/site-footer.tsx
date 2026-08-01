@@ -9,7 +9,7 @@ const COLUMNS: { heading: string; links: [string, string][] }[] = [
       ["Find next", "/find"],
       ["Library", "/library"],
       ["Explore", "/explore"],
-      ["Your stats", "/library/stats"],
+      ["Your stats", "/profile/stats"],
     ],
   },
   {
