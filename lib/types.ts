@@ -77,6 +77,8 @@ export type LibraryEntry = TrackableSummary & {
   progressTotal: number | null;
   /** Private free text; null when empty. */
   notes: string | null;
+  /** Marked for the favorites shelf. */
+  favorite: boolean;
   updatedAt: string;
 };
 
@@ -100,7 +102,59 @@ export type UserProfile = {
   usernameChangedAt: string | null;
   bio: string | null;
   avatarUrl: string | null;
+  bannerUrl: string | null;
+  /** "YYYY-MM-DD" or null. */
+  birthday: string | null;
+  /** Opaque client-owned preferences blob. `{}` for a fresh user. */
+  settings: Record<string, unknown>;
   createdAt: string;
+};
+
+/** One row of a public Top 100 ranking (GET /v1/rankings/{movies,tv}). */
+export type Ranking = {
+  rank: number;
+  tmdbId: number;
+  /** Internal catalog id, or null when not yet cached (always null for TV). */
+  mediaId: number | null;
+  title: string;
+  year: number | null;
+  posterPath: string | null;
+  genres: string[];
+  /** TMDB vote average, 0..10, or null. */
+  score: number | null;
+};
+
+/** Aggregated profile stats (GET /v1/users/me/stats). */
+export type UserStats = {
+  kpis: {
+    totalFilms: number;
+    totalSeasons: number;
+    episodesWatched: number;
+    daysWatched: number;
+    daysPlanned: number;
+    meanScore: number;
+    scoreStddev: number;
+  };
+  scoreDistribution: { band: string; titles: number; hours: number }[];
+  releaseYears: { year: number; titles: number; hours: number }[];
+  watchYears: { year: number; titles: number; hours: number }[];
+  genres: { name: string; count: number; meanScore: number; hours: number }[];
+  formats: { label: string; pct: number }[];
+  countries: { label: string; pct: number }[];
+  activity: { date: string; count: number }[];
+};
+
+export type ImportStatus = "pending" | "running" | "done" | "failed";
+
+/** An async import job (POST /v1/imports, GET /v1/imports/{id}). */
+export type ImportJob = {
+  id: string;
+  source: string;
+  status: ImportStatus;
+  total: number;
+  matched: number;
+  unmatched: number;
+  error: string | null;
 };
 
 export type InteractionKind =

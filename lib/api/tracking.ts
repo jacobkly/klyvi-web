@@ -10,7 +10,7 @@ import type { LibraryEntry, MediaType, TrackingStatus } from "@/lib/types";
 
 import { browserFetch } from "./http";
 import { mapTrackingEntry } from "./map";
-import type { WireTrackingEntry } from "./wire";
+import type { WireAffected, WireTrackingEntry } from "./wire";
 
 export async function listTracking(filters?: {
   mediaType?: MediaType;
@@ -34,6 +34,7 @@ export async function addTracking(input: {
   score?: number | null;
   episodeProgress?: number | null;
   notes?: string | null;
+  favorite?: boolean;
 }): Promise<LibraryEntry> {
   const row = await browserFetch<WireTrackingEntry>("/v1/tracking", {
     method: "POST",
@@ -46,6 +47,7 @@ export async function addTracking(input: {
       score: input.score ?? null,
       episode_progress: input.episodeProgress ?? null,
       notes: input.notes ?? null,
+      favorite: input.favorite,
     },
   });
   return mapTrackingEntry(row);
@@ -58,6 +60,7 @@ export async function updateTracking(
     score?: number | null;
     episodeProgress?: number | null;
     notes?: string | null;
+    favorite?: boolean;
   }
 ): Promise<LibraryEntry> {
   const row = await browserFetch<WireTrackingEntry>(
@@ -69,6 +72,7 @@ export async function updateTracking(
         score: patch.score,
         episode_progress: patch.episodeProgress,
         notes: patch.notes,
+        favorite: patch.favorite,
       },
     }
   );
@@ -79,4 +83,24 @@ export async function deleteTracking(mediaId: number): Promise<void> {
   await browserFetch<{ deleted: boolean }>(`/v1/tracking/${mediaId}`, {
     method: "DELETE",
   });
+}
+
+/** Danger zone: clears every score in one media-type scope. */
+export async function resetScores(mediaType: MediaType): Promise<number> {
+  const r = await browserFetch<WireAffected>("/v1/tracking/reset-scores", {
+    method: "POST",
+    body: { media_type: mediaType },
+  });
+  return r.affected;
+}
+
+/** Danger zone: deletes every entry in one media-type scope. */
+export async function deleteTrackingScope(
+  mediaType: MediaType
+): Promise<number> {
+  const r = await browserFetch<WireAffected>("/v1/tracking", {
+    method: "DELETE",
+    body: { media_type: mediaType },
+  });
+  return r.affected;
 }

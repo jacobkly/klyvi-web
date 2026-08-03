@@ -3,11 +3,12 @@
  * server components and the browser alike.
  */
 
-import type { MediaSummary } from "@/lib/types";
+import type { MediaSummary, Ranking } from "@/lib/types";
 
 import { apiFetch } from "./http";
 import {
   mapMovie,
+  mapRanking,
   mapSearchResults,
   mapTvSeason,
   mapTvSeries,
@@ -16,6 +17,7 @@ import {
 import type {
   WireCollectionMovie,
   WireMovie,
+  WireRanking,
   WireSearchResponse,
   WireTvSeason,
   WireTvSeries,
@@ -83,6 +85,18 @@ export async function getTvList(
     { signal }
   );
   return mapSearchResults(w, "tv").tv;
+}
+
+/** Public Top 100 ranking. `kind` picks the movie or TV list. */
+export async function getRankings(
+  kind: "movies" | "tv",
+  signal?: AbortSignal
+): Promise<Ranking[]> {
+  const rows = await apiFetch<WireRanking[] | null>(
+    `/v1/rankings/${kind}`,
+    { signal }
+  );
+  return (rows ?? []).map(mapRanking);
 }
 
 export async function getTvSeries(

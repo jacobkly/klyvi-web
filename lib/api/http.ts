@@ -61,15 +61,25 @@ async function doFetch(
   token: string | null | undefined
 ): Promise<Response> {
   const { body, signal, headers, method = "GET" } = opts;
+  // FormData carries its own multipart boundary: never stringify it and
+  // never set Content-Type, or the boundary is lost and the upload fails.
+  const isForm = typeof FormData !== "undefined" && body instanceof FormData;
   const init: RequestInit = {
     method,
     headers: {
       Accept: "application/json",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(body !== undefined && !isForm
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(headers as Record<string, string> | undefined),
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body:
+      body === undefined
+        ? undefined
+        : isForm
+          ? (body as FormData)
+          : JSON.stringify(body),
     signal,
     cache: "no-store",
   };

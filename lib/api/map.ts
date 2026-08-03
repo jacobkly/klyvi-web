@@ -11,22 +11,29 @@ import type {
 } from "@/lib/mock-media";
 import type { PoolEntry } from "@/lib/mock-onboarding";
 import type {
+  ImportJob,
+  ImportStatus,
   Interaction,
   InteractionKind,
   LibraryEntry,
   MediaSummary,
   PersonResult,
+  Ranking,
   Reason,
   Scored,
   TrackingStatus,
   UserProfile,
+  UserStats,
 } from "@/lib/types";
 import type {
+  WireImportJob,
   WireInteraction,
   WireMovie,
   WirePoolEntry,
+  WireRanking,
   WireScored,
   WireSearchResponse,
+  WireStats,
   WireTrackingEntry,
   WireTvSeason,
   WireTvSeries,
@@ -94,6 +101,7 @@ export function mapTrackingEntry(w: WireTrackingEntry): LibraryEntry {
     // call does. Progress renders bare until then.
     progressTotal: null,
     notes: w.notes,
+    favorite: w.favorite ?? false,
     updatedAt: w.updated_at,
   };
 }
@@ -219,7 +227,73 @@ export function mapUser(w: WireUser): UserProfile {
     usernameChangedAt: w.username_changed_at ?? null,
     bio: orNull(w.bio),
     avatarUrl: orNull(w.avatar_url),
+    bannerUrl: orNull(w.banner_url),
+    birthday: w.birthday ?? null,
+    settings: w.settings ?? {},
     createdAt: w.created_at,
+  };
+}
+
+// ---------- rankings / stats / imports ----------
+
+export function mapRanking(w: WireRanking): Ranking {
+  return {
+    rank: w.rank,
+    tmdbId: w.tmdb_id,
+    mediaId: w.media_id ?? null,
+    title: w.title,
+    year: w.year && w.year > 0 ? w.year : null,
+    posterPath: orNull(w.poster_path),
+    genres: w.genres ?? [],
+    score: w.score != null && w.score > 0 ? w.score : null,
+  };
+}
+
+export function mapStats(w: WireStats): UserStats {
+  const k = w.kpis;
+  return {
+    kpis: {
+      totalFilms: k.total_films,
+      totalSeasons: k.total_seasons,
+      episodesWatched: k.episodes_watched,
+      daysWatched: k.days_watched,
+      daysPlanned: k.days_planned,
+      meanScore: k.mean_score,
+      scoreStddev: k.score_stddev,
+    },
+    scoreDistribution: w.score_distribution ?? [],
+    releaseYears: w.release_years ?? [],
+    watchYears: w.watch_years ?? [],
+    genres: (w.genres ?? []).map((g) => ({
+      name: g.name,
+      count: g.count,
+      meanScore: g.mean_score,
+      hours: g.hours,
+    })),
+    formats: w.formats ?? [],
+    countries: w.countries ?? [],
+    activity: w.activity ?? [],
+  };
+}
+
+const IMPORT_STATUSES = new Set<ImportStatus>([
+  "pending",
+  "running",
+  "done",
+  "failed",
+]);
+
+export function mapImportJob(w: WireImportJob): ImportJob {
+  return {
+    id: w.id,
+    source: w.source,
+    status: IMPORT_STATUSES.has(w.status as ImportStatus)
+      ? (w.status as ImportStatus)
+      : "pending",
+    total: w.total,
+    matched: w.matched,
+    unmatched: w.unmatched,
+    error: w.error ?? null,
   };
 }
 

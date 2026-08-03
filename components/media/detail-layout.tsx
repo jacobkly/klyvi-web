@@ -144,6 +144,7 @@ function DetailLayout({
     progress,
     progressTotal: episodeCount ?? null,
     notes,
+    favorite: false,
     updatedAt: "",
   };
 

@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   mapMovie,
   mapPoolEntry,
+  mapRanking,
   mapScored,
   mapSearchResults,
+  mapStats,
   mapTrackingEntry,
   mapTvSeries,
   mapUser,
@@ -12,6 +14,7 @@ import {
 import type {
   WireMovie,
   WireScored,
+  WireStats,
   WireTrackingEntry,
   WireTvSeries,
 } from "./wire";
@@ -297,7 +300,7 @@ describe("mapTvSeries", () => {
 });
 
 describe("mapUser + mapPoolEntry", () => {
-  it("maps the user row", () => {
+  it("maps the user row, defaulting a null settings blob to {}", () => {
     const u = mapUser({
       id: "uuid-1",
       username: "user_abc12345",
@@ -305,11 +308,32 @@ describe("mapUser + mapPoolEntry", () => {
       bio: null,
       avatar_url: null,
       banner_url: null,
+      birthday: null,
+      settings: null,
       is_active: true,
       created_at: "2026-07-01T00:00:00Z",
     });
     expect(u.username).toBe("user_abc12345");
     expect(u.avatarUrl).toBeNull();
+    expect(u.birthday).toBeNull();
+    expect(u.settings).toEqual({});
+  });
+
+  it("carries through birthday and the settings blob", () => {
+    const u = mapUser({
+      id: "u2",
+      username: "jacob",
+      username_changed_at: "2026-07-20T00:00:00Z",
+      bio: "arthouse",
+      avatar_url: "https://cdn/a.jpg",
+      banner_url: null,
+      birthday: "1999-04-12",
+      settings: { themeAccent: "blue", textSize: "large" },
+      is_active: true,
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    expect(u.birthday).toBe("1999-04-12");
+    expect(u.settings).toEqual({ themeAccent: "blue", textSize: "large" });
   });
 
   it("maps the verbatim pool entry from API.md", () => {
@@ -327,6 +351,82 @@ describe("mapUser + mapPoolEntry", () => {
       releaseYear: 1994,
       dimension: "auteur",
     });
+  });
+});
+
+describe("mapRanking", () => {
+  it("maps a ranking row from API.md", () => {
+    const r = mapRanking({
+      rank: 1,
+      tmdb_id: 238,
+      media_id: 12,
+      title: "The Godfather",
+      year: 1972,
+      poster_path: "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
+      genres: ["Drama", "Crime"],
+      score: 8.7,
+    });
+    expect(r).toEqual({
+      rank: 1,
+      tmdbId: 238,
+      mediaId: 12,
+      title: "The Godfather",
+      year: 1972,
+      posterPath: "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
+      genres: ["Drama", "Crime"],
+      score: 8.7,
+    });
+  });
+
+  it("null media_id (uncached / TV) and null genres survive", () => {
+    const r = mapRanking({
+      rank: 4,
+      tmdb_id: 999,
+      media_id: null,
+      title: "Some Series",
+      year: null,
+      poster_path: null,
+      genres: null,
+      score: null,
+    });
+    expect(r.mediaId).toBeNull();
+    expect(r.genres).toEqual([]);
+    expect(r.score).toBeNull();
+  });
+});
+
+describe("mapStats", () => {
+  it("camel-cases kpis and defaults null arrays to []", () => {
+    const wire: WireStats = {
+      kpis: {
+        total_films: 284,
+        total_seasons: 61,
+        episodes_watched: 743,
+        days_watched: 38.4,
+        days_planned: 6.2,
+        mean_score: 78.6,
+        score_stddev: 12.4,
+      },
+      score_distribution: [{ band: "91-100", titles: 39, hours: 88 }],
+      release_years: null,
+      watch_years: [{ year: 2025, titles: 88, hours: 0 }],
+      genres: [{ name: "Drama", count: 96, mean_score: 81.2, hours: 214 }],
+      formats: [{ label: "Films", pct: 74 }],
+      countries: null,
+      activity: [{ date: "2026-08-03", count: 3 }],
+    };
+    const s = mapStats(wire);
+    expect(s.kpis.totalFilms).toBe(284);
+    expect(s.kpis.scoreStddev).toBe(12.4);
+    expect(s.releaseYears).toEqual([]);
+    expect(s.countries).toEqual([]);
+    expect(s.genres[0]).toEqual({
+      name: "Drama",
+      count: 96,
+      meanScore: 81.2,
+      hours: 214,
+    });
+    expect(s.activity[0]).toEqual({ date: "2026-08-03", count: 3 });
   });
 });
 

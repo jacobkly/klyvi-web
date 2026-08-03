@@ -115,6 +115,7 @@ export type WireTrackingEntry = {
   score: number | null;
   episode_progress: number | null;
   notes: string | null;
+  favorite: boolean;
   updated_at: string;
   // Display fields joined from the catalog; null when not yet cached.
   tmdb_id: number | null;
@@ -125,6 +126,9 @@ export type WireTrackingEntry = {
   season_number: number | null;
   season_name: string | null;
 };
+
+/** POST /v1/tracking/reset-scores and DELETE /v1/tracking. */
+export type WireAffected = { affected: number };
 
 // ---------- interactions ----------
 
@@ -165,9 +169,61 @@ export type WireUser = {
   bio: string | null;
   avatar_url: string | null;
   banner_url: string | null;
+  /** "YYYY-MM-DD" or null. */
+  birthday: string | null;
+  /** Opaque client-owned blob; `{}` for a fresh user. */
+  settings: Record<string, unknown> | null;
   is_active: boolean;
   created_at: string;
 };
+
+// ---------- rankings / stats / imports ----------
+
+export type WireRanking = {
+  rank: number;
+  tmdb_id: number;
+  media_id: number | null;
+  title: string;
+  year: number | null;
+  poster_path: string | null;
+  genres: string[] | null;
+  score: number | null;
+};
+
+export type WireStats = {
+  kpis: {
+    total_films: number;
+    total_seasons: number;
+    episodes_watched: number;
+    days_watched: number;
+    days_planned: number;
+    mean_score: number;
+    score_stddev: number;
+  };
+  score_distribution: { band: string; titles: number; hours: number }[] | null;
+  release_years: { year: number; titles: number; hours: number }[] | null;
+  watch_years: { year: number; titles: number; hours: number }[] | null;
+  genres:
+    | { name: string; count: number; mean_score: number; hours: number }[]
+    | null;
+  formats: { label: string; pct: number }[] | null;
+  countries: { label: string; pct: number }[] | null;
+  activity: { date: string; count: number }[] | null;
+};
+
+export type WireImportJob = {
+  id: string;
+  source: string;
+  status: string;
+  total: number;
+  matched: number;
+  unmatched: number;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WireBatchResult = { accepted: number; rejected: number };
 
 /** GET /v1/users/username-available. Reason is null when available. */
 export type WireUsernameAvailability = {
