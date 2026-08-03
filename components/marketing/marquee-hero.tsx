@@ -3,6 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 
+import { Reveal } from "@/components/marketing/reveal";
 import { buttonVariants } from "@/components/ui/button";
 import { getMovieList } from "@/lib/api/catalog";
 import { TAGLINE_CLAIM } from "@/lib/marketing-claims";
@@ -62,46 +63,45 @@ export function MarqueeHero() {
   ));
 
   return (
-    <section className="relative flex flex-col items-center overflow-hidden px-4 pt-24 pb-10 text-center sm:pt-28">
+    <section className="relative flex flex-col items-center overflow-hidden px-4 pt-24 pb-12 text-center sm:pt-28">
       <div className="z-10 flex flex-col items-center">
-        <span className="rise mb-5 inline-block rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm">
-          {TAGLINE_CLAIM}
-        </span>
+        <Reveal>
+          <span className="mb-5 inline-block rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm">
+            {TAGLINE_CLAIM}
+          </span>
+        </Reveal>
 
-        <h1
-          className="rise max-w-3xl text-4xl font-semibold tracking-tight text-balance text-foreground sm:text-6xl"
-          style={{ animationDelay: "0.06s" }}
-        >
-          {TITLE}
-        </h1>
+        <Reveal delay={0.08}>
+          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance text-foreground sm:text-6xl">
+            {TITLE}
+          </h1>
+        </Reveal>
 
-        <p
-          className="rise mt-5 max-w-xl text-base text-muted-foreground sm:text-lg"
-          style={{ animationDelay: "0.14s" }}
-        >
-          Klyvi learns what you actually like and tells you what to watch
-          right now, with the reason it picked it.
-        </p>
+        <Reveal delay={0.16}>
+          <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
+            Klyvi learns what you actually like and tells you what to watch
+            right now, with the reason it picked it.
+          </p>
+        </Reveal>
 
-        <div
-          className="rise mt-8 flex items-center gap-4"
-          style={{ animationDelay: "0.22s" }}
-        >
-          <Link href="/signup" className={buttonVariants({ size: "touch" })}>
-            Get started
-          </Link>
-          <Link
-            href="/signin"
-            className="tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-          >
-            Sign in
-          </Link>
-        </div>
+        <Reveal delay={0.24}>
+          <div className="mt-8 flex items-center justify-center gap-4">
+            <Link href="/signup" className={buttonVariants({ size: "touch" })}>
+              Get started
+            </Link>
+            <Link
+              href="/signin"
+              className="tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+            >
+              Sign in
+            </Link>
+          </div>
+        </Reveal>
       </div>
 
       {/* The poster strip, faded at both edges. The mask is functional, not
           decoration: it stops the loop ending in a hard vertical cut. */}
-      <div className="relative mt-14 w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+      <div className="relative mt-24 w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] sm:mt-28">
         <div className="marquee-track flex w-max">{items}</div>
       </div>
     </section>

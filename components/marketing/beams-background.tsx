@@ -3,15 +3,19 @@
 import * as React from "react";
 
 /**
- * Ambient projector-beam backdrop, landing page only. Slow violet light
- * streaks drifting through the dark: the Dark Room idea made literal, a
- * projector throwing light across a black room. This is marketing chrome
- * and never appears inside the app, where the posters are the only light
- * source.
+ * Ambient projector-beam backdrop, landing page only: slow violet light
+ * streaks drifting through the dark, the Dark Room idea made literal.
+ * Never appears inside the app, where posters are the only light source.
  *
- * Honors reduced motion by painting a single static frame instead of
- * animating, so the look survives without the drift. Beam color is the
- * violet accent hue, kept low-opacity so nothing competes with content.
+ * Performance note that is really a correctness note: the reference this
+ * came from set `ctx.filter = "blur(35px)"` inside the frame loop, which
+ * drops canvas onto a software path on plenty of Windows machines and the
+ * loop never finishes a frame (the beams just do not appear). So no canvas
+ * filters here at all: each beam is a soft gradient, and the one blur is
+ * CSS on the canvas element, composited on the GPU.
+ *
+ * Like the hero marquee, this is a disclosed reduced-motion exception:
+ * slow linear drift, no flashing, landing page only.
  */
 
 interface Beam {
@@ -27,23 +31,23 @@ interface Beam {
   pulseSpeed: number;
 }
 
-const BEAM_COUNT = 16;
-// Centered on the violet accent hue (~293 in oklch), spread for depth.
-const HUE_BASE = 282;
-const HUE_SPREAD = 26;
+const BEAM_COUNT = 22;
+// An HSL band around the violet accent (oklch hue ~293 sits near hsl 263).
+const HUE_BASE = 262;
+const HUE_SPREAD = 28;
 
 function createBeam(width: number, height: number): Beam {
   return {
     x: Math.random() * width * 1.5 - width * 0.25,
     y: Math.random() * height * 1.5 - height * 0.25,
-    width: 60 + Math.random() * 80,
-    length: height * 2.5,
+    width: 90 + Math.random() * 110,
+    length: height * 2.2,
     angle: -35 + Math.random() * 10,
-    speed: 0.5 + Math.random() * 0.9,
-    opacity: 0.1 + Math.random() * 0.12,
+    speed: 0.4 + Math.random() * 0.8,
+    opacity: 0.12 + Math.random() * 0.12,
     hue: HUE_BASE + Math.random() * HUE_SPREAD,
     pulse: Math.random() * Math.PI * 2,
-    pulseSpeed: 0.02 + Math.random() * 0.025,
+    pulseSpeed: 0.015 + Math.random() * 0.02,
   };
 }
 
@@ -56,13 +60,26 @@ export function BeamsBackground() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const reduced =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     let beams: Beam[] = [];
     let width = 0;
     let height = 0;
+
+    const resize = () => {
+      // Cap the pixel ratio: a blurred backdrop gains nothing from retina
+      // resolution and the fill cost doubles per step.
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      // setTransform, not scale, so repeated resizes do not compound.
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      beams = Array.from({ length: BEAM_COUNT }, () =>
+        createBeam(width, height)
+      );
+    };
 
     function drawBeam(c: CanvasRenderingContext2D, beam: Beam) {
       c.save();
@@ -70,48 +87,25 @@ export function BeamsBackground() {
       c.rotate((beam.angle * Math.PI) / 180);
       const a = beam.opacity * (0.8 + Math.sin(beam.pulse) * 0.2);
       const g = c.createLinearGradient(0, 0, 0, beam.length);
-      g.addColorStop(0, `oklch(0.7 0.16 ${beam.hue} / 0)`);
-      g.addColorStop(0.15, `oklch(0.7 0.16 ${beam.hue} / ${a * 0.5})`);
-      g.addColorStop(0.5, `oklch(0.7 0.16 ${beam.hue} / ${a})`);
-      g.addColorStop(0.85, `oklch(0.7 0.16 ${beam.hue} / ${a * 0.5})`);
-      g.addColorStop(1, `oklch(0.7 0.16 ${beam.hue} / 0)`);
+      g.addColorStop(0, `hsla(${beam.hue}, 70%, 62%, 0)`);
+      g.addColorStop(0.2, `hsla(${beam.hue}, 70%, 62%, ${a * 0.5})`);
+      g.addColorStop(0.5, `hsla(${beam.hue}, 70%, 62%, ${a})`);
+      g.addColorStop(0.8, `hsla(${beam.hue}, 70%, 62%, ${a * 0.5})`);
+      g.addColorStop(1, `hsla(${beam.hue}, 70%, 62%, 0)`);
       c.fillStyle = g;
       c.fillRect(-beam.width / 2, 0, beam.width, beam.length);
       c.restore();
     }
 
-    function render(c: CanvasRenderingContext2D) {
-      c.clearRect(0, 0, width, height);
-      c.filter = "blur(32px)";
-      for (const beam of beams) drawBeam(c, beam);
-    }
-
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      // setTransform (not scale) so repeated resizes do not compound.
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      beams = Array.from({ length: BEAM_COUNT }, () =>
-        createBeam(width, height)
-      );
-      if (reduced) render(ctx);
-    };
-
     let raf = 0;
     const tick = () => {
       ctx.clearRect(0, 0, width, height);
-      ctx.filter = "blur(32px)";
       for (const beam of beams) {
         beam.y -= beam.speed;
         beam.pulse += beam.pulseSpeed;
         if (beam.y + beam.length < -100) {
           Object.assign(beam, createBeam(width, height), {
-            y: height + 120,
+            y: height + 100,
           });
         }
         drawBeam(ctx, beam);
@@ -121,7 +115,7 @@ export function BeamsBackground() {
 
     resize();
     window.addEventListener("resize", resize);
-    if (!reduced) raf = requestAnimationFrame(tick);
+    raf = requestAnimationFrame(tick);
 
     return () => {
       window.removeEventListener("resize", resize);
@@ -131,7 +125,10 @@ export function BeamsBackground() {
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 bg-background">
-      <canvas ref={canvasRef} className="absolute inset-0 [filter:blur(8px)]" />
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 [filter:blur(26px)]"
+      />
       {/* Sink the streaks into the page top and bottom rather than letting
           them end at a hard edge. */}
       <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-transparent to-background/80" />

@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 
 import { NeighbourPick, PickHero } from "@/components/find/pick-stage";
+import { LandingHeader } from "@/components/marketing/landing-header";
+import { Reveal } from "@/components/marketing/reveal";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { Button } from "@/components/ui/button";
 import { getMovie } from "@/lib/api/catalog";
@@ -83,17 +85,15 @@ export function FindNextDemo() {
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-16">
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          This is the actual Find Next screen
-        </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Five sample picks from a taste profile that loves slow burns. Step
-          through them; nothing here needs an account.
-        </p>
-      </div>
+      <Reveal>
+        <LandingHeader
+          eyebrow="See it live"
+          title="This is the actual Find Next screen"
+          lead="Five sample picks from a formed taste profile. Step through them; nothing here needs an account."
+        />
+      </Reveal>
 
-      <div className="mt-8 overflow-hidden">
+      <div className="mt-10 overflow-hidden">
         <div className="relative mx-auto w-full lg:w-2/3">
           {prev ? (
             <NeighbourPick pick={prev} side="left" onClick={() => step(-1)} />

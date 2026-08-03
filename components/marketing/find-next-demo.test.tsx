@@ -47,10 +47,10 @@ describe("FindNextDemo", () => {
 
   it("shows curated reason chips for the current pick", () => {
     render(<FindNextDemo />);
-    // Pick 3 of 5 is Knives Out in the demo set.
-    expect(screen.getByText("whodunit")).toBeInTheDocument();
+    // Pick 3 of 5 is Dune: Part Two in the demo set.
+    expect(screen.getByText("epic world-building")).toBeInTheDocument();
     expect(
-      screen.getByText("because you liked Memories of Murder")
+      screen.getByText("because you liked Blade Runner 2049")
     ).toBeInTheDocument();
   });
 });
