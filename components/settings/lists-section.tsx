@@ -26,8 +26,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { deleteTrackingScope, resetScores } from "@/lib/api/tracking";
 import { usePref, type Prefs } from "@/lib/local-prefs";
-import { STATUS_LABELS, type TrackingStatus } from "@/lib/types";
+import {
+  STATUS_LABELS,
+  type MediaType,
+  type TrackingStatus,
+} from "@/lib/types";
 
 import { FieldStack, SectionHeading, SettingRow, SettingsNote } from "./section";
 
@@ -57,20 +62,33 @@ const ACTIVITY: { status: TrackingStatus; label: string }[] = [
 
 /**
  * A destructive action behind a confirmation that names exactly what is
- * destroyed. No backend exists for these yet, so confirm closes with the
- * honest not-built toast; the shape is real so wiring is a swap later.
+ * destroyed. `onConfirm` returns the affected-row count for the toast.
  */
 function DangerAction({
   trigger,
   title,
   description,
   confirmLabel,
+  onConfirm,
+  done,
 }: {
   trigger: string;
   title: string;
   description: string;
   confirmLabel: string;
+  onConfirm: () => Promise<number>;
+  done: (affected: number) => string;
 }) {
+  const [busy, setBusy] = React.useState(false);
+
+  function run() {
+    setBusy(true);
+    onConfirm()
+      .then((affected) => toast(done(affected)))
+      .catch(() => toast("Could not do that. Try again."))
+      .finally(() => setBusy(false));
+  }
+
   return (
     <AlertDialog>
       <AlertDialogTrigger
@@ -84,12 +102,11 @@ function DangerAction({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             className={buttonVariants({ variant: "destructive" })}
-            onClick={() =>
-              toast("Not wired up yet. Arrives with a coming update.")
-            }
+            disabled={busy}
+            onClick={run}
           >
             {confirmLabel}
           </AlertDialogAction>
@@ -231,12 +248,16 @@ export function ListsSection() {
               title="Reset every film score?"
               description={`This clears every score on every film entry (${STATUS_LABELS.completed}, ${STATUS_LABELS.watching}, all of them). The entries stay. There is no undo.`}
               confirmLabel="Reset scores"
+              onConfirm={() => resetScores("movie" as MediaType)}
+              done={(n) => `Cleared ${n} film ${n === 1 ? "score" : "scores"}.`}
             />
             <DangerAction
               trigger="Reset TV scores"
               title="Reset every TV score?"
               description="This clears every score on every tracked season. The entries stay. There is no undo."
               confirmLabel="Reset scores"
+              onConfirm={() => resetScores("season" as MediaType)}
+              done={(n) => `Cleared ${n} season ${n === 1 ? "score" : "scores"}.`}
             />
           </div>
 
@@ -252,12 +273,18 @@ export function ListsSection() {
               title="Delete your entire film list?"
               description="Every tracked film, every score, every note, gone permanently. Your account and TV list stay. There is no undo."
               confirmLabel="Delete film list"
+              onConfirm={() => deleteTrackingScope("movie" as MediaType)}
+              done={(n) => `Deleted ${n} film ${n === 1 ? "entry" : "entries"}.`}
             />
             <DangerAction
               trigger="Delete TV list"
               title="Delete your entire TV list?"
               description="Every tracked season, every score, every note, gone permanently. Your account and film list stay. There is no undo."
               confirmLabel="Delete TV list"
+              onConfirm={() => deleteTrackingScope("season" as MediaType)}
+              done={(n) =>
+                `Deleted ${n} season ${n === 1 ? "entry" : "entries"}.`
+              }
             />
           </div>
         </div>

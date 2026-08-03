@@ -8,14 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { updateMe } from "@/lib/api/users";
+import { deleteAvatar, updateMe, uploadAvatar } from "@/lib/api/users";
 import {
-  readBirthday,
-  useLocalAvatar,
   validateAvatarFile,
   validateBirthday,
-  writeBirthday,
-  writeLocalAvatar,
 } from "@/lib/local-profile";
 import type { UserProfile } from "@/lib/types";
 import {
@@ -50,16 +46,13 @@ export function ProfileSection({
   const [bio, setBio] = React.useState(me?.bio ?? "");
   const [saving, setSaving] = React.useState(false);
   const [fieldError, setFieldError] = React.useState<string | null>(null);
-  const [birthday, setBirthday] = React.useState("");
+  const [birthday, setBirthday] = React.useState(me?.birthday ?? "");
   const [birthdayError, setBirthdayError] = React.useState<string | null>(
     null
   );
-  const avatar = useLocalAvatar();
+  const [avatarBusy, setAvatarBusy] = React.useState(false);
+  const avatar = me?.avatarUrl ?? null;
   const fileRef = React.useRef<HTMLInputElement>(null);
-
-  React.useEffect(() => {
-    setBirthday(readBirthday() ?? "");
-  }, []);
 
   function onAvatarPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -71,14 +64,22 @@ export function ProfileSection({
       toast(problem);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const ok =
-        typeof reader.result === "string" && writeLocalAvatar(reader.result);
-      if (!ok) toast("Could not save the image on this device.");
-    };
-    reader.onerror = () => toast("Could not read that file.");
-    reader.readAsDataURL(file);
+    setAvatarBusy(true);
+    uploadAvatar(file)
+      .then((u) => {
+        onSaved(u);
+        toast("Photo updated");
+      })
+      .catch(() => toast("Could not upload that image. Try again."))
+      .finally(() => setAvatarBusy(false));
+  }
+
+  function removeAvatar() {
+    setAvatarBusy(true);
+    deleteAvatar()
+      .then((u) => onSaved(u))
+      .catch(() => toast("Could not remove the photo. Try again."))
+      .finally(() => setAvatarBusy(false));
   }
 
   // The profile can land after first render; adopt it once, untouched.
@@ -88,6 +89,7 @@ export function ProfileSection({
       seeded.current = true;
       setUsername(me.username);
       setBio(me.bio ?? "");
+      setBirthday(me.birthday ?? "");
     }
   }, [me]);
 
@@ -113,10 +115,9 @@ export function ProfileSection({
       }
     }
     setBirthdayError(null);
-    writeBirthday(birthday || null);
     setFieldError(null);
     setSaving(true);
-    updateMe({ username: name, bio })
+    updateMe({ username: name, bio, birthday: birthday || null })
       .then((u) => {
         onSaved(u);
         toast("Saved");
@@ -149,15 +150,17 @@ export function ProfileSection({
               <Button
                 variant="outline"
                 size="sm"
+                disabled={avatarBusy}
                 onClick={() => fileRef.current?.click()}
               >
-                Upload
+                {avatarBusy ? "Working" : "Upload"}
               </Button>
               {avatar ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => writeLocalAvatar(null)}
+                  disabled={avatarBusy}
+                  onClick={removeAvatar}
                 >
                   Remove
                 </Button>
@@ -166,15 +169,15 @@ export function ProfileSection({
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept="image/png,image/jpeg,image/webp,image/gif"
               aria-label="Upload a profile image"
               className="sr-only"
               onChange={onAvatarPicked}
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            PNG or JPG up to 2 MB. Shown on your profile and in the top bar.
-            Stored on this device until upload ships.
+            PNG, JPG, WebP, or GIF up to 2 MB. Shown on your profile and in
+            the top bar.
           </p>
         </div>
         <FormField
@@ -230,7 +233,7 @@ export function ProfileSection({
           id="st-birthday"
           label="Birthday"
           error={birthdayError ?? undefined}
-          hint="Optional. Shown on your profile. Stored on this device for now."
+          hint="Optional. Shown on your profile."
         >
           {(field) => (
             <Input

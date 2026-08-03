@@ -27,7 +27,17 @@ describe("DataSection import dialog", () => {
     expect(
       await screen.findByText("letterboxd-export.csv")
     ).toBeInTheDocument();
-    // The real import waits on the backend; the button must not pretend.
+    // Import is disabled until a file is chosen, then enabled.
+    expect(
+      screen.getByRole("button", { name: "Import" })
+    ).not.toBeDisabled();
+  });
+
+  it("disables Import until a file is chosen", async () => {
+    const user = userEvent.setup();
+    render(<DataSection />);
+    await user.click(screen.getByRole("button", { name: /import/i }));
+    await screen.findByText("Import your history", { selector: "h2" });
     expect(screen.getByRole("button", { name: "Import" })).toBeDisabled();
   });
 });

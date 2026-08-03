@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { FileUp, Upload } from "lucide-react";
+import { toast } from "sonner";
 
+import { exportTracking } from "@/lib/api/users";
+import { getImport, startImport, type ImportSource } from "@/lib/api/imports";
+import type { ImportJob } from "@/lib/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { FieldStack, SectionHeading, SettingsNote } from "./section";
+import { FieldStack, SectionHeading } from "./section";
 
 const SOURCES: Record<string, string> = {
   letterboxd: "Letterboxd",
@@ -46,10 +50,56 @@ function ImportDialog() {
   const [source, setSource] = React.useState("letterboxd");
   const [file, setFile] = React.useState<File | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
+  const [job, setJob] = React.useState<ImportJob | null>(null);
+  const [busy, setBusy] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  // Poll while the job is in flight; stop on done/failed or unmount.
+  React.useEffect(() => {
+    if (!job || (job.status !== "pending" && job.status !== "running")) return;
+    let cancelled = false;
+    const timer = setInterval(() => {
+      getImport(job.id)
+        .then((next) => {
+          if (cancelled) return;
+          setJob(next);
+          if (next.status === "done") {
+            toast(
+              `Imported ${next.matched} of ${next.total}. ${next.unmatched} could not be matched.`
+            );
+          } else if (next.status === "failed") {
+            toast(next.error ?? "The import failed.");
+          }
+        })
+        .catch(() => {});
+    }, 1500);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [job]);
+
+  function runImport() {
+    if (!file) return;
+    setBusy(true);
+    startImport(source as ImportSource, file)
+      .then((j) => setJob(j))
+      .catch(() => toast("Could not start the import. Try again."))
+      .finally(() => setBusy(false));
+  }
+
+  const running =
+    busy || job?.status === "pending" || job?.status === "running";
+
   return (
-    <Dialog>
+    <Dialog
+      onOpenChange={(open) => {
+        if (!open) {
+          setFile(null);
+          setJob(null);
+        }
+      }}
+    >
       <DialogTrigger
         className={buttonVariants({ variant: "outline", size: "sm" })}
       >
@@ -148,9 +198,17 @@ function ImportDialog() {
 
         <DialogFooter className="items-center gap-3">
           <p className="text-xs text-muted-foreground">
-            Importing is not wired up yet. It lands with a coming update.
+            {job
+              ? job.status === "done"
+                ? `Done: ${job.matched} matched, ${job.unmatched} not.`
+                : job.status === "failed"
+                  ? "The import failed."
+                  : `Working: ${job.matched}/${job.total} matched.`
+              : "Matched titles land as completed entries."}
           </p>
-          <Button disabled>Import</Button>
+          <Button onClick={runImport} disabled={!file || running}>
+            {running ? "Importing" : "Import"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -195,12 +253,18 @@ export function DataSection() {
               <RadioGroupItem value="json" /> JSON
             </Label>
           </RadioGroup>
-          <Button variant="outline" size="sm" className="mt-3" disabled>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() =>
+              exportTracking(format as "csv" | "json").catch(() =>
+                toast("Could not prepare the export. Try again.")
+              )
+            }
+          >
             Download
           </Button>
-          <SettingsNote>
-            Export is not wired up yet. It lands with a coming update.
-          </SettingsNote>
         </div>
       </FieldStack>
     </section>

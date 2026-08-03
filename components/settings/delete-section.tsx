@@ -3,6 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
+import { useSession } from "@/components/auth/auth-provider";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -16,6 +17,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { deleteAccount } from "@/lib/api/users";
 
 import { SectionHeading } from "./section";
 
@@ -27,8 +29,23 @@ const CONFIRM_PHRASE = "delete my account";
  * built, rather than pretending.
  */
 export function DeleteSection() {
+  const { signOut } = useSession();
   const [typed, setTyped] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
   const armed = typed.trim().toLowerCase() === CONFIRM_PHRASE;
+
+  function run() {
+    setBusy(true);
+    deleteAccount()
+      .then(() => {
+        toast("Your account has been deleted.");
+        void signOut();
+      })
+      .catch(() => {
+        toast("Could not delete the account. Try again.");
+        setBusy(false);
+      });
+  }
 
   return (
     <section>
@@ -70,26 +87,18 @@ export function DeleteSection() {
                 />
               </div>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
                 <Button
                   variant="destructive"
-                  disabled={!armed}
-                  onClick={() =>
-                    toast(
-                      "Deletion is not built yet. It arrives before Klyvi leaves beta."
-                    )
-                  }
+                  disabled={!armed || busy}
+                  onClick={run}
                 >
-                  Delete my account
+                  {busy ? "Deleting" : "Delete my account"}
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Deletion is not wired up yet. It arrives before Klyvi leaves beta,
-          and it will work right here.
-        </p>
       </div>
     </section>
   );

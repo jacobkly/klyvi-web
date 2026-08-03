@@ -72,18 +72,64 @@ export function readPref<K extends keyof Prefs>(key: K): Prefs[K] {
   return (stored ?? DEFAULT_PREFS[key]) as Prefs[K];
 }
 
-export function writePref<K extends keyof Prefs>(
-  key: K,
-  value: Prefs[K]
+/** The whole blob, stored values over defaults. What we push to the server. */
+export function readAllPrefs(): Prefs {
+  return { ...DEFAULT_PREFS, ...readAll() };
+}
+
+// Server sync. Injected by the auth provider so this module stays free of
+// an import cycle and works untouched in tests that never set it.
+let pushFn: ((settings: Record<string, unknown>) => void) | null = null;
+let pushTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function setPrefsPusher(
+  fn: ((settings: Record<string, unknown>) => void) | null
 ): void {
+  pushFn = fn;
+}
+
+function schedulePush(): void {
+  if (!pushFn) return;
+  if (pushTimer != null) clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    pushTimer = null;
+    pushFn?.(readAllPrefs());
+  }, 800);
+}
+
+function writeBlob(next: Partial<Prefs>): void {
   try {
-    const next = { ...readAll(), [key]: value };
     window.localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
     // Quota or privacy mode: the control still works for the session
     // through the event below, it just will not survive a reload.
   }
   window.dispatchEvent(new Event(EVENT));
+}
+
+export function writePref<K extends keyof Prefs>(
+  key: K,
+  value: Prefs[K]
+): void {
+  writeBlob({ ...readAll(), [key]: value });
+  // User-initiated: mirror it to the server (debounced).
+  schedulePush();
+}
+
+/**
+ * Seed local prefs from the server's settings blob on sign-in. Only known
+ * keys are adopted, and this does NOT push back (it is server truth
+ * arriving, not a user change), so it cannot loop with schedulePush.
+ */
+export function seedPrefs(settings: Record<string, unknown>): void {
+  const known = Object.keys(DEFAULT_PREFS) as (keyof Prefs)[];
+  const merged: Partial<Prefs> = { ...readAll() };
+  for (const k of known) {
+    if (k in settings) {
+      (merged as Record<string, unknown>)[k] = settings[k];
+    }
+  }
+  writeBlob(merged);
 }
 
 function subscribe(listener: () => void): () => void {

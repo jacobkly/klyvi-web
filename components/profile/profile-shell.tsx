@@ -13,7 +13,6 @@ import { getMovie } from "@/lib/api/catalog";
 import { getFeed } from "@/lib/api/reco";
 import { listTracking } from "@/lib/api/tracking";
 import { getMe, getMyStats } from "@/lib/api/users";
-import { readBirthday, useLocalAvatar } from "@/lib/local-profile";
 import type {
   LibraryEntry,
   Reason,
@@ -86,8 +85,6 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [state, setState] = React.useState<State>({ kind: "loading" });
   const [backdrop, setBackdrop] = React.useState<string | null>(null);
-  const [birthday, setBirthday] = React.useState<string | null>(null);
-  const localAvatar = useLocalAvatar();
 
   const load = React.useCallback(() => {
     setState({ kind: "loading" });
@@ -115,7 +112,6 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(load, [load]);
-  React.useEffect(() => setBirthday(readBirthday()), []);
 
   // The banner backdrop arrives late and quietly: highest-rated film's
   // backdrop via the catalog, fallback stays the plain surface.
@@ -176,8 +172,8 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
   }
 
   const { me } = state.data;
-  const avatarSrc = localAvatar ?? me?.avatarUrl ?? null;
-  const birthdayLine = birthday ? formatBirthday(birthday) : null;
+  const avatarSrc = me?.avatarUrl ?? null;
+  const birthdayLine = me?.birthday ? formatBirthday(me.birthday) : null;
 
   return (
     <main className="flex-1">

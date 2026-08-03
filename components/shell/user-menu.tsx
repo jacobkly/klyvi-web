@@ -13,7 +13,6 @@ import {
 
 import { useSession } from "@/components/auth/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useLocalAvatar } from "@/lib/local-profile";
 import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,9 +31,7 @@ import {
  */
 function UserMenu() {
   const { user, profile, loading, signOut } = useSession();
-  // Device-local upload wins until the API can store one.
-  const localAvatar = useLocalAvatar();
-  const avatarSrc = localAvatar ?? profile?.avatarUrl ?? null;
+  const avatarSrc = profile?.avatarUrl ?? null;
 
   if (loading) {
     return <div aria-hidden="true" className="size-8" />;

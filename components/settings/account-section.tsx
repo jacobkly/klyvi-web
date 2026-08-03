@@ -8,6 +8,7 @@ import { FormField } from "@/components/klyvi/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { downloadAccountData } from "@/lib/api/users";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import {
   validateOnBlur,
@@ -155,9 +156,17 @@ export function AccountSection() {
 
         <SettingRow
           title="Download your data"
-          description="One file with your account, library, ratings, and taste profile. Lands with a coming update."
+          description="One JSON file with your account, library, ratings, and interaction history."
         >
-          <Button variant="outline" size="sm" disabled>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              downloadAccountData().catch(() =>
+                toast("Could not prepare the download. Try again.")
+              )
+            }
+          >
             Download
           </Button>
         </SettingRow>

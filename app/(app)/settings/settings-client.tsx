@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getMe } from "@/lib/api/users";
-import { useLocalAvatar } from "@/lib/local-profile";
 import type { UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -65,8 +64,7 @@ export function SettingsClient() {
   const { user, setProfile } = useSession();
   const [active, setActive] = React.useState<SectionId>("profile");
   const [me, setMe] = React.useState<UserProfile | null>(null);
-  const localAvatar = useLocalAvatar();
-  const avatarSrc = localAvatar ?? me?.avatarUrl ?? null;
+  const avatarSrc = me?.avatarUrl ?? null;
 
   React.useEffect(() => {
     getMe()
