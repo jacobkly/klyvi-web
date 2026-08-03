@@ -1,6 +1,6 @@
 "use client";
 
-import { recordInteraction } from "@/lib/api/interactions";
+import { recordInteractionsBatch } from "@/lib/api/interactions";
 import type { InteractionSource, MediaType } from "@/lib/types";
 
 /**
@@ -65,13 +65,18 @@ export function flushSignals(): void {
   }
   const batch = queue;
   queue = [];
-  for (const s of batch) {
-    recordInteraction({
-      tmdbId: s.tmdbId,
-      mediaType: s.mediaType,
-      kind: s.kind,
-      source: s.source,
-    }).catch(() => {});
+  if (batch.length === 0) return;
+  // One request per screenful. The endpoint caps at 25, so chunk defensively
+  // even though FLUSH_AT keeps the queue at or under 10.
+  for (let i = 0; i < batch.length; i += 25) {
+    recordInteractionsBatch(
+      batch.slice(i, i + 25).map((s) => ({
+        tmdbId: s.tmdbId,
+        mediaType: s.mediaType,
+        kind: s.kind,
+        source: s.source,
+      }))
+    ).catch(() => {});
   }
 }
 

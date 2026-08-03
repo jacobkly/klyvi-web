@@ -9,9 +9,11 @@ const getMe = vi.fn();
 const listTracking = vi.fn();
 const getFeed = vi.fn();
 const getMovie = vi.fn();
+const getMyStats = vi.fn();
 
 vi.mock("@/lib/api/users", () => ({
   getMe: (...a: unknown[]) => getMe(...a),
+  getMyStats: (...a: unknown[]) => getMyStats(...a),
 }));
 vi.mock("@/lib/api/tracking", () => ({
   listTracking: (...a: unknown[]) => listTracking(...a),
@@ -63,6 +65,7 @@ describe("ProfileShell", () => {
     listTracking.mockReset().mockResolvedValue([entry({})]);
     getFeed.mockReset().mockResolvedValue([]);
     getMovie.mockReset().mockResolvedValue(null);
+    getMyStats.mockReset().mockRejectedValue(new Error("no stats in test"));
     window.localStorage.clear();
   });
 

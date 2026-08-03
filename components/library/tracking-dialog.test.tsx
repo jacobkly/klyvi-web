@@ -119,6 +119,27 @@ describe("TrackingDialog", () => {
     expect(onSave.mock.calls[0][0].notes).toBe(`${noted.notes} Done.`);
   });
 
+  it("toggles the favorite flag and reports it on save", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <TrackingDialog
+        entry={parasite}
+        open
+        onOpenChange={() => {}}
+        onSave={onSave}
+        onDelete={() => {}}
+      />
+    );
+    const star = screen.getByRole("switch", { name: "Favorite" });
+    expect(star).toHaveAttribute("aria-checked", "false");
+    await user.click(star);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ favorite: true })
+    );
+  });
+
   it("hides Remove from library for a fresh, never-tracked entry", () => {
     render(
       <TrackingDialog

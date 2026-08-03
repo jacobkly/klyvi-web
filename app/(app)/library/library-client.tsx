@@ -48,6 +48,7 @@ export function LibraryClient({ simulate }: { simulate?: string }) {
         score: edit.score,
         episodeProgress: edit.progress,
         notes: edit.notes,
+        favorite: edit.favorite,
       });
       // A new or changed score is recommender signal, and the API keeps the
       // two pillars separate: without this dual-write the recommender never

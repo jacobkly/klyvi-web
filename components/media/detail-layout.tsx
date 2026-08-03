@@ -181,6 +181,7 @@ function DetailLayout({
             score: edit.score,
             episodeProgress: edit.progress,
             notes: edit.notes,
+            favorite: edit.favorite,
           })
         : addTracking({
             tmdbId: media.tmdbId,
@@ -190,6 +191,7 @@ function DetailLayout({
             score: edit.score,
             episodeProgress: edit.progress,
             notes: edit.notes,
+            favorite: edit.favorite,
           });
     write
       .then((saved) => {

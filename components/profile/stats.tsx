@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { BarChart3 } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -11,6 +12,7 @@ import {
   XAxis,
 } from "recharts";
 
+import { EmptyState } from "@/components/klyvi/empty-state";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { useProfile } from "@/components/profile/profile-shell";
 import {
@@ -19,17 +21,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import {
-  MOCK_COUNTRY_DIST,
-  MOCK_FORMAT_DIST,
-  MOCK_GENRES,
-  MOCK_KPIS,
-  MOCK_RELEASE_YEARS,
-  MOCK_SCORE_DIST,
-  MOCK_WATCH_YEARS,
-  SAMPLE_NOTE,
-} from "@/lib/mock-stats";
-import { STATUS_LABELS, type TrackingStatus } from "@/lib/types";
+import { STATUS_LABELS, type TrackingStatus, type UserStats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Measure = "titles" | "hours";
@@ -39,7 +31,7 @@ const MEASURE_LABEL: Record<Measure, string> = {
   hours: "Hours",
 };
 
-/** The pill toggle every chart header carries, AniList-style. */
+/** The pill toggle chart headers carry, AniList-style. */
 function MeasureToggle({
   value,
   onChange,
@@ -113,31 +105,50 @@ function DistributionRow({
   );
 }
 
-/**
- * The full AniList-shape stats tab, rendered from sample data until the
- * backend can compute any of it. Real data appears in exactly one place:
- * the status distribution, which the tracking list already knows.
- */
+/** The band string is "1-10".."91-100"; show its ceiling on the axis. */
+function bandCeiling(band: string): string {
+  const parts = band.split("-");
+  return parts[1] ?? band;
+}
+
 export function ProfileStats() {
   const data = useProfile();
   const [scoreMeasure, setScoreMeasure] = React.useState<Measure>("titles");
   const [releaseMeasure, setReleaseMeasure] =
     React.useState<Measure>("titles");
-  const [watchMeasure, setWatchMeasure] = React.useState<Measure>("titles");
   if (!data) return null;
-  const { entries } = data;
+
+  const stats = data.stats;
+  const rated = data.entries.filter((e) => e.score != null).length;
+
+  // No stats payload (fetch failed), or too little rated history to say
+  // anything honest: one empty state, an invitation to rate more.
+  if (!stats || rated < 10) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-16">
+        <EmptyState
+          icon={BarChart3}
+          title="Your stats need more data"
+          body="Rate about 10 titles and this page fills in. The more you track, the more it can tell you."
+          action={{ label: "Find something to watch", href: "/find" }}
+        />
+      </div>
+    );
+  }
+
+  const scoreDist = stats.scoreDistribution.map((b) => ({
+    ...b,
+    label: bandCeiling(b.band),
+  }));
 
   const kpis: { label: string; value: string }[] = [
-    { label: "Total films", value: String(MOCK_KPIS.totalFilms) },
-    { label: "Total seasons", value: String(MOCK_KPIS.totalSeasons) },
-    { label: "Episodes watched", value: String(MOCK_KPIS.episodesWatched) },
-    { label: "Days watched", value: MOCK_KPIS.daysWatched.toFixed(1) },
-    { label: "Days planned", value: MOCK_KPIS.daysPlanned.toFixed(1) },
-    { label: "Mean score", value: MOCK_KPIS.meanScore.toFixed(1) },
-    {
-      label: "Standard deviation",
-      value: MOCK_KPIS.standardDeviation.toFixed(1),
-    },
+    { label: "Total films", value: String(stats.kpis.totalFilms) },
+    { label: "Total seasons", value: String(stats.kpis.totalSeasons) },
+    { label: "Episodes watched", value: String(stats.kpis.episodesWatched) },
+    { label: "Days watched", value: stats.kpis.daysWatched.toFixed(1) },
+    { label: "Days planned", value: stats.kpis.daysPlanned.toFixed(1) },
+    { label: "Mean score", value: stats.kpis.meanScore.toFixed(1) },
+    { label: "Standard deviation", value: stats.kpis.scoreStddev.toFixed(1) },
   ];
 
   const statuses: TrackingStatus[] = [
@@ -151,9 +162,7 @@ export function ProfileStats() {
 
   return (
     <div className="py-8">
-      <p className="text-xs text-muted-foreground">{SAMPLE_NOTE}</p>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         {kpis.map((k) => (
           <div
             key={k.label}
@@ -167,22 +176,14 @@ export function ProfileStats() {
         ))}
       </div>
 
-      <section className="mt-12">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <SectionHeader title="Score distribution" />
-          <MeasureToggle value={scoreMeasure} onChange={setScoreMeasure} />
-        </div>
+      <StatsSection title="Score distribution">
+        <MeasureToggle value={scoreMeasure} onChange={setScoreMeasure} />
         <ChartContainer
           config={chartConfig}
           className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
         >
-          <BarChart data={MOCK_SCORE_DIST} margin={{ top: 20 }}>
-            <XAxis
-              dataKey="band"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={6}
-            />
+          <BarChart data={scoreDist} margin={{ top: 20 }}>
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} />
             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
             <Bar
               dataKey={scoreMeasure}
@@ -198,135 +199,103 @@ export function ProfileStats() {
             </Bar>
           </BarChart>
         </ChartContainer>
-        <p className="sr-only">
-          Score distribution by band of ten:{" "}
-          {MOCK_SCORE_DIST.map(
-            (b) => `${b.titles} titles up to ${b.band}`
-          ).join(", ")}
-          .
-        </p>
-      </section>
+      </StatsSection>
 
-      <section className="mt-12">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <SectionHeader title="Release year" />
+      {stats.releaseYears.length > 0 ? (
+        <StatsSection title="Release year">
           <MeasureToggle value={releaseMeasure} onChange={setReleaseMeasure} />
-        </div>
-        <ChartContainer
-          config={chartConfig}
-          className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
-        >
-          <LineChart data={MOCK_RELEASE_YEARS} margin={{ top: 16, left: 12, right: 12 }}>
-            <CartesianGrid vertical={false} strokeOpacity={0.15} />
-            <XAxis
-              dataKey="year"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={6}
-              interval="preserveStartEnd"
-            />
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-            <Line
-              dataKey={releaseMeasure}
-              type="monotone"
-              stroke={`var(--color-${releaseMeasure})`}
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ChartContainer>
-      </section>
+          <ChartContainer
+            config={chartConfig}
+            className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
+          >
+            <LineChart data={stats.releaseYears} margin={{ top: 16, left: 12, right: 12 }}>
+              <CartesianGrid vertical={false} strokeOpacity={0.15} />
+              <XAxis
+                dataKey="year"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={6}
+                interval="preserveStartEnd"
+              />
+              <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+              <Line
+                dataKey={releaseMeasure}
+                type="monotone"
+                stroke={`var(--color-${releaseMeasure})`}
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ChartContainer>
+        </StatsSection>
+      ) : null}
 
-      <section className="mt-12">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <SectionHeader title="Watch year" />
-          <MeasureToggle value={watchMeasure} onChange={setWatchMeasure} />
-        </div>
-        <ChartContainer
-          config={chartConfig}
-          className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
-        >
-          <LineChart data={MOCK_WATCH_YEARS} margin={{ top: 16, left: 12, right: 12 }}>
-            <CartesianGrid vertical={false} strokeOpacity={0.15} />
-            <XAxis
-              dataKey="year"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={6}
-            />
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-            <Line
-              dataKey={watchMeasure}
-              type="monotone"
-              stroke={`var(--color-${watchMeasure})`}
-              strokeWidth={2}
-              dot={{ r: 3 }}
-            />
-          </LineChart>
-        </ChartContainer>
-      </section>
+      {stats.watchYears.length > 0 ? (
+        <StatsSection title="Watch year">
+          <ChartContainer
+            config={chartConfig}
+            className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
+          >
+            <LineChart data={stats.watchYears} margin={{ top: 16, left: 12, right: 12 }}>
+              <CartesianGrid vertical={false} strokeOpacity={0.15} />
+              <XAxis dataKey="year" tickLine={false} axisLine={false} tickMargin={6} />
+              <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+              <Line
+                dataKey="titles"
+                type="monotone"
+                stroke="var(--color-titles)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            </LineChart>
+          </ChartContainer>
+        </StatsSection>
+      ) : null}
 
-      <section className="mt-12">
-        <SectionHeader title="Genres" className="mb-5" />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {MOCK_GENRES.map((g, i) => (
-            <div
-              key={g.name}
-              className="rounded-lg bg-card p-4 ring-1 ring-foreground/10"
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-[15px] font-semibold text-foreground">
-                  {g.name}
-                </p>
-                <span
-                  data-numeric
-                  className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground"
-                >
-                  {i + 1}
-                </span>
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <div>
-                  <p data-numeric className="font-mono text-sm text-foreground">
-                    {g.count}
+      {stats.genres.length > 0 ? (
+        <section className="mt-12">
+          <SectionHeader title="Genres" className="mb-5" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {stats.genres.map((g, i) => (
+              <div
+                key={g.name}
+                className="rounded-lg bg-card p-4 ring-1 ring-foreground/10"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[15px] font-semibold text-foreground">
+                    {g.name}
                   </p>
-                  <p className="text-xs text-muted-foreground">Count</p>
+                  <span
+                    data-numeric
+                    className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground"
+                  >
+                    {i + 1}
+                  </span>
                 </div>
-                <div>
-                  <p data-numeric className="font-mono text-sm text-foreground">
-                    {g.meanScore.toFixed(1)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Mean score</p>
-                </div>
-                <div>
-                  <p data-numeric className="font-mono text-sm text-foreground">
-                    {g.hoursWatched}h
-                  </p>
-                  <p className="text-xs text-muted-foreground">Watched</p>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <Metric value={String(g.count)} label="Count" />
+                  <Metric value={g.meanScore.toFixed(1)} label="Mean score" />
+                  <Metric value={`${g.hours}h`} label="Watched" />
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="mt-12 grid gap-8 md:grid-cols-3">
         <section>
           <SectionHeader title="Format" className="mb-4" />
-          <div className="flex flex-col gap-2">
-            {MOCK_FORMAT_DIST.map((f) => (
-              <DistributionRow key={f.label} label={f.label} pct={f.pct} />
-            ))}
-          </div>
+          <Distributions rows={stats.formats} />
         </section>
 
         <section>
           <SectionHeader title="Status" className="mb-4" />
           <div className="flex flex-col gap-2">
             {statuses.map((s) => {
-              const count = entries.filter((e) => e.status === s).length;
-              const pct = entries.length
-                ? Math.round((count / entries.length) * 100)
+              const count = data.entries.filter((e) => e.status === s).length;
+              const pct = data.entries.length
+                ? Math.round((count / data.entries.length) * 100)
                 : 0;
               return (
                 <DistributionRow
@@ -338,20 +307,56 @@ export function ProfileStats() {
               );
             })}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Live from your library.
-          </p>
         </section>
 
         <section>
           <SectionHeader title="Country" className="mb-4" />
-          <div className="flex flex-col gap-2">
-            {MOCK_COUNTRY_DIST.map((c) => (
-              <DistributionRow key={c.label} label={c.label} pct={c.pct} />
-            ))}
-          </div>
+          <Distributions rows={stats.countries} />
         </section>
       </div>
+    </div>
+  );
+}
+
+function StatsSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const [head, ...rest] = React.Children.toArray(children);
+  return (
+    <section className="mt-12">
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <SectionHeader title={title} />
+        {head}
+      </div>
+      {rest}
+    </section>
+  );
+}
+
+function Metric({ value, label }: { value: string; label: string }) {
+  return (
+    <div>
+      <p data-numeric className="font-mono text-sm text-foreground">
+        {value}
+      </p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function Distributions({ rows }: { rows: UserStats["formats"] }) {
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground">Not enough data yet.</p>;
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {rows.map((r) => (
+        <DistributionRow key={r.label} label={r.label} pct={r.pct} />
+      ))}
     </div>
   );
 }

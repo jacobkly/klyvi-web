@@ -9,8 +9,7 @@ import { EmptyState } from "@/components/klyvi/empty-state";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { MediaRail } from "@/components/klyvi/media-rail";
 import { SectionHeader } from "@/components/klyvi/section-header";
-import { RankedRow } from "@/components/explore/ranked-row";
-import { placeholderRanking, TOP_100_NOTE } from "@/lib/mock-top100";
+import { RankingList } from "@/components/explore/ranking-list";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -402,27 +401,23 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
               </MediaRail>
             ))}
 
-            {/* Top 100: structure now, ranking when the backend ships it. */}
+            {/* Top 100 preview, live from the rankings endpoint. */}
             <section>
               <SectionHeader
                 title="Top 100 films"
                 action={{ label: "View all", href: "/explore/top-100-films" }}
                 className="mb-4"
               />
-              <ol className="flex flex-col gap-2">
-                {placeholderRanking(10).map((item) => (
-                  <RankedRow key={item.rank} item={item} />
-                ))}
-              </ol>
+              <RankingList kind="movies" limit={10} />
               <p className="mt-3 text-xs text-muted-foreground">
-                {TOP_100_NOTE}{" "}
+                Also see the{" "}
                 <Link
                   href="/explore/top-100-tv"
                   className="text-violet-text hover:underline"
                 >
                   Top 100 series
-                </Link>{" "}
-                waits on the same list.
+                </Link>
+                .
               </p>
             </section>
           </div>

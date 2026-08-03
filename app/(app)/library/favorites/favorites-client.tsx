@@ -11,18 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { listTracking } from "@/lib/api/tracking";
 import type { LibraryEntry } from "@/lib/types";
 
-/** Scores at or above this stand in for favorites until starring ships. */
-const FAVORITE_THRESHOLD = 90;
-
 type State =
   | { kind: "loading" }
   | { kind: "error" }
   | { kind: "ready"; favorites: LibraryEntry[] };
 
 /**
- * Favorites, driven by the real tracking list. The API has no favorites
- * flag yet, so the honest stand-in is the user's own highest-rated titles,
- * and the copy says so.
+ * Favorites: the entries the user has starred, from the tracking list's
+ * `favorite` flag. Sorted highest-rated first, unrated last.
  */
 export function FavoritesClient() {
   const [state, setState] = React.useState<State>({ kind: "loading" });
@@ -34,8 +30,8 @@ export function FavoritesClient() {
         setState({
           kind: "ready",
           favorites: entries
-            .filter((e) => (e.score ?? -1) >= FAVORITE_THRESHOLD)
-            .sort((a, b) => (b.score ?? 0) - (a.score ?? 0)),
+            .filter((e) => e.favorite)
+            .sort((a, b) => (b.score ?? -1) - (a.score ?? -1)),
         })
       )
       .catch(() => setState({ kind: "error" }));
@@ -86,17 +82,13 @@ export function FavoritesClient() {
           <EmptyState
             icon={Star}
             title="No favorites yet"
-            body={`Rate something ${FAVORITE_THRESHOLD} or higher and it lands here. Starring arrives later.`}
+            body="Star a film or season from its page and it lands here."
             action={{ label: "Find something to watch", href: "/find" }}
           />
         </div>
       ) : (
         <section className="mt-8">
-          <SectionHeader title="Your highest rated" className="mb-4" />
-          <p className="mb-4 -mt-2 text-xs text-muted-foreground">
-            Titles you rated {FAVORITE_THRESHOLD} or higher stand in for
-            favorites until starring ships.
-          </p>
+          <SectionHeader title="Starred" className="mb-4" />
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {favorites.map((e) => (
               <PosterCard key={e.mediaId} media={e} variant="compact" />

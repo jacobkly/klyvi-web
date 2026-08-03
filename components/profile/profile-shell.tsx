@@ -12,13 +12,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getMovie } from "@/lib/api/catalog";
 import { getFeed } from "@/lib/api/reco";
 import { listTracking } from "@/lib/api/tracking";
-import { getMe } from "@/lib/api/users";
+import { getMe, getMyStats } from "@/lib/api/users";
 import { readBirthday, useLocalAvatar } from "@/lib/local-profile";
 import type {
   LibraryEntry,
   Reason,
   Scored,
   UserProfile,
+  UserStats,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,8 @@ export type ProfileData = {
   me: UserProfile | null;
   entries: LibraryEntry[];
   taste: Reason[];
+  /** Server-aggregated stats, or null when the fetch failed. */
+  stats: UserStats | null;
 };
 
 const ProfileContext = React.createContext<ProfileData | null>(null);
@@ -88,25 +91,27 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
 
   const load = React.useCallback(() => {
     setState({ kind: "loading" });
-    Promise.allSettled([getMe(), listTracking(), getFeed()]).then(
-      ([me, tracking, feed]) => {
-        if (me.status === "rejected" && tracking.status === "rejected") {
-          setState({ kind: "error" });
-          return;
-        }
-        setState({
-          kind: "ready",
-          data: {
-            me: me.status === "fulfilled" ? me.value : null,
-            entries: tracking.status === "fulfilled" ? tracking.value : [],
-            taste:
-              feed.status === "fulfilled"
-                ? aggregateReasons(feed.value)
-                : [],
-          },
-        });
+    Promise.allSettled([
+      getMe(),
+      listTracking(),
+      getFeed(),
+      getMyStats(),
+    ]).then(([me, tracking, feed, stats]) => {
+      if (me.status === "rejected" && tracking.status === "rejected") {
+        setState({ kind: "error" });
+        return;
       }
-    );
+      setState({
+        kind: "ready",
+        data: {
+          me: me.status === "fulfilled" ? me.value : null,
+          entries: tracking.status === "fulfilled" ? tracking.value : [],
+          taste:
+            feed.status === "fulfilled" ? aggregateReasons(feed.value) : [],
+          stats: stats.status === "fulfilled" ? stats.value : null,
+        },
+      });
+    });
   }, []);
 
   React.useEffect(load, [load]);

@@ -1,4 +1,3 @@
-import { MOCK_HEATMAP } from "@/lib/mock-stats";
 import { cn } from "@/lib/utils";
 
 /** Intensity 0 to 4 onto the violet chart ramp, cool to hot. */
@@ -10,24 +9,46 @@ const CELL_COLORS = [
   "bg-chart-1",
 ];
 
+function intensity(count: number, max: number): number {
+  if (count <= 0 || max <= 0) return 0;
+  const ratio = count / max;
+  if (ratio > 0.75) return 4;
+  if (ratio > 0.5) return 3;
+  if (ratio > 0.25) return 2;
+  return 1;
+}
+
 /**
- * The GitHub-style year grid. Purely presentational; the sample data
- * lives in mock-stats until the backend can say when things were watched.
+ * The GitHub-style year grid, from the server's daily activity series
+ * (371 days ending today). Chunked into columns of seven so each column
+ * is a week.
  */
-export function ActivityHeatmap() {
-  const total = MOCK_HEATMAP.flat().filter((v) => v > 0).length;
+export function ActivityHeatmap({
+  activity,
+}: {
+  activity: { date: string; count: number }[];
+}) {
+  const max = activity.reduce((m, d) => Math.max(m, d.count), 0);
+  const active = activity.filter((d) => d.count > 0).length;
+
+  const weeks: { date: string; count: number }[][] = [];
+  for (let i = 0; i < activity.length; i += 7) {
+    weeks.push(activity.slice(i, i + 7));
+  }
+
   return (
     <div>
       <div className="overflow-x-auto pb-2">
         <div aria-hidden="true" className="flex w-max gap-[3px]">
-          {MOCK_HEATMAP.map((week, w) => (
+          {weeks.map((week, w) => (
             <div key={w} className="flex flex-col gap-[3px]">
-              {week.map((intensity, d) => (
+              {week.map((day) => (
                 <div
-                  key={d}
+                  key={day.date}
+                  title={`${day.date}: ${day.count}`}
                   className={cn(
                     "size-2.5 rounded-[2px]",
-                    CELL_COLORS[intensity]
+                    CELL_COLORS[intensity(day.count, max)]
                   )}
                 />
               ))}
@@ -36,8 +57,8 @@ export function ActivityHeatmap() {
         </div>
       </div>
       <p className="sr-only">
-        Activity for the last year: {total} active days out of{" "}
-        {MOCK_HEATMAP.flat().length}.
+        Activity for the last year: {active} active days out of{" "}
+        {activity.length}.
       </p>
       <div
         aria-hidden="true"

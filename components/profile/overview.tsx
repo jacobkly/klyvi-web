@@ -8,11 +8,6 @@ import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import {
-  MOCK_GENRES,
-  MOCK_KPIS,
-  SAMPLE_NOTE,
-} from "@/lib/mock-stats";
-import {
   STATUS_LABELS,
   type LibraryEntry,
   type TrackingStatus,
@@ -38,15 +33,14 @@ function relativeTime(iso: string): string {
 export function ProfileOverview() {
   const data = useProfile();
   if (!data) return null;
-  const { entries, taste } = data;
+  const { entries, taste, stats } = data;
 
   const rated = entries.filter((e) => e.score != null);
   const mean = rated.length
     ? Math.round(rated.reduce((n, e) => n + (e.score ?? 0), 0) / rated.length)
     : null;
 
-  // Real where the data exists, sample where it cannot exist yet.
-  const kpis: { label: string; value: string; sample?: boolean }[] = [
+  const kpis: { label: string; value: string }[] = [
     { label: "Tracked", value: String(entries.length) },
     { label: "Rated", value: String(rated.length) },
     { label: "Mean score", value: mean != null ? String(mean) : "–" },
@@ -55,14 +49,12 @@ export function ProfileOverview() {
       value: String(entries.filter((e) => e.status === "completed").length),
     },
     {
-      label: "Hours watched",
-      value: String(MOCK_KPIS.hoursWatched),
-      sample: true,
+      label: "Days watched",
+      value: stats ? stats.kpis.daysWatched.toFixed(1) : "–",
     },
     {
       label: "Days planned",
-      value: MOCK_KPIS.daysPlanned.toFixed(1),
-      sample: true,
+      value: stats ? stats.kpis.daysPlanned.toFixed(1) : "–",
     },
   ];
 
@@ -83,7 +75,8 @@ export function ProfileOverview() {
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
     .slice(0, 8);
 
-  const maxGenre = Math.max(...MOCK_GENRES.map((g) => g.count));
+  const topGenres = stats?.genres.slice(0, 5) ?? [];
+  const maxGenre = Math.max(1, ...topGenres.map((g) => g.count));
 
   return (
     <div className="grid gap-x-10 gap-y-10 py-8 lg:grid-cols-[1fr_360px]">
@@ -97,51 +90,49 @@ export function ProfileOverview() {
               <p data-numeric className="font-mono text-2xl text-violet-text">
                 {k.value}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {k.label}
-                {k.sample ? "*" : ""}
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{k.label}</p>
             </div>
           ))}
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">* {SAMPLE_NOTE}</p>
 
-        <section className="mt-10">
-          <SectionHeader title="Activity" className="mb-4" />
-          <ActivityHeatmap />
-          <p className="mt-1 text-xs text-muted-foreground">{SAMPLE_NOTE}</p>
-        </section>
+        {stats && stats.activity.length > 0 ? (
+          <section className="mt-10">
+            <SectionHeader title="Activity" className="mb-4" />
+            <ActivityHeatmap activity={stats.activity} />
+          </section>
+        ) : null}
 
-        <section className="mt-10">
-          <SectionHeader
-            title="Genre overview"
-            action={{ label: "Full stats", href: "/profile/stats" }}
-            className="mb-4"
-          />
-          <div className="flex flex-col gap-2">
-            {MOCK_GENRES.slice(0, 5).map((g) => (
-              <div key={g.name} className="flex items-center gap-3">
-                <span className="w-28 shrink-0 text-sm text-muted-foreground">
-                  {g.name}
-                </span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-chart-3"
-                    style={{ width: `${(g.count / maxGenre) * 100}%` }}
-                    aria-hidden="true"
-                  />
+        {topGenres.length > 0 ? (
+          <section className="mt-10">
+            <SectionHeader
+              title="Genre overview"
+              action={{ label: "Full stats", href: "/profile/stats" }}
+              className="mb-4"
+            />
+            <div className="flex flex-col gap-2">
+              {topGenres.map((g) => (
+                <div key={g.name} className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-sm text-muted-foreground">
+                    {g.name}
+                  </span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-chart-3"
+                      style={{ width: `${(g.count / maxGenre) * 100}%` }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <span
+                    data-numeric
+                    className="w-8 shrink-0 text-right font-mono text-xs text-muted-foreground"
+                  >
+                    {g.count}
+                  </span>
                 </div>
-                <span
-                  data-numeric
-                  className="w-8 shrink-0 text-right font-mono text-xs text-muted-foreground"
-                >
-                  {g.count}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">{SAMPLE_NOTE}</p>
-        </section>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {highlights.length > 0 ? (
           <section className="mt-10">

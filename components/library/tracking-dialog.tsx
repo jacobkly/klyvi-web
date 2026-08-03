@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import * as React from "react";
+import { Star } from "lucide-react";
 
 import {
   AlertDialog,
@@ -58,6 +59,7 @@ export type TrackingEdit = {
   score: number | null;
   progress: number | null;
   notes: string | null;
+  favorite: boolean;
 };
 
 /**
@@ -90,6 +92,7 @@ function TrackingDialog({
     entry.progress?.toString() ?? ""
   );
   const [notes, setNotes] = React.useState(entry.notes ?? "");
+  const [favorite, setFavorite] = React.useState(entry.favorite);
   const [fetchedTotal, setFetchedTotal] = React.useState<number | null>(null);
 
   // Reset the form when a different entry opens.
@@ -98,6 +101,7 @@ function TrackingDialog({
     setScore(entry.score?.toString() ?? "");
     setProgress(entry.progress?.toString() ?? "");
     setNotes(entry.notes ?? "");
+    setFavorite(entry.favorite);
   }, [entry]);
 
   // The tracking list carries no episode totals; the season detail call
@@ -142,6 +146,7 @@ function TrackingDialog({
           ? null
           : Number(progress),
       notes: notes.trim() === "" ? null : notes,
+      favorite,
     });
     onOpenChange(false);
   }
@@ -312,6 +317,35 @@ function TrackingDialog({
             <p className="text-xs text-muted-foreground">
               Only you can see these
             </p>
+          </div>
+
+          <div className="col-span-2 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">Favorite</p>
+              <p className="text-xs text-muted-foreground">
+                Pin it to your favorites shelf.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={favorite}
+              aria-label="Favorite"
+              onClick={() => setFavorite((f) => !f)}
+              className={
+                "hit-44 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 " +
+                (favorite
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground")
+              }
+            >
+              <Star
+                aria-hidden="true"
+                strokeWidth={2}
+                className={"size-4 " + (favorite ? "fill-current" : "")}
+              />
+              {favorite ? "Favorited" : "Favorite"}
+            </button>
           </div>
         </div>
 

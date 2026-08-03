@@ -32,19 +32,18 @@ function entry(over: Partial<LibraryEntry>): LibraryEntry {
 describe("FavoritesClient", () => {
   beforeEach(() => listTracking.mockReset());
 
-  it("shows only entries rated 90 or above, highest first", async () => {
+  it("shows only starred entries, highest rated first", async () => {
     listTracking.mockResolvedValue([
-      entry({ mediaId: 1, title: "Parasite", score: 95 }),
-      entry({ mediaId: 2, title: "Mid Movie", score: 70 }),
-      entry({ mediaId: 3, title: "Whiplash", score: 98 }),
-      entry({ mediaId: 4, title: "Unrated", score: null }),
+      entry({ mediaId: 1, title: "Parasite", score: 95, favorite: true }),
+      entry({ mediaId: 2, title: "Not Starred", score: 99, favorite: false }),
+      entry({ mediaId: 3, title: "Whiplash", score: 98, favorite: true }),
     ]);
     render(<FavoritesClient />);
 
     expect(await screen.findByText("Whiplash")).toBeInTheDocument();
     expect(screen.getByText("Parasite")).toBeInTheDocument();
-    expect(screen.queryByText("Mid Movie")).not.toBeInTheDocument();
-    expect(screen.queryByText("Unrated")).not.toBeInTheDocument();
+    // A high score without the flag is not a favorite.
+    expect(screen.queryByText("Not Starred")).not.toBeInTheDocument();
 
     const titles = screen
       .getAllByRole("link")
@@ -53,15 +52,17 @@ describe("FavoritesClient", () => {
     expect(titles[0]).toContain("Whiplash");
   });
 
-  it("shows the empty state when nothing qualifies", async () => {
-    listTracking.mockResolvedValue([entry({ score: 70 })]);
+  it("shows the empty state when nothing is starred", async () => {
+    listTracking.mockResolvedValue([entry({ score: 99, favorite: false })]);
     render(<FavoritesClient />);
     expect(await screen.findByText("No favorites yet")).toBeInTheDocument();
   });
 
   it("shows the error state with a retry that refetches", async () => {
     listTracking.mockRejectedValueOnce(new Error("boom"));
-    listTracking.mockResolvedValueOnce([entry({ title: "Whiplash", score: 98 })]);
+    listTracking.mockResolvedValueOnce([
+      entry({ title: "Whiplash", score: 98, favorite: true }),
+    ]);
     render(<FavoritesClient />);
 
     const retry = await screen.findByRole("button", { name: "Try again" });

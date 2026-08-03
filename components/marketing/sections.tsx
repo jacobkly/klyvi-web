@@ -249,7 +249,7 @@ export function FeaturesRow() {
           align="split"
           eyebrow="How it works"
           title="Genre is a terrible way to pick a film"
-          lead="You do not love thrillers, you love slow-burn thrillers with an unreliable narrator. Klyvi works from what actually predicts your taste: keywords, cast, and the films you rated highly."
+          lead="Klyvi works from what actually predicts your taste: keywords, cast, and the films you rated highly."
           className="mb-10"
         />
       </Reveal>
@@ -302,7 +302,7 @@ export function ClosingCta() {
         <h2 className="relative mx-auto mt-3 max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
           {CLOSING_CLAIM.heading}
         </h2>
-        <p className="relative mx-auto mt-4 max-w-md text-base text-muted-foreground">
+        <p className="relative mx-auto mt-4 max-w-xl text-base text-balance text-muted-foreground">
           {CLOSING_CLAIM.line}
         </p>
         <div className="relative mt-8 flex items-center justify-center gap-4">
