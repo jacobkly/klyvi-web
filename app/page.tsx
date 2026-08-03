@@ -1,6 +1,8 @@
+import { BeamsBackground } from "@/components/marketing/beams-background";
 import { FindNextDemo } from "@/components/marketing/find-next-demo";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarqueeHero } from "@/components/marketing/marquee-hero";
+import { PointerGlow } from "@/components/marketing/pointer-glow";
 import {
   ClosingCta,
   FeaturesRow,
@@ -23,6 +25,11 @@ export const metadata = {
 export default function MarketingPage() {
   return (
     <div className="flex min-h-dvh flex-col">
+      {/* Landing-only atmosphere, both fixed behind the content: violet
+          projector beams drifting, plus a soft glow that trails the
+          cursor. Neither appears inside the app. */}
+      <BeamsBackground />
+      <PointerGlow />
       <MarketingNav />
       <MarqueeHero />
       <StatsBand />

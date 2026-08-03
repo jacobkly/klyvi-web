@@ -13,7 +13,7 @@ import { CLOSING_CLAIM, STAT_CLAIMS } from "@/lib/marketing-claims";
 
 export function StatsBand() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-20">
+    <section className="mx-auto w-full max-w-6xl px-4 pt-28 pb-16 sm:pt-32">
       <div className="grid gap-3 sm:grid-cols-3">
         {STAT_CLAIMS.map((s) => (
           <div
@@ -32,23 +32,6 @@ export function StatsBand() {
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="mt-16 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          Built for people who watch a lot
-        </h2>
-        <p className="mt-3 text-base text-muted-foreground">
-          The pick engine for taste you cannot quite put into words.
-        </p>
-        <div className="mt-7 flex justify-center">
-          <Link href="/signup" className={buttonVariants({ size: "touch" })}>
-            Get started
-          </Link>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Free. No card, no ads.
-        </p>
       </div>
     </section>
   );
@@ -143,16 +126,18 @@ const FEATURES = [
 export function FeaturesRow() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-16">
-      <h2 className="max-w-md text-2xl font-semibold tracking-tight sm:text-3xl">
-        Genre is a terrible way to pick a film
-      </h2>
-      <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-        You do not love thrillers, you love slow-burn thrillers with an
-        unreliable narrator. Klyvi works from what actually predicts your
-        taste: keywords, cast, and the films you rated highly.
-      </p>
+      <div className="mx-auto max-w-2xl text-center">
+        <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+          Genre is a terrible way to pick a film
+        </h2>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+          You do not love thrillers, you love slow-burn thrillers with an
+          unreliable narrator. Klyvi works from what actually predicts your
+          taste: keywords, cast, and the films you rated highly.
+        </p>
+      </div>
 
-      <div className="mt-10 grid gap-4 md:grid-cols-3">
+      <div className="mt-12 grid gap-4 md:grid-cols-3">
         {FEATURES.map((f) => (
           <div
             key={f.title}
@@ -174,25 +159,55 @@ export function FeaturesRow() {
   );
 }
 
+const CLOSING_REASSURANCE = [
+  "Free while Klyvi grows",
+  "No card",
+  "No ads",
+  "Your ratings stay yours",
+];
+
 export function ClosingCta() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 pt-8 pb-24 text-center">
-      <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-        {CLOSING_CLAIM.heading}
-      </h2>
-      <p className="mx-auto mt-3 max-w-md text-base text-muted-foreground">
-        {CLOSING_CLAIM.line}
-      </p>
-      <div className="mt-7 flex items-center justify-center gap-4">
-        <Link href="/signup" className={buttonVariants({ size: "touch" })}>
-          Get started
-        </Link>
-        <Link
-          href="/signin"
-          className="tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          I have an account
-        </Link>
+    <section className="mx-auto w-full max-w-6xl px-4 pt-12 pb-28">
+      <div className="relative overflow-hidden rounded-lg bg-card px-6 py-20 text-center ring-1 ring-foreground/10 sm:py-24">
+        {/* Violet only where the app speaks: a faint bloom behind the final
+            ask, not a background wash. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -top-24 h-64 [background:radial-gradient(closest-side,color-mix(in_oklch,var(--primary)_22%,transparent),transparent)]"
+        />
+        <p className="relative text-sm font-medium tracking-[0.14em] text-violet-text uppercase">
+          Tonight
+        </p>
+        <h2 className="relative mx-auto mt-3 max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+          {CLOSING_CLAIM.heading}
+        </h2>
+        <p className="relative mx-auto mt-4 max-w-md text-base text-muted-foreground">
+          {CLOSING_CLAIM.line}
+        </p>
+        <div className="relative mt-8 flex items-center justify-center gap-4">
+          <Link href="/signup" className={buttonVariants({ size: "touch" })}>
+            Get started
+          </Link>
+          <Link
+            href="/signin"
+            className="tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            I have an account
+          </Link>
+        </div>
+        <ul className="relative mx-auto mt-8 flex max-w-lg flex-wrap items-center justify-center gap-x-2 gap-y-2 text-xs text-muted-foreground">
+          {CLOSING_REASSURANCE.map((item, i) => (
+            <li key={item} className="flex items-center gap-2">
+              {i > 0 ? (
+                <span aria-hidden="true" className="text-muted-foreground/40">
+                  ·
+                </span>
+              ) : null}
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
