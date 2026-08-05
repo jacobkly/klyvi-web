@@ -38,7 +38,7 @@ export function ActivityHeatmap({
 
   return (
     <div>
-      <div className="overflow-x-auto pb-2">
+      <div className="no-scrollbar overflow-x-auto pb-2">
         <div aria-hidden="true" className="flex w-max gap-[3px]">
           {weeks.map((week, w) => (
             <div key={w} className="flex flex-col gap-[3px]">

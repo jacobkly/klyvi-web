@@ -174,15 +174,22 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
   const { me } = state.data;
   const avatarSrc = me?.avatarUrl ?? null;
   const birthdayLine = me?.birthday ? formatBirthday(me.birthday) : null;
+  // A set banner_url wins; otherwise the top-rated film's backdrop stands
+  // in. bannerUrl is a full URL, backdrop is a TMDB path.
+  const bannerSrc = me?.bannerUrl
+    ? me.bannerUrl
+    : backdrop
+      ? `https://image.tmdb.org/t/p/w1280${backdrop}`
+      : null;
 
   return (
     <main className="flex-1">
       {/* Banner: real artwork, dimmed so the identity line holds contrast. */}
       <div className="relative h-40 w-full overflow-hidden bg-card sm:h-52">
-        {backdrop ? (
+        {bannerSrc ? (
           <>
             <Image
-              src={`https://image.tmdb.org/t/p/w1280${backdrop}`}
+              src={bannerSrc}
               alt=""
               fill
               priority

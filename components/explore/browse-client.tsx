@@ -110,19 +110,31 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
       });
   }, [fetchPage]);
 
-  // Observe the sentinel; the button below stays as the fallback.
+  // Auto-load as the sentinel nears the viewport. A scroll-position check
+  // rather than IntersectionObserver: the observer's enter-transition
+  // fires unreliably (and not at all when a page starts already short),
+  // whereas re-checking on scroll and after every load chains cleanly.
+  // The "Load more" button below stays as the no-JS / accessible fallback.
+  const itemCount = state.kind === "ready" ? state.items.length : 0;
   React.useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) loadMore();
-      },
-      { rootMargin: "600px 0px" }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [loadMore, state.kind]);
+    if (state.kind !== "ready") return;
+    const check = () => {
+      const el = sentinelRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      // rect.top > 0 skips the synthetic zero-rect environments (jsdom);
+      // loadMore is guarded (done / loadingMore) so an eager call is safe.
+      if (rect.top > 0 && rect.top <= window.innerHeight + 600) {
+        loadMore();
+      }
+    };
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    return () => {
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
+  }, [loadMore, state.kind, itemCount]);
 
   if (state.kind === "loading") {
     return (
