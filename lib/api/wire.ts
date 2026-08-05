@@ -1,12 +1,11 @@
 /**
  * Raw wire shapes from the Klyvi Go API, verified against the Go structs
- * in the klyvi repo's internal packages (models.go files), not assumed.
+ * in the klyvi repo's internal packages, not assumed.
  *
- * Casing is MIXED by design:
- * - Most payloads are snake_case (json tags on the Go structs).
- * - The reco feed is Go-default PascalCase because Scored has no json tags,
- *   EXCEPT its reasons, which are tagged lowercase with name omitted when
- *   the catalog cannot resolve it.
+ * Everything is snake_case. The Go structs all carry json tags, including
+ * the reco feed's Scored/Candidate, which were snake_cased in the contract
+ * cleanup (they used to serialize Go-default PascalCase). A reason's name
+ * is omitted when the catalog cannot resolve its id.
  *
  * JSONB columns (genres, keywords, credits, seasons) arrive as TMDB's own
  * nested payloads, stored verbatim server-side.
@@ -142,20 +141,22 @@ export type WireInteraction = {
   created_at: string;
 };
 
-// ---------- reco feed (PascalCase, no json tags on Scored) ----------
+// ---------- reco feed (flat snake_case; Candidate is embedded in Scored) ----------
 
 export type WireScored = {
-  MediaID: number;
-  MediaType: string;
-  TMDBID: number;
-  Title: string;
-  PosterPath: string;
-  BackdropPath: string;
-  ReleaseYear: number;
-  VoteAverage: number;
-  Score: number;
-  /** Lowercase: Reason IS json-tagged. name absent when unresolvable. */
-  Reasons: { kind: string; id: number; name?: string }[] | null;
+  media_id: number;
+  media_type: string;
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_year: number;
+  vote_average: number;
+  /** Debug/explainability passthrough; the frontend ignores it. */
+  features?: unknown;
+  score: number;
+  /** name absent when the catalog can't resolve the id; Tier 0 sends []. */
+  reasons: { kind: string; id: number; name?: string }[] | null;
 };
 
 // ---------- users ----------

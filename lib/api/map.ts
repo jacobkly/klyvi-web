@@ -110,19 +110,19 @@ export function mapTrackingEntry(w: WireTrackingEntry): LibraryEntry {
 
 export function mapScored(w: WireScored): Scored {
   return {
-    mediaId: w.MediaID,
-    mediaType: w.MediaType === "season" ? "season" : "movie",
-    tmdbId: w.TMDBID,
-    title: w.Title,
-    posterPath: orNull(w.PosterPath),
-    backdropPath: orNull(w.BackdropPath),
-    year: w.ReleaseYear > 0 ? w.ReleaseYear : null,
-    voteAverage: w.VoteAverage > 0 ? w.VoteAverage : null,
+    mediaId: w.media_id,
+    mediaType: w.media_type === "season" ? "season" : "movie",
+    tmdbId: w.tmdb_id,
+    title: w.title,
+    posterPath: orNull(w.poster_path),
+    backdropPath: orNull(w.backdrop_path),
+    year: w.release_year > 0 ? w.release_year : null,
+    voteAverage: w.vote_average > 0 ? w.vote_average : null,
     // Hydrated from /v1/movies/{id} for the pick being shown.
     overview: null,
     runtime: null,
     genres: [],
-    reasons: (w.Reasons ?? []).map(
+    reasons: (w.reasons ?? []).map(
       (r): Reason => ({
         kind: r.kind === "genre" ? "genre" : "keyword",
         id: r.id,

@@ -98,25 +98,25 @@ describe("mapTrackingEntry", () => {
   });
 });
 
-/** Verbatim from API.md, GET /v1/reco/feed: PascalCase except reasons. */
+/** Verbatim from the reco feed: flat snake_case, reasons name-omittable. */
 const SCORED: WireScored = {
-  MediaID: 142,
-  MediaType: "movie",
-  TMDBID: 11423,
-  Title: "Memories of Murder",
-  PosterPath: "/74gE8YyApcoUKj4tFPmuTBlAOPK.jpg",
-  BackdropPath: "/srGy65EpFp2Fnp1jpVRWWVF4Vox.jpg",
-  ReleaseYear: 2003,
-  VoteAverage: 8.1,
-  Score: 1.42,
-  Reasons: [
+  media_id: 142,
+  media_type: "movie",
+  tmdb_id: 11423,
+  title: "Memories of Murder",
+  poster_path: "/74gE8YyApcoUKj4tFPmuTBlAOPK.jpg",
+  backdrop_path: "/srGy65EpFp2Fnp1jpVRWWVF4Vox.jpg",
+  release_year: 2003,
+  vote_average: 8.1,
+  score: 1.42,
+  reasons: [
     { kind: "keyword", id: 9826, name: "slow-burn" },
     { kind: "genre", id: 18, name: "Drama" },
   ],
 };
 
 describe("mapScored", () => {
-  it("maps the PascalCase feed item with lowercase reasons", () => {
+  it("maps the snake_case feed item with its reasons", () => {
     const s = mapScored(SCORED);
     expect(s).toMatchObject({
       mediaId: 142,
@@ -136,22 +136,22 @@ describe("mapScored", () => {
     expect(s.genres).toEqual([]);
   });
 
-  it("keeps a nameless reason and tolerates null Reasons (Tier 0)", () => {
+  it("keeps a nameless reason and tolerates null reasons (Tier 0)", () => {
     const s = mapScored({
       ...SCORED,
-      Reasons: [{ kind: "keyword", id: 42 }],
+      reasons: [{ kind: "keyword", id: 42 }],
     });
     expect(s.reasons).toEqual([{ kind: "keyword", id: 42, name: undefined }]);
-    expect(mapScored({ ...SCORED, Reasons: null }).reasons).toEqual([]);
+    expect(mapScored({ ...SCORED, reasons: null }).reasons).toEqual([]);
   });
 
   it("treats empty display strings and zero year as absent", () => {
     const s = mapScored({
       ...SCORED,
-      PosterPath: "",
-      BackdropPath: "",
-      ReleaseYear: 0,
-      VoteAverage: 0,
+      poster_path: "",
+      backdrop_path: "",
+      release_year: 0,
+      vote_average: 0,
     });
     expect(s.posterPath).toBeNull();
     expect(s.backdropPath).toBeNull();
