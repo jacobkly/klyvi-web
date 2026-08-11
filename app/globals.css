@@ -313,3 +313,29 @@
     animation: klyvi-marquee 42s linear infinite !important;
   }
 }
+
+/* Indeterminate progress. Base UI gives the indicator no width when value is
+   null, so the "still reading the file" phase of an import is styled and
+   animated here: a short violet fill sweeping across the track. */
+@keyframes klyvi-progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(340%);
+  }
+}
+[data-slot="progress-indicator"][data-indeterminate] {
+  width: 30%;
+  animation: klyvi-progress-indeterminate 1.15s var(--ease-enter) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The universal killer would freeze the sweep off-screen. Fall back to a
+     calm static fill that still reads as "working, amount unknown". */
+  [data-slot="progress-indicator"][data-indeterminate] {
+    animation: none !important;
+    transform: none !important;
+    width: 100% !important;
+    opacity: 0.5;
+  }
+}
