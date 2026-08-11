@@ -105,6 +105,9 @@ export function FindClient({ simulate }: { simulate?: string }) {
   const [rating, setRating] = React.useState<Scored | null>(null);
   /** tmdbId → detail; session-lived hydration cache. */
   const detailsRef = React.useRef(new Map<number, MovieDetail | null>());
+  /** tmdbIds with a hydration request in flight, so concurrent triggers
+   *  (initial load, stepping, mood prefetch) do not double-fetch. */
+  const inflightRef = React.useRef(new Set<number>());
   const [, forceRender] = React.useReducer((n: number) => n + 1, 0);
 
   const mockTier: RecoTier =
@@ -144,14 +147,23 @@ export function FindClient({ simulate }: { simulate?: string }) {
 
   async function hydrate(pick: Scored | undefined) {
     if (!pick || pick.mediaType !== "movie") return;
+    // A stored result is final: a MovieDetail, or null for a genuine 404
+    // (getMovie returns null rather than throwing on not-found). An in-flight
+    // request is enough to skip. A transient failure (a 500, a dropped
+    // connection) stores NOTHING, so the next step or new set retries instead
+    // of the pick showing no synopsis for the rest of the session.
     if (detailsRef.current.has(pick.tmdbId)) return;
+    if (inflightRef.current.has(pick.tmdbId)) return;
+    inflightRef.current.add(pick.tmdbId);
     try {
       const d = await getMovie(pick.tmdbId);
       detailsRef.current.set(pick.tmdbId, d);
+      forceRender();
     } catch {
-      detailsRef.current.set(pick.tmdbId, null);
+      // Leave it uncached so a later trigger can try again.
+    } finally {
+      inflightRef.current.delete(pick.tmdbId);
     }
-    forceRender();
   }
 
   async function fetchPicks() {
