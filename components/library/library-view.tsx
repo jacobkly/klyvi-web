@@ -22,6 +22,7 @@ import {
   type LibrarySortKey,
   type SortOrder,
 } from "@/lib/library-filter";
+import { usePref } from "@/lib/local-prefs";
 import {
   STATUS_LABELS,
   STATUS_VERBS,
@@ -75,9 +76,13 @@ function LibraryView({
     type: "all",
     query: "",
   });
-  const [sortKey, setSortKey] = React.useState<LibrarySortKey>("updated");
+  // Score, highest first, is the default a taste library wants: the best of
+  // what you have watched at the top rather than the most recently touched.
+  const [sortKey, setSortKey] = React.useState<LibrarySortKey>("score");
   const [sortOrder, setSortOrder] = React.useState<SortOrder>("desc");
-  const [view, setView] = React.useState<LibraryViewMode>("grid");
+  // Remembered across visits: the density choice is a preference, not a
+  // per-session toggle, so it persists (and syncs) like the theme settings.
+  const [view, setView] = usePref("libraryView");
   const [editing, setEditing] = React.useState<LibraryEntry | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
@@ -487,8 +492,11 @@ function EntryCollection({
             media={e}
             variant={view === "compact" ? "compact" : "overlay"}
             status={e.status}
+            score={e.score}
             progress={
-              e.progress != null
+              // Episode progress is a TV-season concept; a movie has no
+              // episodes, so it never carries a progress counter.
+              e.mediaType === "season" && e.progress != null
                 ? { watched: e.progress, total: e.progressTotal }
                 : undefined
             }

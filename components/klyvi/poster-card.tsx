@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Star } from "lucide-react";
 
 import {
   STATUS_LABELS,
@@ -28,12 +29,15 @@ function PosterCard({
   variant,
   status,
   progress,
+  score,
   className,
 }: {
   media: MediaSummary;
   variant: "overlay" | "below" | "compact";
   status?: TrackingStatus;
   progress?: { watched: number; total: number | null };
+  /** The user's own score (0..100), shown bottom-right. Null renders nothing. */
+  score?: number | null;
   className?: string;
 }) {
   const href =
@@ -54,6 +58,7 @@ function PosterCard({
       ? `${progress.watched} / ${progress.total}`
       : `${progress.watched}`
     : null;
+  const scoreText = score != null ? String(score) : null;
 
   return (
     <Link
@@ -112,23 +117,53 @@ function PosterCard({
               {media.title}
               {seasonSuffix}
             </p>
-            {progressText ? (
-              <p
-                data-numeric
-                className="mt-0.5 font-mono text-[11px] text-violet-text"
-              >
-                {progressText}
-              </p>
+            {progressText || scoreText ? (
+              <div className="mt-1 flex items-center justify-between gap-2">
+                {/* Episode progress (TV only): violet, the app speaking. */}
+                <span data-numeric className="font-mono text-[11px] text-violet-text">
+                  {progressText}
+                </span>
+                {/* Your score: neutral (user data, not the app), on the right
+                    where a rating is read. The star names it, so it can never
+                    be mistaken for a count again. */}
+                {scoreText ? (
+                  <span
+                    data-numeric
+                    aria-label={`Your score ${scoreText} out of 100`}
+                    className="flex items-center gap-0.5 font-mono text-[11px] font-medium text-white"
+                  >
+                    <Star aria-hidden="true" className="size-2.5 fill-current" strokeWidth={2} />
+                    {scoreText}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : null}
 
-        {variant !== "overlay" && progressText ? (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pt-6 pb-1.5">
-            <p data-numeric className="font-mono text-[11px] text-violet-text">
-              {progressText}
-            </p>
-          </div>
+        {/* Compact has no title bar, so progress and score ride the artwork as
+            corner chips: progress bottom-left (TV), score bottom-right. */}
+        {variant === "compact" && src ? (
+          <>
+            {progressText ? (
+              <span
+                data-numeric
+                className="absolute bottom-1 left-1 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] font-medium text-violet-text backdrop-blur-sm"
+              >
+                {progressText}
+              </span>
+            ) : null}
+            {scoreText ? (
+              <span
+                data-numeric
+                aria-label={`Your score ${scoreText} out of 100`}
+                className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] font-medium text-white backdrop-blur-sm"
+              >
+                <Star aria-hidden="true" className="size-2.5 fill-current" strokeWidth={2} />
+                {scoreText}
+              </span>
+            ) : null}
+          </>
         ) : null}
       </div>
 

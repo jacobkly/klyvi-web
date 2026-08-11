@@ -7,8 +7,9 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 export type LibraryViewMode = "grid" | "list" | "compact";
 
 /**
- * The three-mode view switcher. Icon-only targets carry aria-labels;
- * persistence to settings arrives with the settings screen.
+ * The three-mode view switcher. Icon-only targets carry aria-labels. The
+ * chosen mode is a remembered preference (the caller persists it), so it
+ * survives navigation and reloads rather than resetting to grid.
  */
 function ViewSwitcher({
   value,

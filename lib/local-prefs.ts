@@ -17,6 +17,8 @@ export type Prefs = {
   scoringSystem: "hundred" | "ten" | "stars" | "smiley";
   listOrder: "updated" | "title" | "score" | "added";
   combineLists: boolean;
+  /** Library layout the user last chose; remembered so it does not reset. */
+  libraryView: "grid" | "list" | "compact";
   /** Which tracking updates create activity feed entries, keyed by status. */
   activityFeed: Record<string, boolean>;
   /** In-app notification switches, keyed by id. */
@@ -33,6 +35,7 @@ export const DEFAULT_PREFS: Prefs = {
   scoringSystem: "hundred",
   listOrder: "updated",
   combineLists: true,
+  libraryView: "grid",
   activityFeed: {},
   notifications: {},
   emails: {},

@@ -99,4 +99,17 @@ describe("PosterCard", () => {
     render(<PosterCard media={media} variant="compact" />);
     expect(screen.queryByText(/^S\d/)).not.toBeInTheDocument();
   });
+
+  it("shows the user's score, labelled, in the overlay variant", () => {
+    render(<PosterCard media={media} variant="overlay" score={82} />);
+    expect(
+      screen.getByLabelText("Your score 82 out of 100")
+    ).toBeInTheDocument();
+    expect(screen.getByText("82")).toBeInTheDocument();
+  });
+
+  it("renders no score element when the score is null", () => {
+    render(<PosterCard media={media} variant="overlay" score={null} />);
+    expect(screen.queryByLabelText(/your score/i)).not.toBeInTheDocument();
+  });
 });
