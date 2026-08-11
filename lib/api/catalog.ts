@@ -99,6 +99,23 @@ export async function getRankings(
   return (rows ?? []).map(mapRanking);
 }
 
+/**
+ * "More like this" for a movie. TMDB's own recommendations passthrough, used
+ * as the stand-in until Klyvi's keyword/cast similarity ships (see
+ * docs/planning/similar-movies-plan.md). Empty on 404 or a cold id.
+ */
+export async function getMovieRecommendations(
+  tmdbId: number,
+  signal?: AbortSignal
+): Promise<MediaSummary[]> {
+  const w = await apiFetch<WireSearchResponse | null>(
+    `/v1/movies/${tmdbId}/recommendations`,
+    { allow404: true, signal }
+  );
+  if (!w) return [];
+  return mapSearchResults(w, "movie").movies;
+}
+
 export async function getTvSeries(
   tmdbId: number,
   signal?: AbortSignal

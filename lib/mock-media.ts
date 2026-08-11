@@ -9,6 +9,8 @@ import type { MediaSummary } from "./types";
 
 export type CastMember = { id: number; name: string };
 export type Keyword = { id: number; name: string };
+/** Crew grouped by the role we surface (Director, Writers, ...). */
+export type CrewGroup = { role: string; names: string[] };
 
 export type MovieDetail = {
   tmdbId: number;
@@ -28,6 +30,7 @@ export type MovieDetail = {
   keywords: Keyword[];
   cast: CastMember[];
   director: string | null;
+  crew: CrewGroup[];
 };
 
 export type SeasonInfo = {
@@ -80,6 +83,12 @@ export const MOCK_MOVIE: MovieDetail = {
     { id: 8, name: "Park Myung-hoon" },
   ],
   director: "Bong Joon Ho",
+  crew: [
+    { role: "Director", names: ["Bong Joon Ho"] },
+    { role: "Writers", names: ["Bong Joon Ho", "Han Jin-won"] },
+    { role: "Cinematography", names: ["Hong Kyung-pyo"] },
+    { role: "Music", names: ["Jung Jae-il"] },
+  ],
 };
 
 export const MOCK_TV: TvDetail = {
@@ -112,6 +121,11 @@ export const MOCK_TV: TvDetail = {
     { id: 6, name: "Tramell Tillman" },
   ],
   creator: "Dan Erickson",
+  crew: [
+    { role: "Creator", names: ["Dan Erickson"] },
+    { role: "Directors", names: ["Ben Stiller", "Aoife McArdle"] },
+    { role: "Music", names: ["Theodore Shapiro"] },
+  ],
   episodeRuntime: 50,
   firstAirDate: "2022-02-17",
   lastAirDate: "2025-03-20",

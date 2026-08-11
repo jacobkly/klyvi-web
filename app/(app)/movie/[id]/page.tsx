@@ -2,7 +2,11 @@ import { cache } from "react";
 
 import { DetailError, DetailNotFound } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
-import { getMovie, getMovieCollection } from "@/lib/api/catalog";
+import {
+  getMovie,
+  getMovieCollection,
+  getMovieRecommendations,
+} from "@/lib/api/catalog";
 import { formatDate, formatRuntime } from "@/lib/mock-media";
 
 /** Deduped across generateMetadata and the page render. */
@@ -37,8 +41,14 @@ export default async function MoviePage({
   if (failed) return <DetailError />;
   if (!m) return <DetailNotFound />;
 
-  const collection = await getMovieCollection(tmdbId).catch(() => []);
+  // Collection and recommendations are enrichment, not the page: a failure of
+  // either still renders the film. Fetched together to share the wait.
+  const [collection, recommendations] = await Promise.all([
+    getMovieCollection(tmdbId).catch(() => []),
+    getMovieRecommendations(tmdbId).catch(() => []),
+  ]);
   const related = collection.filter((c) => c.tmdbId !== tmdbId);
+  const moreLikeThis = recommendations.filter((c) => c.tmdbId !== tmdbId);
 
   return (
     <DetailLayout
@@ -71,11 +81,13 @@ export default async function MoviePage({
       ]}
       keywords={m.keywords}
       cast={m.cast}
+      crew={m.crew}
       related={
         related.length > 0
           ? { heading: "In the same collection", items: related }
           : undefined
       }
+      moreLikeThis={moreLikeThis}
     />
   );
 }

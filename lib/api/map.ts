@@ -5,6 +5,7 @@
 
 import type {
   CastMember,
+  CrewGroup,
   MovieDetail,
   SeasonInfo,
   TvDetail,
@@ -75,12 +76,40 @@ function keywordList(
   return kw.keywords ?? kw.results ?? [];
 }
 
-function topCast(credits: WireMovie["credits"], limit = 12): CastMember[] {
+function topCast(credits: WireMovie["credits"], limit = 30): CastMember[] {
   const cast = credits?.cast ?? [];
   return [...cast]
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
     .slice(0, limit)
     .map((c) => ({ id: c.id, name: c.name }));
+}
+
+// The crew roles Klyvi surfaces, in display order. TMDB job strings on the
+// left map to the human role label; several jobs can feed one label (a film
+// with a Screenplay and a Story credit both read as Writers).
+const CREW_ROLES: { role: string; jobs: string[] }[] = [
+  { role: "Director", jobs: ["Director"] },
+  { role: "Writers", jobs: ["Screenplay", "Writer", "Story", "Author", "Novel"] },
+  { role: "Producers", jobs: ["Producer"] },
+  { role: "Cinematography", jobs: ["Director of Photography"] },
+  { role: "Editing", jobs: ["Editor"] },
+  { role: "Music", jobs: ["Original Music Composer", "Music"] },
+  { role: "Production Design", jobs: ["Production Design"] },
+];
+
+function groupCrew(credits: WireMovie["credits"], perRole = 6): CrewGroup[] {
+  const crew = credits?.crew ?? [];
+  const out: CrewGroup[] = [];
+  for (const { role, jobs } of CREW_ROLES) {
+    const names: string[] = [];
+    for (const c of crew) {
+      if (!c.job || !c.name || !jobs.includes(c.job)) continue;
+      if (!names.includes(c.name)) names.push(c.name);
+      if (names.length >= perRole) break;
+    }
+    if (names.length > 0) out.push({ role, names });
+  }
+  return out;
 }
 
 // ---------- tracking ----------
@@ -155,6 +184,7 @@ export function mapMovie(w: WireMovie): MovieDetail {
     keywords: keywordList(w.keywords),
     cast: topCast(w.credits),
     director,
+    crew: groupCrew(w.credits),
   };
 }
 
@@ -192,6 +222,7 @@ export function mapTvSeries(w: WireTvSeries): TvDetail {
     creator: w.created_by?.length
       ? w.created_by.map((c) => c.name).join(", ")
       : null,
+    crew: groupCrew(w.credits),
   };
 }
 

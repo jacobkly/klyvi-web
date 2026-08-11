@@ -25,8 +25,9 @@ import { BackdropHero } from "@/components/media/backdrop-hero";
 import { CastChips } from "@/components/media/cast-chips";
 import { KeywordCard } from "@/components/media/keyword-card";
 import { MetadataList } from "@/components/media/metadata-list";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { CastMember, Keyword } from "@/lib/mock-media";
+import type { CastMember, CrewGroup, Keyword } from "@/lib/mock-media";
 import {
   STATUS_VERBS,
   type LibraryEntry,
@@ -60,7 +61,9 @@ function DetailLayout({
   metadata,
   keywords,
   cast,
+  crew,
   related,
+  moreLikeThis,
   extra,
 }: {
   media: TrackableSummary;
@@ -83,7 +86,11 @@ function DetailLayout({
   metadata: { label: string; value: string | number | null }[];
   keywords: Keyword[];
   cast: CastMember[];
+  /** Crew grouped by role (Director, Writers, ...). Empty hides the section. */
+  crew?: CrewGroup[];
   related?: { heading: string; items: MediaSummary[] };
+  /** Similar titles for the bottom shelf. Its own section, below related. */
+  moreLikeThis?: MediaSummary[];
   extra?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -343,13 +350,53 @@ function DetailLayout({
                 <CastChips cast={cast} />
               </section>
 
+              {crew && crew.length > 0 ? (
+                <section className="mb-10">
+                  <SectionHeader title="Crew" className="mb-4" />
+                  <div className="flex flex-col gap-3">
+                    {crew.map((g) => (
+                      <div
+                        key={g.role}
+                        className="flex flex-col gap-1.5 sm:flex-row sm:items-baseline sm:gap-4"
+                      >
+                        <span className="shrink-0 pt-0.5 text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground sm:w-36">
+                          {g.role}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {g.names.map((n) => (
+                            <Badge key={n} variant="secondary">
+                              {n}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
               {related && related.items.length > 0 ? (
-                <section>
+                <section className="mb-10">
                   <SectionHeader title={related.heading} className="mb-4" />
                   <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
                     {related.items.map((m) => (
                       <PosterCard
                         key={`${m.mediaType}-${m.tmdbId}-${m.seasonNumber ?? 0}`}
+                        media={m}
+                        variant="below"
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {moreLikeThis && moreLikeThis.length > 0 ? (
+                <section>
+                  <SectionHeader title="More like this" className="mb-4" />
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                    {moreLikeThis.slice(0, 12).map((m) => (
+                      <PosterCard
+                        key={`${m.mediaType}-${m.tmdbId}`}
                         media={m}
                         variant="below"
                       />
