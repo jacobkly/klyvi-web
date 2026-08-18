@@ -146,6 +146,9 @@ export type UserStats = {
 
 export type ImportStatus = "pending" | "running" | "done" | "failed";
 
+/** A row the import could not match to a catalog film, for manual rating. */
+export type UnmatchedTitle = { title: string; year: number };
+
 /** An async import job (POST /v1/imports, GET /v1/imports/{id}). */
 export type ImportJob = {
   id: string;
@@ -154,6 +157,9 @@ export type ImportJob = {
   total: number;
   matched: number;
   unmatched: number;
+  /** The unmatched rows themselves (capped at 200 server-side), so the user
+   *  can find and rate them by hand. `unmatched` stays the exact count. */
+  unmatchedTitles: UnmatchedTitle[];
   error: string | null;
 };
 

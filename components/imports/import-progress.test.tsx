@@ -13,6 +13,7 @@ function job(partial: Partial<ImportJob>): ImportJob {
     total: 0,
     matched: 0,
     unmatched: 0,
+    unmatchedTitles: [],
     error: null,
     ...partial,
   };
@@ -73,6 +74,26 @@ describe("ImportProgress", () => {
       "100"
     );
     expect(screen.getByText(/180 added/)).toBeInTheDocument();
+  });
+
+  it("lists the titles that could not be matched, for manual resolution", () => {
+    render(
+      <ImportProgress
+        job={job({
+          status: "done",
+          total: 3,
+          matched: 1,
+          unmatched: 2,
+          unmatchedTitles: [
+            { title: "Obscure Film", year: 1975 },
+            { title: "Lost Reel", year: 0 },
+          ],
+        })}
+      />
+    );
+    expect(screen.getByText("2 could not be matched")).toBeInTheDocument();
+    expect(screen.getByText(/Obscure Film/)).toBeInTheDocument();
+    expect(screen.getByText(/Lost Reel/)).toBeInTheDocument();
   });
 
   it("shows the job's error message when the import failed", () => {

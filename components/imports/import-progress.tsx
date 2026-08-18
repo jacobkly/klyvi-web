@@ -74,6 +74,29 @@ export function ImportProgress({
               : `${processed} / ${job.total}`}
         </span>
       </div>
+
+      {/* The rows that could not be matched, so the user can search and rate
+          them by hand. Native details/summary: accessible, collapsed by
+          default so a big unmatched list does not swamp the dialog. */}
+      {done && job.unmatchedTitles.length > 0 ? (
+        <details className="mt-1 text-xs">
+          <summary className="cursor-pointer text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30">
+            {job.unmatchedTitles.length} could not be matched
+          </summary>
+          <ul className="mt-2 flex max-h-40 flex-col gap-1 overflow-y-auto pl-1">
+            {job.unmatchedTitles.map((t, i) => (
+              <li key={`${t.title}-${t.year}-${i}`} className="text-muted-foreground">
+                {t.title}
+                {t.year ? (
+                  <span data-numeric className="ml-1 font-mono text-muted-foreground/70">
+                    {t.year}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
     </div>
   );
 }

@@ -324,6 +324,10 @@ export function mapImportJob(w: WireImportJob): ImportJob {
     total: w.total,
     matched: w.matched,
     unmatched: w.unmatched,
+    unmatchedTitles: (w.unmatched_titles ?? []).map((t) => ({
+      title: t.title,
+      year: t.year,
+    })),
     error: w.error ?? null,
   };
 }

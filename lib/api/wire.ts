@@ -219,6 +219,9 @@ export type WireImportJob = {
   total: number;
   matched: number;
   unmatched: number;
+  /** Rows that could not be matched (title + year), always an array server-
+   *  side (never null), capped at 200. Added in the imports contract update. */
+  unmatched_titles: { title: string; year: number }[] | null;
   error: string | null;
   created_at: string;
   updated_at: string;
