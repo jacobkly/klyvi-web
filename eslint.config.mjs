@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The archived beta is its own Next app with its own build output.
+    "beta-ui/**",
   ]),
 ]);
 
