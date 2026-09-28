@@ -26,6 +26,27 @@ export async function listTracking(filters?: {
   return (rows ?? []).map(mapTrackingEntry);
 }
 
+/** The user's entry for one title, or null when they do not track it. Detail
+ *  pages use this instead of pulling the whole library to find one row. */
+export async function lookupTracking(input: {
+  tmdbId: number;
+  mediaType: MediaType;
+  seasonNumber?: number | null;
+}): Promise<LibraryEntry | null> {
+  const params = new URLSearchParams({
+    tmdb_id: String(input.tmdbId),
+    media_type: input.mediaType,
+  });
+  if (input.mediaType === "season" && input.seasonNumber != null) {
+    params.set("season_number", String(input.seasonNumber));
+  }
+  const row = await browserFetch<WireTrackingEntry | null>(
+    `/v1/tracking/lookup?${params}`,
+    { allow404: true }
+  );
+  return row ? mapTrackingEntry(row) : null;
+}
+
 export async function addTracking(input: {
   tmdbId: number;
   mediaType: MediaType;

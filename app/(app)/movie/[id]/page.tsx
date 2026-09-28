@@ -1,13 +1,16 @@
-import { cache } from "react";
+import { cache, Suspense } from "react";
 
 import { DetailError, DetailNotFound } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
+import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
 import {
   getMovie,
   getMovieCollection,
   getMovieRecommendations,
 } from "@/lib/api/catalog";
 import { formatDate, formatRuntime } from "@/lib/mock-media";
+
+import { MovieShelves } from "./movie-shelves";
 
 /** Deduped across generateMetadata and the page render. */
 const load = cache(async (id: number) => {
@@ -37,18 +40,16 @@ export default async function MoviePage({
   const tmdbId = Number(id);
   if (!Number.isFinite(tmdbId) || tmdbId <= 0) return <DetailNotFound />;
 
+  // All three requests need only the TMDB id, so they start together.
+  // Collection and recommendations are enrichment, not the page: a failure
+  // of either still renders the film, and they stream in behind the hero
+  // rather than holding it back.
+  const collection = getMovieCollection(tmdbId).catch(() => []);
+  const recommendations = getMovieRecommendations(tmdbId).catch(() => []);
+
   const { movie: m, failed } = await load(tmdbId);
   if (failed) return <DetailError />;
   if (!m) return <DetailNotFound />;
-
-  // Collection and recommendations are enrichment, not the page: a failure of
-  // either still renders the film. Fetched together to share the wait.
-  const [collection, recommendations] = await Promise.all([
-    getMovieCollection(tmdbId).catch(() => []),
-    getMovieRecommendations(tmdbId).catch(() => []),
-  ]);
-  const related = collection.filter((c) => c.tmdbId !== tmdbId);
-  const moreLikeThis = recommendations.filter((c) => c.tmdbId !== tmdbId);
 
   return (
     <DetailLayout
@@ -82,12 +83,15 @@ export default async function MoviePage({
       keywords={m.keywords}
       cast={m.cast}
       crew={m.crew}
-      related={
-        related.length > 0
-          ? { heading: "In the same collection", items: related }
-          : undefined
+      shelves={
+        <Suspense fallback={<DetailShelvesSkeleton />}>
+          <MovieShelves
+            tmdbId={tmdbId}
+            collection={collection}
+            recommendations={recommendations}
+          />
+        </Suspense>
       }
-      moreLikeThis={moreLikeThis}
     />
   );
 }

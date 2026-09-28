@@ -117,6 +117,9 @@ const SCORED: WireScored = {
   backdrop_path: "/srGy65EpFp2Fnp1jpVRWWVF4Vox.jpg",
   release_year: 2003,
   vote_average: 8.1,
+  overview: "In 1986, in the province of Gyunggi, two detectives hunt a killer.",
+  runtime: 131,
+  genres: ["Crime", "Drama", "Thriller"],
   score: 1.42,
   reasons: [
     { kind: "keyword", id: 9826, name: "slow-burn" },
@@ -139,7 +142,16 @@ describe("mapScored", () => {
         { kind: "genre", id: 18, name: "Drama" },
       ],
     });
-    // Hydrated later, absent from the feed.
+    // Card details ride along with the feed, no per-pick hydration.
+    expect(s.overview).toBe(
+      "In 1986, in the province of Gyunggi, two detectives hunt a killer."
+    );
+    expect(s.runtime).toBe(131);
+    expect(s.genres).toEqual(["Crime", "Drama", "Thriller"]);
+  });
+
+  it("treats a blank synopsis, zero runtime, and null genres as absent", () => {
+    const s = mapScored({ ...SCORED, overview: "", runtime: 0, genres: null });
     expect(s.overview).toBeNull();
     expect(s.runtime).toBeNull();
     expect(s.genres).toEqual([]);

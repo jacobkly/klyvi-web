@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
-import type { MovieDetail } from "@/lib/mock-media";
 import type { Scored } from "@/lib/types";
 import { tmdbImage } from "@/lib/tmdb-image";
 
@@ -24,16 +23,14 @@ import { tmdbImage } from "@/lib/tmdb-image";
  */
 export function PickHero({
   pick,
-  detail,
   priority,
   detailHref,
 }: {
   pick: Scored;
-  detail?: MovieDetail | null;
   priority?: boolean;
   detailHref?: string | null;
 }) {
-  const backdropPath = pick.backdropPath ?? detail?.backdropPath ?? null;
+  const backdropPath = pick.backdropPath;
   const poster = tmdbImage(pick.posterPath);
   const href =
     detailHref === undefined ? `/movie/${pick.tmdbId}` : detailHref;

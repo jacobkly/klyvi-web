@@ -84,9 +84,9 @@ export type LibraryEntry = TrackableSummary & {
   backdropPath?: string | null;
 };
 
-/** One item from GET /v1/reco/feed, enriched server-side. Overview, runtime,
- *  and genres are NOT in the feed payload; the client hydrates them from
- *  /v1/movies/{id} for the pick being shown. */
+/** One item from GET /v1/reco/feed, enriched server-side. The card details
+ *  (overview, runtime, genres) ride along in the feed, so a pick never needs
+ *  a follow-up /v1/movies/{id} request. */
 export type Scored = MediaSummary & {
   backdropPath: string | null;
   voteAverage: number | null;

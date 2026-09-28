@@ -148,10 +148,9 @@ export function mapScored(w: WireScored): Scored {
     backdropPath: orNull(w.backdrop_path),
     year: w.release_year > 0 ? w.release_year : null,
     voteAverage: w.vote_average > 0 ? w.vote_average : null,
-    // Hydrated from /v1/movies/{id} for the pick being shown.
-    overview: null,
-    runtime: null,
-    genres: [],
+    overview: orNull(w.overview),
+    runtime: w.runtime > 0 ? w.runtime : null,
+    genres: w.genres ?? [],
     reasons: (w.reasons ?? []).map(
       (r): Reason => ({
         kind: r.kind === "genre" ? "genre" : "keyword",

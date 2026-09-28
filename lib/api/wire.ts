@@ -152,6 +152,12 @@ export type WireScored = {
   backdrop_path: string | null;
   release_year: number;
   vote_average: number;
+  /** "" when TMDB has no synopsis. */
+  overview: string;
+  /** Minutes, 0 when unknown. */
+  runtime: number;
+  /** Names in TMDB order. The server sends [], null is tolerated. */
+  genres: string[] | null;
   /** Debug/explainability passthrough; the frontend ignores it. */
   features?: unknown;
   score: number;

@@ -10,11 +10,10 @@ import { recordInteraction } from "@/lib/api/interactions";
 import {
   addTracking,
   deleteTracking,
-  listTracking,
+  lookupTracking,
   updateTracking,
 } from "@/lib/api/tracking";
 
-import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { StatusControl } from "@/components/library/status-control";
 import {
@@ -31,7 +30,6 @@ import type { CastMember, CrewGroup, Keyword } from "@/lib/mock-media";
 import {
   STATUS_VERBS,
   type LibraryEntry,
-  type MediaSummary,
   type TrackableSummary,
   type TrackingStatus,
 } from "@/lib/types";
@@ -63,8 +61,7 @@ function DetailLayout({
   keywords,
   cast,
   crew,
-  related,
-  moreLikeThis,
+  shelves,
   extra,
 }: {
   media: TrackableSummary;
@@ -89,9 +86,10 @@ function DetailLayout({
   cast: CastMember[];
   /** Crew grouped by role (Director, Writers, ...). Empty hides the section. */
   crew?: CrewGroup[];
-  related?: { heading: string; items: MediaSummary[] };
-  /** Similar titles for the bottom shelf. Its own section, below related. */
-  moreLikeThis?: MediaSummary[];
+  /** Poster shelves at the foot of the page (collection, more like this).
+   *  A slot rather than data so the page can stream them in on their own
+   *  Suspense boundary; see DetailShelves. */
+  shelves?: React.ReactNode;
   extra?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -107,27 +105,25 @@ function DetailLayout({
   const [pendingStatus, setPendingStatus] = React.useState<TrackingStatus | null>(
     null
   );
-  /** Internal media_id, learned from the tracking list or the first POST.
+  /** Internal media_id, learned from the tracking lookup or the first POST.
    *  PATCH and DELETE address this, so writes queue behind knowing it. */
   const [mediaId, setMediaId] = React.useState<number | null>(null);
   const [editing, setEditing] = React.useState(false);
   const [overviewOpen, setOverviewOpen] = React.useState(false);
 
-  // Hydrate any existing entry so the control reflects reality on load.
-  // Signed out (or API down) this fails quietly; browsing stays public.
+  // Hydrate any existing entry so the control reflects reality on load. One
+  // lookup for this title, not the whole library. Signed out (or API down)
+  // this fails quietly; browsing stays public.
   React.useEffect(() => {
     if (!trackable || !user) return;
     let cancelled = false;
-    listTracking()
-      .then((entries) => {
+    lookupTracking({
+      tmdbId: media.tmdbId,
+      mediaType: media.mediaType,
+      seasonNumber: media.seasonNumber,
+    })
+      .then((mine) => {
         if (cancelled) return;
-        const mine = entries.find(
-          (e) =>
-            e.tmdbId === media.tmdbId &&
-            e.mediaType === media.mediaType &&
-            (media.mediaType === "movie" ||
-              e.seasonNumber === media.seasonNumber)
-        );
         if (mine) {
           setMediaId(mine.mediaId);
           setStatus(mine.status);
@@ -376,35 +372,7 @@ function DetailLayout({
                 </section>
               ) : null}
 
-              {related && related.items.length > 0 ? (
-                <section className="mb-10">
-                  <SectionHeader title={related.heading} className="mb-4" />
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                    {related.items.map((m) => (
-                      <PosterCard
-                        key={`${m.mediaType}-${m.tmdbId}-${m.seasonNumber ?? 0}`}
-                        media={m}
-                        variant="below"
-                      />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              {moreLikeThis && moreLikeThis.length > 0 ? (
-                <section>
-                  <SectionHeader title="More like this" className="mb-4" />
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                    {moreLikeThis.slice(0, 12).map((m) => (
-                      <PosterCard
-                        key={`${m.mediaType}-${m.tmdbId}`}
-                        media={m}
-                        variant="below"
-                      />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
+              {shelves}
             </div>
           </div>
         </div>

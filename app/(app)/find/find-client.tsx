@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 import {
@@ -22,14 +21,13 @@ import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { getMovie } from "@/lib/api/catalog";
 import { recordInteraction } from "@/lib/api/interactions";
 import { getFeed } from "@/lib/api/reco";
 import { addTracking } from "@/lib/api/tracking";
 import { listInteractions } from "@/lib/api/interactions";
 import { queueSignal } from "@/lib/interactions-batch";
 import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
-import { formatRuntime, type MovieDetail } from "@/lib/mock-media";
+import { formatRuntime } from "@/lib/mock-media";
 import { watchWindowPhrase } from "@/lib/time-of-day";
 import type { Scored } from "@/lib/types";
 
@@ -37,42 +35,43 @@ const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
 
 /**
  * Moods are honest client-side lenses over the feed, not server queries.
- * Each one names the data it reads; anything it cannot see passes through.
+ * Each one reads only what the feed carries (runtime, genres, year, and the
+ * keywords named in its reasons); a pick missing that data does not fit.
  */
 const MOODS: {
   id: string;
   label: string;
-  fits: (s: Scored, d: MovieDetail | null) => boolean;
+  fits: (s: Scored) => boolean;
 }[] = [
   { id: "any", label: "Anything", fits: () => true },
   {
     id: "short",
     label: "Under 2 hours",
-    fits: (_s, d) => d?.runtime != null && d.runtime <= 120,
+    fits: (s) => s.runtime != null && s.runtime <= 120,
   },
   {
     id: "slow",
     label: "Slow burn",
-    fits: (_s, d) =>
-      d != null &&
-      (d.keywords.some((k) => /slow.?burn|psychological/i.test(k.name)) ||
-        (d.genres.includes("Drama") && !d.genres.includes("Action"))),
+    fits: (s) =>
+      s.reasons.some(
+        (r) =>
+          r.kind === "keyword" && /slow.?burn|psychological/i.test(r.name ?? "")
+      ) ||
+      (s.genres.includes("Drama") && !s.genres.includes("Action")),
   },
   {
     id: "light",
     label: "Something light",
-    fits: (_s, d) =>
-      d != null &&
-      d.genres.some((g) => ["Comedy", "Romance", "Family", "Animation"].includes(g)) &&
-      !d.genres.includes("Horror"),
+    fits: (s) =>
+      s.genres.some((g) => ["Comedy", "Romance", "Family", "Animation"].includes(g)) &&
+      !s.genres.includes("Horror"),
   },
   {
     id: "heavy",
     label: "Heavy",
-    fits: (_s, d) =>
-      d != null &&
-      d.genres.some((g) => ["Drama", "War", "Crime", "Thriller"].includes(g)) &&
-      !d.genres.includes("Comedy"),
+    fits: (s) =>
+      s.genres.some((g) => ["Drama", "War", "Crime", "Thriller"].includes(g)) &&
+      !s.genres.includes("Comedy"),
   },
   {
     id: "old",
@@ -90,9 +89,8 @@ type Phase =
 /**
  * Find Next, built as a decision surface rather than a list: ONE pick at a
  * time, full-bleed backdrop, reasons prominent, the rest of the set behind
- * arrows. Live data comes from /v1/reco/feed; the synopsis, runtime, and
- * genres are hydrated per pick from /v1/movies/{id} because the feed does
- * not carry them.
+ * arrows. Everything on screen, synopsis, runtime, and genres included,
+ * comes from one /v1/reco/feed request.
  */
 export function FindClient({ simulate }: { simulate?: string }) {
   const { user } = useSession();
@@ -103,12 +101,6 @@ export function FindClient({ simulate }: { simulate?: string }) {
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
   const [interactions, setInteractions] = React.useState<number | null>(null);
   const [rating, setRating] = React.useState<Scored | null>(null);
-  /** tmdbId → detail; session-lived hydration cache. */
-  const detailsRef = React.useRef(new Map<number, MovieDetail | null>());
-  /** tmdbIds with a hydration request in flight, so concurrent triggers
-   *  (initial load, stepping, mood prefetch) do not double-fetch. */
-  const inflightRef = React.useRef(new Set<number>());
-  const [, forceRender] = React.useReducer((n: number) => n + 1, 0);
 
   const mockTier: RecoTier =
     simulate === "tier0" ? 0 : simulate === "tier2" ? 2 : 1;
@@ -145,27 +137,6 @@ export function FindClient({ simulate }: { simulate?: string }) {
     [mock]
   );
 
-  async function hydrate(pick: Scored | undefined) {
-    if (!pick || pick.mediaType !== "movie") return;
-    // A stored result is final: a MovieDetail, or null for a genuine 404
-    // (getMovie returns null rather than throwing on not-found). An in-flight
-    // request is enough to skip. A transient failure (a 500, a dropped
-    // connection) stores NOTHING, so the next step or new set retries instead
-    // of the pick showing no synopsis for the rest of the session.
-    if (detailsRef.current.has(pick.tmdbId)) return;
-    if (inflightRef.current.has(pick.tmdbId)) return;
-    inflightRef.current.add(pick.tmdbId);
-    try {
-      const d = await getMovie(pick.tmdbId);
-      detailsRef.current.set(pick.tmdbId, d);
-      forceRender();
-    } catch {
-      // Leave it uncached so a later trigger can try again.
-    } finally {
-      inflightRef.current.delete(pick.tmdbId);
-    }
-  }
-
   async function fetchPicks() {
     setPhase({ kind: "loading" });
 
@@ -185,35 +156,11 @@ export function FindClient({ simulate }: { simulate?: string }) {
     }
 
     try {
-      let feed = await getFeed();
-
-      // A chosen mood needs the details to judge, so hydrate the whole feed
-      // (bounded: the feed caps at 30, and the catalog cache makes repeats
-      // cheap), then filter. "Anything" skips straight through.
+      const feed = await getFeed();
       const m = MOODS.find((x) => x.id === mood) ?? MOODS[0];
-      if (m.id !== "any") {
-        await Promise.all(feed.map((p) => hydrate(p)));
-        feed = feed.filter((p) =>
-          m.fits(p, detailsRef.current.get(p.tmdbId) ?? null)
-        );
-      }
-
-      const picks = feed.slice(0, count).map((p) => {
-        const d = detailsRef.current.get(p.tmdbId);
-        return d
-          ? {
-              ...p,
-              overview: d.overview,
-              runtime: d.runtime,
-              genres: d.genres,
-              backdropPath: p.backdropPath ?? d.backdropPath,
-            }
-          : p;
-      });
+      const picks = feed.filter(m.fits).slice(0, count);
       setPhase({ kind: "ready", picks, index: 0 });
       sawPick(picks[0]);
-      void hydrate(picks[0]);
-      void hydrate(picks[1]);
     } catch {
       setPhase({ kind: "error" });
     }
@@ -225,7 +172,6 @@ export function FindClient({ simulate }: { simulate?: string }) {
     if (next < 0 || next >= phase.picks.length) return;
     setPhase({ ...phase, index: next });
     sawPick(phase.picks[next]);
-    void hydrate(phase.picks[next + 1]);
   }
 
   function removeCurrent() {
@@ -457,10 +403,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
 
   // ---------- the pick ----------
   const pick = phase.picks[phase.index];
-  const detail = detailsRef.current.get(pick.tmdbId) ?? null;
-  const overview = pick.overview ?? detail?.overview ?? null;
-  const runtime = pick.runtime ?? detail?.runtime ?? null;
-  const genres = pick.genres.length > 0 ? pick.genres : (detail?.genres ?? []);
+  const { overview, runtime, genres } = pick;
   // Read at render, which only ever happens on the client here: the pick
   // view appears after the user asks for a set, so there is no server pass
   // to disagree with about the hour.
@@ -499,7 +442,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
           ) : null}
 
           <div className="relative z-10">
-            <PickHero pick={pick} detail={detail} priority />
+            <PickHero pick={pick} priority />
 
             {/* Fixed height, because this is the only part of the card whose
                 size follows the film. Letting it size to the synopsis moved
