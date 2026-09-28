@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { getMovieList, getTvList } from "@/lib/api/catalog";
 import { MOCK_POOL } from "@/lib/mock-onboarding";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * The app, glimpsed behind the onboarding overlay: real trending and
@@ -65,7 +66,7 @@ export function OnboardingBackdrop() {
                 className="relative aspect-[2/3] w-32 shrink-0 overflow-hidden rounded-art xl:w-36"
               >
                 <Image
-                  src={`https://image.tmdb.org/t/p/w342${poster}`}
+                  src={tmdbImage(poster)}
                   alt=""
                   fill
                   sizes="144px"

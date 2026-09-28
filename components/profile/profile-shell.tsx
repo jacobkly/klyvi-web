@@ -6,33 +6,31 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 import { Settings as SettingsIcon } from "lucide-react";
 
+import { useSession } from "@/components/auth/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getMovie } from "@/lib/api/catalog";
 import { getFeed } from "@/lib/api/reco";
 import { listTracking } from "@/lib/api/tracking";
-import { getMe, getMyStats } from "@/lib/api/users";
-import type {
-  LibraryEntry,
-  Reason,
-  Scored,
-  UserProfile,
-  UserStats,
-} from "@/lib/types";
+import { getMyStats } from "@/lib/api/users";
+import type { LibraryEntry, Reason, Scored, UserStats } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { tmdbImage } from "@/lib/tmdb-image";
+
+/** One section's data: undefined while it loads, null when it failed. */
+export type Loaded<T> = T | null | undefined;
 
 export type ProfileData = {
-  me: UserProfile | null;
   entries: LibraryEntry[];
-  taste: Reason[];
-  /** Server-aggregated stats, or null when the fetch failed. */
-  stats: UserStats | null;
+  /** Top reasons from the feed, which is the slowest call. */
+  taste: Loaded<Reason[]>;
+  /** Server-aggregated stats. */
+  stats: Loaded<UserStats>;
 };
 
 const ProfileContext = React.createContext<ProfileData | null>(null);
 
-/** Ready profile data. Null while the shell is still loading or failed. */
+/** Profile data once the library is in. Null before that, or if it failed. */
 export function useProfile(): ProfileData | null {
   return React.useContext(ProfileContext);
 }
@@ -65,11 +63,6 @@ function formatBirthday(iso: string): string | null {
   });
 }
 
-type State =
-  | { kind: "loading" }
-  | { kind: "error" }
-  | { kind: "ready"; data: ProfileData };
-
 const TABS = [
   { href: "/profile", label: "Overview" },
   { href: "/profile/stats", label: "Stats" },
@@ -79,108 +72,80 @@ const TABS = [
  * The profile chrome shared by both tabs: full-bleed banner built from the
  * user's highest-rated backdrop (the posters are the light source, so the
  * banner is artwork, not decoration), overlapping avatar, identity line,
- * and the tab row. Data loads once here and feeds both tabs via context.
+ * and the tab row.
+ *
+ * The identity is the session's profile, never a second fetch. The library,
+ * the feed, and the stats load separately: the tabs wait only for the
+ * library, and the feed and stats fill their own sections as they land.
  */
 export function ProfileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [state, setState] = React.useState<State>({ kind: "loading" });
-  const [backdrop, setBackdrop] = React.useState<string | null>(null);
+  const { profile: me, loading: sessionLoading } = useSession();
+  const [entries, setEntries] = React.useState<Loaded<LibraryEntry[]>>();
+  const [taste, setTaste] = React.useState<Loaded<Reason[]>>();
+  const [stats, setStats] = React.useState<Loaded<UserStats>>();
+  /** Bumped by the error state's Try again to refetch everything. */
+  const [attempt, setAttempt] = React.useState(0);
 
-  const load = React.useCallback(() => {
-    setState({ kind: "loading" });
-    Promise.allSettled([
-      getMe(),
-      listTracking(),
-      getFeed(),
-      getMyStats(),
-    ]).then(([me, tracking, feed, stats]) => {
-      if (me.status === "rejected" && tracking.status === "rejected") {
-        setState({ kind: "error" });
-        return;
-      }
-      setState({
-        kind: "ready",
-        data: {
-          me: me.status === "fulfilled" ? me.value : null,
-          entries: tracking.status === "fulfilled" ? tracking.value : [],
-          taste:
-            feed.status === "fulfilled" ? aggregateReasons(feed.value) : [],
-          stats: stats.status === "fulfilled" ? stats.value : null,
-        },
-      });
-    });
-  }, []);
-
-  React.useEffect(load, [load]);
-
-  // The banner backdrop arrives late and quietly: highest-rated film's
-  // backdrop via the catalog, fallback stays the plain surface.
   React.useEffect(() => {
-    if (state.kind !== "ready") return;
-    const best = [...state.data.entries]
-      .filter((e) => e.mediaType === "movie" && e.score != null)
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
-    if (!best) return;
-    let cancelled = false;
-    getMovie(best.tmdbId)
-      .then((detail) => {
-        if (!cancelled && detail?.backdropPath)
-          setBackdrop(detail.backdropPath);
-      })
-      .catch(() => {});
+    let live = true;
+    listTracking().then(
+      (v) => {
+        if (live) setEntries(v);
+      },
+      () => {
+        if (live) setEntries(null);
+      }
+    );
+    getFeed().then(
+      (v) => {
+        if (live) setTaste(aggregateReasons(v));
+      },
+      () => {
+        if (live) setTaste(null);
+      }
+    );
+    getMyStats().then(
+      (v) => {
+        if (live) setStats(v);
+      },
+      () => {
+        if (live) setStats(null);
+      }
+    );
     return () => {
-      cancelled = true;
+      live = false;
     };
-  }, [state]);
+  }, [attempt]);
 
-  if (state.kind === "loading") {
-    return (
-      <main className="flex-1">
-        <div className="h-40 w-full bg-card sm:h-52" />
-        <div className="mx-auto w-full max-w-[1100px] px-4 md:px-6">
-          <div className="-mt-8 flex items-end gap-4">
-            <Skeleton className="size-24 rounded-full ring-4 ring-background" />
-            <div className="pb-2">
-              <Skeleton className="h-7 w-44 rounded-lg" />
-              <Skeleton className="mt-2 h-4 w-32 rounded-lg" />
-            </div>
-          </div>
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-lg" />
-            ))}
-          </div>
-        </div>
-      </main>
-    );
+  function retry() {
+    setEntries(undefined);
+    setTaste(undefined);
+    setStats(undefined);
+    setAttempt((n) => n + 1);
   }
 
-  if (state.kind === "error") {
-    return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center px-4 py-24 text-center md:px-6">
-        <p className="text-[15px] font-semibold text-foreground">
-          Could not load your profile.
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Something went wrong on Klyvi&apos;s end.
-        </p>
-        <Button className="mt-5" onClick={load}>
-          Try again
-        </Button>
-      </main>
-    );
-  }
+  const data = React.useMemo<ProfileData | null>(
+    () => (entries ? { entries, taste, stats } : null),
+    [entries, taste, stats]
+  );
 
-  const { me } = state.data;
+  // The session's profile usually lands first. If it has not by the time
+  // the library has, it failed, and the fallback name stands in rather than
+  // a skeleton that never resolves.
+  const identityReady =
+    me != null || (!sessionLoading && entries !== undefined);
   const avatarSrc = me?.avatarUrl ?? null;
   const birthdayLine = me?.birthday ? formatBirthday(me.birthday) : null;
-  // A set banner_url wins; otherwise the top-rated film's backdrop stands
-  // in. bannerUrl is a full URL, backdrop is a TMDB path.
-  const bannerSrc = me?.bannerUrl
-    ? me.bannerUrl
-    : backdrop
-      ? `https://image.tmdb.org/t/p/w1280${backdrop}`
-      : null;
+  // A set banner_url wins; otherwise the highest-rated backdrop stands in.
+  // bannerUrl is a full URL, the backdrop is a TMDB path. Chosen only once
+  // the identity is known, so a set banner never swaps in over artwork.
+  const best = (entries ?? [])
+    .filter((e) => e.score != null && e.backdropPath)
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+  const bannerSrc = identityReady
+    ? (me?.bannerUrl ?? tmdbImage(best?.backdropPath))
+    : null;
 
   return (
     <main className="flex-1">
@@ -203,28 +168,38 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
 
       <div className="mx-auto w-full max-w-[1100px] px-4 md:px-6">
         <div className="-mt-8 flex flex-wrap items-end justify-between gap-4">
-          <div className="flex items-end gap-4">
-            <Avatar className="size-24 ring-4 ring-background">
-              {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
-              <AvatarFallback className="text-2xl">
-                {(me?.username?.charAt(0) ?? "K").toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="pb-1">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                {me?.username ?? "Your profile"}
-              </h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {me?.bio ?? "Your taste, in one place."}
-                {birthdayLine ? (
-                  <span className="text-muted-foreground/80">
-                    {me?.bio ? " · " : ""}
-                    Born {birthdayLine}
-                  </span>
-                ) : null}
-              </p>
+          {identityReady ? (
+            <div className="flex items-end gap-4">
+              <Avatar className="size-24 ring-4 ring-background">
+                {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
+                <AvatarFallback className="text-2xl">
+                  {(me?.username?.charAt(0) ?? "K").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="pb-1">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  {me?.username ?? "Your profile"}
+                </h1>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {me?.bio ?? "Your taste, in one place."}
+                  {birthdayLine ? (
+                    <span className="text-muted-foreground/80">
+                      {me?.bio ? " · " : ""}
+                      Born {birthdayLine}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-end gap-4">
+              <Skeleton className="size-24 rounded-full ring-4 ring-background" />
+              <div className="pb-2">
+                <Skeleton className="h-7 w-44 rounded-lg" />
+                <Skeleton className="mt-2 h-4 w-32 rounded-lg" />
+              </div>
+            </div>
+          )}
           <Link
             href="/settings"
             className={
@@ -257,9 +232,29 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <ProfileContext.Provider value={state.data}>
-          {children}
-        </ProfileContext.Provider>
+        {entries === undefined ? (
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-lg" />
+            ))}
+          </div>
+        ) : data === null ? (
+          <div className="py-16 text-center">
+            <p className="text-[15px] font-semibold text-foreground">
+              Could not load your profile.
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Something went wrong on Klyvi&apos;s end.
+            </p>
+            <Button className="mt-5" onClick={retry}>
+              Try again
+            </Button>
+          </div>
+        ) : (
+          <ProfileContext.Provider value={data}>
+            {children}
+          </ProfileContext.Provider>
+        )}
       </div>
     </main>
   );

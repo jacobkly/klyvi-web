@@ -31,7 +31,7 @@ import { queueSignal } from "@/lib/interactions-batch";
 import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
 import { formatRuntime, type MovieDetail } from "@/lib/mock-media";
 import { watchWindowPhrase } from "@/lib/time-of-day";
-import { posterUrl, type Scored } from "@/lib/types";
+import type { Scored } from "@/lib/types";
 
 const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
 

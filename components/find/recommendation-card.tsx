@@ -6,8 +6,9 @@ import { Bookmark, Check, EyeOff } from "lucide-react";
 
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { Button } from "@/components/ui/button";
-import { posterUrl, type Reason } from "@/lib/types";
+import type { Reason } from "@/lib/types";
 import type { Scored } from "@/lib/mock-reco";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * The large Find Next card. The reason chips are the point of it: they sit
@@ -24,7 +25,7 @@ function RecommendationCard({
   onDismiss: (item: Scored) => void;
   onSeen: (item: Scored) => void;
 }) {
-  const src = posterUrl(item.posterPath, "w342");
+  const src = tmdbImage(item.posterPath);
 
   return (
     <div className="flex gap-4 rounded-lg bg-card p-4 ring-1 ring-foreground/10 sm:gap-5 sm:p-5">

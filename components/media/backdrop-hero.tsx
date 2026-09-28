@@ -1,6 +1,8 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 
+import { tmdbImage } from "@/lib/tmdb-image";
+
 /**
  * The cinematic detail header: full-bleed backdrop with a scrim into the page
  * background, overlapping poster slot, and the title block beside it. When
@@ -18,7 +20,7 @@ function BackdropHero({
       {backdropPath ? (
         <div className="absolute inset-x-0 top-0 h-72 overflow-hidden sm:h-96 lg:h-[32rem]">
           <Image
-            src={`https://image.tmdb.org/t/p/w1280${backdropPath}`}
+            src={tmdbImage(backdropPath)}
             alt=""
             fill
             priority

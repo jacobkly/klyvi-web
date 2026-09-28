@@ -102,6 +102,31 @@ describe("apiFetch", () => {
     expect(secondInit.headers.Authorization).toBe("Bearer fresh-token");
   });
 
+  it("lets a public GET cache, in the browser and on the server", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [] }));
+    await apiFetch("/v1/rankings/movies");
+    const [, init] = fetchMock.mock.calls[0];
+    // No cache mode means the browser follows the API's Cache-Control.
+    expect(init.cache).toBeUndefined();
+    expect(init.next).toEqual({ revalidate: 3600 });
+  });
+
+  it("never caches a signed-in request", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [] }));
+    await apiFetch("/v1/tracking", { token: "t" });
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.cache).toBe("no-store");
+    expect(init.next).toBeUndefined();
+  });
+
+  it("never caches a write", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: {} }));
+    await apiFetch("/v1/imports", { method: "POST", body: {} });
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.cache).toBe("no-store");
+    expect(init.next).toBeUndefined();
+  });
+
   it("does not retry a 401 twice", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: "unauthorized" }, 401));
     const refresh = vi.fn().mockResolvedValue("fresh-token");

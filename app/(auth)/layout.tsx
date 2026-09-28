@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 
 import { MOCK_POOL } from "@/lib/mock-onboarding";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * The split auth layout: form column on the left half, artwork on the
@@ -20,7 +21,7 @@ import { MOCK_POOL } from "@/lib/mock-onboarding";
 export default function AuthLayout({ children }: { children: ReactNode }) {
   // The pool is only ~20 deep, which leaves short rows at the bottom of a
   // tall panel. Repeat it so the grid always overflows at every breakpoint.
-  const posters = MOCK_POOL.filter((p) => p.posterPath);
+  const posters = MOCK_POOL.flatMap((p) => (p.posterPath ? [p.posterPath] : []));
   const wall = Array.from(
     { length: 36 },
     (_, i) => posters[i % posters.length]
@@ -37,13 +38,13 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           className="absolute -inset-8 grid grid-cols-4 gap-3 opacity-50 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5"
           style={{ transform: "rotate(-4deg) scale(1.12)" }}
         >
-          {wall.map((p, i) => (
+          {wall.map((path, i) => (
             <div
               key={i}
               className="relative aspect-[2/3] overflow-hidden rounded-art"
             >
               <Image
-                src={`https://image.tmdb.org/t/p/w342${p.posterPath}`}
+                src={tmdbImage(path)}
                 alt=""
                 fill
                 sizes="(max-width: 1024px) 33vw, 20vw"

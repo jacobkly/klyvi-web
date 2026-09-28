@@ -21,6 +21,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
 import { STATUS_LABELS, type TrackingStatus, type UserStats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +121,19 @@ export function ProfileStats() {
 
   const stats = data.stats;
   const rated = data.entries.filter((e) => e.score != null).length;
+
+  if (stats === undefined) {
+    return (
+      <div className="py-8">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-lg" />
+          ))}
+        </div>
+        <Skeleton className="mt-12 h-56 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   // No stats payload (fetch failed), or too little rated history to say
   // anything honest: one empty state, an invitation to rate more.

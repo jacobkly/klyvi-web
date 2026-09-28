@@ -64,6 +64,14 @@ async function doFetch(
   // FormData carries its own multipart boundary: never stringify it and
   // never set Content-Type, or the boundary is lost and the upload fails.
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
+  // A public read may cache. The browser then follows the API's own
+  // Cache-Control, and on the server Next keeps it for an hour, the API's
+  // catalog max-age. Anything that carries a user's token, or writes,
+  // always goes to the API.
+  const caching: RequestInit =
+    !token && (method === "GET" || method === "HEAD")
+      ? { next: { revalidate: 3600 } }
+      : { cache: "no-store" };
   const init: RequestInit = {
     method,
     headers: {
@@ -81,7 +89,7 @@ async function doFetch(
           ? (body as FormData)
           : JSON.stringify(body),
     signal,
-    cache: "no-store",
+    ...caching,
   };
   try {
     return await fetch(joinUrl(env.apiUrl, path), init);

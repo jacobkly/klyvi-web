@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
-import { posterUrl } from "@/lib/types";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * The quick rating step behind "Seen it": a watched-but-unrated title is the
@@ -38,7 +38,7 @@ export function RatingDialog({
   onSubmit: (score: number | null) => void;
 }) {
   const [score, setScore] = React.useState(75);
-  const poster = posterUrl(posterPath);
+  const poster = tmdbImage(posterPath);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

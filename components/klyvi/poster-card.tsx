@@ -4,11 +4,11 @@ import { Star } from "lucide-react";
 
 import {
   STATUS_LABELS,
-  posterUrl,
   type MediaSummary,
   type TrackingStatus,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * The atom of the app. Three variants (04-components.md §4):
@@ -46,7 +46,7 @@ function PosterCard({
       : media.mediaType === "tv"
         ? `/tv/${media.tmdbId}`
         : `/movie/${media.tmdbId}`;
-  const src = posterUrl(media.posterPath);
+  const src = tmdbImage(media.posterPath);
   const seasonSuffix =
     media.mediaType === "season" && media.seasonNumber != null
       ? ` Season ${media.seasonNumber}`

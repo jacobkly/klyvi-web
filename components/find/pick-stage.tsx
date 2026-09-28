@@ -5,7 +5,8 @@ import Link from "next/link";
 import * as React from "react";
 
 import type { MovieDetail } from "@/lib/mock-media";
-import { posterUrl, type Scored } from "@/lib/types";
+import type { Scored } from "@/lib/types";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * The presentation half of Find Next, shared by the live screen and the
@@ -33,7 +34,7 @@ export function PickHero({
   detailHref?: string | null;
 }) {
   const backdropPath = pick.backdropPath ?? detail?.backdropPath ?? null;
-  const poster = posterUrl(pick.posterPath, "w500");
+  const poster = tmdbImage(pick.posterPath);
   const href =
     detailHref === undefined ? `/movie/${pick.tmdbId}` : detailHref;
 
@@ -56,7 +57,7 @@ export function PickHero({
       <div className="relative aspect-[16/10] sm:aspect-[16/7]">
         {backdropPath ? (
           <Image
-            src={`https://image.tmdb.org/t/p/w1280${backdropPath}`}
+            src={tmdbImage(backdropPath)}
             alt=""
             fill
             priority={priority}
@@ -153,7 +154,7 @@ export function NeighbourPick({
   side: "left" | "right";
   onClick: () => void;
 }) {
-  const poster = posterUrl(pick.posterPath, "w342");
+  const poster = tmdbImage(pick.posterPath);
 
   return (
     <button

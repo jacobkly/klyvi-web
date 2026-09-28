@@ -61,13 +61,39 @@ const SORTS = {
 
 type ResultTab = "all" | "movie" | "tv" | "person";
 
-type RailsState =
+type Rail = {
+  title: string;
+  slug: string;
+  load: (signal: AbortSignal) => Promise<MediaSummary[]>;
+};
+
+const RAILS: Rail[] = [
+  {
+    title: "Trending this week",
+    slug: "trending-films",
+    load: (s) => getMovieList("trending", s),
+  },
+  {
+    title: "Popular films",
+    slug: "popular-films",
+    load: (s) => getMovieList("popular", s),
+  },
+  {
+    title: "Top rated",
+    slug: "top-rated-films",
+    load: (s) => getMovieList("top_rated", s),
+  },
+  {
+    title: "Popular TV",
+    slug: "popular-tv",
+    load: (s) => getTvList("popular", s),
+  },
+];
+
+type RailState =
   | { kind: "loading" }
   | { kind: "error" }
-  | {
-      kind: "ready";
-      rails: { title: string; slug: string; items: MediaSummary[] }[];
-    };
+  | { kind: "ready"; items: MediaSummary[] };
 
 type SearchState =
   | { kind: "idle" }
@@ -77,9 +103,9 @@ type SearchState =
 
 /**
  * Explore is the app's single search surface: the top bar and cmd+K land
- * here. Empty query shows browse rails from the TMDB list passthroughs;
- * typing runs a debounced multi search, and the tabs pick a bucket from the
- * one response rather than re-querying.
+ * here. Empty query shows browse rails from the TMDB list passthroughs,
+ * each loading on its own; typing runs a debounced multi search, and the
+ * tabs pick a bucket from the one response rather than re-querying.
  */
 export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
   const [query, setQuery] = React.useState("");
@@ -88,7 +114,6 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
   const [decade, setDecade] = React.useState("all");
   const [sort, setSort] = React.useState("relevance");
   const [filtersOpen, setFiltersOpen] = React.useState(false);
-  const [rails, setRails] = React.useState<RailsState>({ kind: "loading" });
   const [searchState, setSearchState] = React.useState<SearchState>({
     kind: "idle",
   });
@@ -99,43 +124,6 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
   React.useEffect(() => {
     if (autofocus) inputRef.current?.focus();
   }, [autofocus]);
-
-  // ---------- browse rails ----------
-  const loadRails = React.useCallback(() => {
-    setRails({ kind: "loading" });
-    const ac = new AbortController();
-    Promise.all([
-      getMovieList("trending", ac.signal),
-      getMovieList("popular", ac.signal),
-      getMovieList("top_rated", ac.signal),
-      getTvList("popular", ac.signal),
-    ])
-      .then(([trending, popular, top, tv]) => {
-        setRails({
-          kind: "ready",
-          rails: [
-            {
-              title: "Trending this week",
-              slug: "trending-films",
-              items: trending,
-            },
-            { title: "Popular films", slug: "popular-films", items: popular },
-            { title: "Top rated", slug: "top-rated-films", items: top },
-            { title: "Popular TV", slug: "popular-tv", items: tv },
-          ],
-        });
-      })
-      .catch((e) => {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        setRails({ kind: "error" });
-      });
-    return ac;
-  }, []);
-
-  React.useEffect(() => {
-    const ac = loadRails();
-    return () => ac.abort();
-  }, [loadRails]);
 
   // ---------- search ----------
   const q = query.trim();
@@ -350,79 +338,36 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
         <p className="mt-3 text-xs text-muted-foreground">Keep typing.</p>
       ) : null}
 
-      {!active ? (
-        // ---------- browse ----------
-        rails.kind === "loading" ? (
-          <div className="mt-10 flex flex-col gap-10">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i}>
-                <Skeleton className="h-5 w-40 rounded-lg" />
-                <div className="mt-4 flex gap-3 overflow-hidden">
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <Skeleton
-                      key={j}
-                      className="aspect-[2/3] w-28 shrink-0 rounded-art sm:w-36 lg:w-40"
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : rails.kind === "error" ? (
-          <div className="mt-16 text-center">
-            <p className="text-[15px] font-semibold text-foreground">
-              Could not load the catalog.
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Something went wrong on Klyvi&apos;s end.
-            </p>
-            <Button className="mt-5" onClick={() => loadRails()}>
-              Try again
-            </Button>
-          </div>
-        ) : (
-          <div className="mt-10 flex flex-col gap-10">
-            {rails.rails.map((rail) => (
-              <MediaRail
-                key={rail.title}
-                title={rail.title}
-                action={{
-                  label: "View more",
-                  href: `/explore/browse/${rail.slug}`,
-                }}
-              >
-                {rail.items.map((m) => (
-                  <PosterCard
-                    key={`${m.mediaType}-${m.tmdbId}`}
-                    media={m}
-                    variant="below"
-                  />
-                ))}
-              </MediaRail>
-            ))}
+      {/* ---------- browse ----------
+          Hidden, not unmounted, during a search: clearing the query brings
+          the rails back as they were, with no refetch. */}
+      <div hidden={active} className="mt-10 flex flex-col gap-10">
+        {RAILS.map((rail) => (
+          <CatalogRail key={rail.slug} rail={rail} />
+        ))}
 
-            {/* Top 100 preview, live from the rankings endpoint. */}
-            <section>
-              <SectionHeader
-                title="Top 100 films"
-                action={{ label: "View all", href: "/explore/top-100-films" }}
-                className="mb-4"
-              />
-              <RankingList kind="movies" limit={10} />
-              <p className="mt-3 text-xs text-muted-foreground">
-                Also see the{" "}
-                <Link
-                  href="/explore/top-100-tv"
-                  className="text-violet-text hover:underline"
-                >
-                  Top 100 series
-                </Link>
-                .
-              </p>
-            </section>
-          </div>
-        )
-      ) : (
+        {/* Top 100 preview, live from the rankings endpoint. */}
+        <section>
+          <SectionHeader
+            title="Top 100 films"
+            action={{ label: "View all", href: "/explore/top-100-films" }}
+            className="mb-4"
+          />
+          <RankingList kind="movies" limit={10} />
+          <p className="mt-3 text-xs text-muted-foreground">
+            Also see the{" "}
+            <Link
+              href="/explore/top-100-tv"
+              className="text-violet-text hover:underline"
+            >
+              Top 100 series
+            </Link>
+            .
+          </p>
+        </section>
+      </div>
+
+      {active ? (
         // ---------- results ----------
         <div className="mt-6">
           <Tabs value={tab} onValueChange={(v) => setTab(v as ResultTab)}>
@@ -500,8 +445,73 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
             </>
           ) : null}
         </div>
-      )}
+      ) : null}
     </main>
+  );
+}
+
+/**
+ * One browse rail. It owns its fetch and skeleton, so a slow list does not
+ * hold back the others and a failed one says so in place while the rest
+ * stay up.
+ */
+function CatalogRail({ rail }: { rail: Rail }) {
+  const [state, setState] = React.useState<RailState>({ kind: "loading" });
+  /** Bumped by Try again to refetch just this rail. */
+  const [attempt, setAttempt] = React.useState(0);
+
+  React.useEffect(() => {
+    const ac = new AbortController();
+    rail
+      .load(ac.signal)
+      .then((items) => setState({ kind: "ready", items }))
+      .catch((e) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setState({ kind: "error" });
+      });
+    return () => ac.abort();
+  }, [rail, attempt]);
+
+  const action = { label: "View more", href: `/explore/browse/${rail.slug}` };
+
+  if (state.kind === "error") {
+    return (
+      <section>
+        <SectionHeader title={rail.title} action={action} className="mb-4" />
+        <div className="rounded-lg bg-card p-6 text-center ring-1 ring-foreground/10">
+          <p className="text-sm text-muted-foreground">
+            Could not load this list right now.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              setState({ kind: "loading" });
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <MediaRail title={rail.title} action={action}>
+      {state.kind === "loading"
+        ? Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-[2/3] rounded-art" />
+          ))
+        : state.items.map((m) => (
+            <PosterCard
+              key={`${m.mediaType}-${m.tmdbId}`}
+              media={m}
+              variant="below"
+            />
+          ))}
+    </MediaRail>
   );
 }
 

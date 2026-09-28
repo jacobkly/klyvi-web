@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { listInteractions, recordInteraction } from "@/lib/api/interactions";
 import { getPool } from "@/lib/api/onboarding";
 import type { PoolEntry } from "@/lib/mock-onboarding";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 const TARGET = 20;
 const UNLOCK_AT = 10;
@@ -247,7 +248,7 @@ export function RateDeck() {
         >
           {film?.posterPath ? (
             <Image
-              src={`https://image.tmdb.org/t/p/w500${film.posterPath}`}
+              src={tmdbImage(film.posterPath)}
               alt=""
               fill
               priority
@@ -273,15 +274,19 @@ export function RateDeck() {
         </p>
 
         {/* The next three posters preload behind the card so transitions
-            stay instant (onboarding-spec §6). */}
+            stay instant (onboarding-spec §6). Same srcset and sizes as the
+            card, so the browser picks the file the card will ask for. */}
         <div aria-hidden="true" className="hidden">
           {films.slice(index + 1, index + 4).map((f) =>
             f.posterPath ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 key={f.tmdbId}
-                src={`https://image.tmdb.org/t/p/w500${f.posterPath}`}
+                src={tmdbImage(f.posterPath)}
                 alt=""
+                width={288}
+                height={432}
+                sizes="288px"
+                loading="eager"
               />
             ) : null
           )}

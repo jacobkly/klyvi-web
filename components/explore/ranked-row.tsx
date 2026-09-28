@@ -4,6 +4,7 @@ import { Film } from "lucide-react";
 
 import type { Ranking } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * One row of a Top 100 list: rank numeral, poster thumb, title block,
@@ -41,7 +42,7 @@ export function RankedRow({
         >
           {item.posterPath ? (
             <Image
-              src={`https://image.tmdb.org/t/p/w154${item.posterPath}`}
+              src={tmdbImage(item.posterPath)}
               alt=""
               fill
               sizes="48px"

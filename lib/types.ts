@@ -80,6 +80,8 @@ export type LibraryEntry = TrackableSummary & {
   /** Marked for the favorites shelf. */
   favorite: boolean;
   updatedAt: string;
+  /** From the tracking list. Absent on entries the client builds itself. */
+  backdropPath?: string | null;
 };
 
 /** One item from GET /v1/reco/feed, enriched server-side. Overview, runtime,
@@ -192,11 +194,3 @@ export type PersonResult = {
   profilePath: string | null;
   knownFor: string[];
 };
-
-/** TMDB image base. Sizes per TMDB's configuration documentation. */
-export function posterUrl(
-  path: string | null,
-  size: "w342" | "w500" = "w342"
-): string | null {
-  return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
-}

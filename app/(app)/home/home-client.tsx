@@ -51,69 +51,92 @@ function aggregateReasons(picks: Scored[]): Reason[] {
     .map((x) => x.reason);
 }
 
-type HomeData = {
-  picks: Scored[] | null;
-  entries: LibraryEntry[] | null;
-  ratedCount: number | null;
-};
+/** One section's data: undefined while it loads, null when it failed. */
+type Loaded<T> = T | null | undefined;
 
-type State =
-  | { kind: "loading" }
-  | { kind: "error" }
-  | { kind: "ready"; data: HomeData };
+const subscribeNever = () => () => {};
+
+/** False on the server and during hydration, true after. */
+function useHydrated(): boolean {
+  return React.useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false
+  );
+}
 
 /**
  * The dashboard (archetype D). Find-next strip owns the top; continue
- * watching second; activity and taste snapshot quieter. Sections load
- * together but fail independently: a dead feed does not blank the library
- * column (the partial state, phase1 §states).
+ * watching second; activity and taste snapshot quieter. Each section paints
+ * as its own request lands, with its own skeleton until then, so the feed
+ * (the slowest call) never holds back the library column, and one failure
+ * never blanks the other (the partial state, phase1 §states).
  */
 export function HomeClient({ simulate }: { simulate?: string }) {
   const mock = simulate != null;
   const { profile } = useSession();
+  const hydrated = useHydrated();
   const [nudgeDismissed, setNudgeDismissed] = React.useState(true);
-  const [state, setState] = React.useState<State>({ kind: "loading" });
+  const [picks, setPicks] = React.useState<Loaded<Scored[]>>(() =>
+    mock ? mockFeed(2, 3) : undefined
+  );
+  const [entries, setEntries] = React.useState<Loaded<LibraryEntry[]>>(() =>
+    mock ? MOCK_LIBRARY : undefined
+  );
+  const [ratedCount, setRatedCount] = React.useState<Loaded<number>>(() =>
+    mock ? 12 : undefined
+  );
+  /** Bumped by the error state's Try again to refetch every section. */
+  const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
     setNudgeDismissed(window.localStorage.getItem(NUDGE_KEY) === "1");
   }, []);
 
-  const load = React.useCallback(() => {
-    if (mock) {
-      setState({
-        kind: "ready",
-        data: {
-          picks: mockFeed(2, 3),
-          entries: MOCK_LIBRARY,
-          ratedCount: 12,
-        },
-      });
-      return;
-    }
-    setState({ kind: "loading" });
-    Promise.allSettled([getFeed(), listTracking(), listInteractions()]).then(
-      ([feed, tracking, interactions]) => {
-        const data: HomeData = {
-          picks: feed.status === "fulfilled" ? feed.value : null,
-          entries: tracking.status === "fulfilled" ? tracking.value : null,
-          ratedCount:
-            interactions.status === "fulfilled"
-              ? interactions.value.filter((i) => i.kind === "rated").length
-              : null,
-        };
-        if (!data.picks && !data.entries) setState({ kind: "error" });
-        else setState({ kind: "ready", data });
+  React.useEffect(() => {
+    if (mock) return;
+    let live = true;
+    getFeed().then(
+      (v) => {
+        if (live) setPicks(v);
+      },
+      () => {
+        if (live) setPicks(null);
       }
     );
-  }, [mock]);
+    listTracking().then(
+      (v) => {
+        if (live) setEntries(v);
+      },
+      () => {
+        if (live) setEntries(null);
+      }
+    );
+    listInteractions().then(
+      (v) => {
+        if (live) setRatedCount(v.filter((i) => i.kind === "rated").length);
+      },
+      () => {
+        if (live) setRatedCount(null);
+      }
+    );
+    return () => {
+      live = false;
+    };
+  }, [mock, attempt]);
 
-  React.useEffect(load, [load]);
+  function retry() {
+    setPicks(undefined);
+    setEntries(undefined);
+    setRatedCount(undefined);
+    setAttempt((n) => n + 1);
+  }
 
   // The two picks on screen are impressions; batched and deduped in the
   // signal queue, so a revisit or re-render cannot double-count.
   React.useEffect(() => {
-    if (mock || state.kind !== "ready") return;
-    for (const p of (state.data.picks ?? []).slice(0, 2)) {
+    if (mock || !picks) return;
+    for (const p of picks.slice(0, 2)) {
       queueSignal({
         tmdbId: p.tmdbId,
         mediaType: "movie",
@@ -121,7 +144,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
         source: "feed",
       });
     }
-  }, [mock, state]);
+  }, [mock, picks]);
 
   function dismissNudge() {
     setNudgeDismissed(true);
@@ -129,29 +152,8 @@ export function HomeClient({ simulate }: { simulate?: string }) {
     window.localStorage.setItem(NUDGE_KEY, "1");
   }
 
-  // ---------- loading ----------
-  if (state.kind === "loading") {
-    return (
-      <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
-        <Skeleton className="h-8 w-40 rounded-lg" />
-        <div className="mt-8 flex flex-col gap-3">
-          <Skeleton className="h-20 w-full rounded-lg" />
-          <Skeleton className="h-20 w-full rounded-lg" />
-        </div>
-        <div className="mt-10 flex gap-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton
-              key={i}
-              className="aspect-[2/3] w-28 shrink-0 rounded-art sm:w-32"
-            />
-          ))}
-        </div>
-      </main>
-    );
-  }
-
   // ---------- error (both pillars down) ----------
-  if (state.kind === "error") {
+  if (picks === null && entries === null) {
     return (
       <main className="mx-auto w-full max-w-2xl px-4 py-24 text-center md:px-6">
         <p className="text-[15px] font-semibold text-foreground">
@@ -160,14 +162,13 @@ export function HomeClient({ simulate }: { simulate?: string }) {
         <p className="mt-1 text-sm text-muted-foreground">
           Something went wrong on Klyvi&apos;s end.
         </p>
-        <Button className="mt-5" onClick={load}>
+        <Button className="mt-5" onClick={retry}>
           Try again
         </Button>
       </main>
     );
   }
 
-  const { picks, entries, ratedCount } = state.data;
   const topPicks = (picks ?? []).slice(0, 2);
   const tasteReasons = aggregateReasons(picks ?? []);
   const inProgress = (entries ?? []).filter(
@@ -182,10 +183,18 @@ export function HomeClient({ simulate }: { simulate?: string }) {
   return (
     <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
       {/* The name is appended only once it is known, so the greeting never
-          flashes a placeholder or a trailing comma. */}
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {profile?.username ? `${greeting()}, ${profile.username}` : greeting()}
-      </h1>
+          flashes a placeholder or a trailing comma. The greeting reads the
+          local clock, so it waits for hydration: the server's hour is not
+          the viewer's. */}
+      {hydrated ? (
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {profile?.username
+            ? `${greeting()}, ${profile.username}`
+            : greeting()}
+        </h1>
+      ) : (
+        <Skeleton className="h-8 w-40 rounded-lg" />
+      )}
 
       {/* Action sits inline with the dismiss rather than stacked under the
           copy: a nudge that costs three lines of the fold is working against
@@ -230,7 +239,12 @@ export function HomeClient({ simulate }: { simulate?: string }) {
               action={{ label: "Find something to watch", href: "/find" }}
               className="mb-4"
             />
-            {picks == null ? (
+            {picks === undefined ? (
+              <div className="flex flex-col gap-3">
+                <Skeleton className="h-20 w-full rounded-lg" />
+                <Skeleton className="h-20 w-full rounded-lg" />
+              </div>
+            ) : picks === null ? (
               <p className="text-sm text-muted-foreground">
                 Could not load your picks right now.
               </p>
@@ -301,7 +315,16 @@ export function HomeClient({ simulate }: { simulate?: string }) {
               action={{ label: "View all", href: "/library" }}
               className="mb-4"
             />
-            {entries == null ? (
+            {entries === undefined ? (
+              <div className="flex gap-3 overflow-hidden pb-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton
+                    key={i}
+                    className="aspect-[2/3] w-28 shrink-0 rounded-art sm:w-32"
+                  />
+                ))}
+              </div>
+            ) : entries === null ? (
               <p className="text-sm text-muted-foreground">
                 Could not load your library right now.
               </p>
@@ -331,7 +354,13 @@ export function HomeClient({ simulate }: { simulate?: string }) {
 
           <section className="mt-10">
             <SectionHeader title="Recent activity" className="mb-4" />
-            {entries == null ? (
+            {entries === undefined ? (
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-5 w-2/3 rounded-lg" />
+                ))}
+              </div>
+            ) : entries === null ? (
               <p className="text-sm text-muted-foreground">
                 Could not load your activity right now.
               </p>
@@ -376,7 +405,13 @@ export function HomeClient({ simulate }: { simulate?: string }) {
             <h2 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
               Your taste right now
             </h2>
-            {tasteReasons.length > 0 ? (
+            {picks === undefined ? (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-5 w-20 rounded-full" />
+                ))}
+              </div>
+            ) : tasteReasons.length > 0 ? (
               <>
                 <ReasonChips reasons={tasteReasons} max={5} className="mt-3" />
                 <p className="mt-3 text-xs text-muted-foreground">
@@ -410,7 +445,11 @@ export function HomeClient({ simulate }: { simulate?: string }) {
                 >
                   <dt className="text-muted-foreground">{label}</dt>
                   <dd data-numeric className="font-mono text-foreground">
-                    {(entries ?? []).filter((e) => e.status === key).length}
+                    {entries === undefined ? (
+                      <Skeleton className="h-4 w-4 rounded-lg" />
+                    ) : (
+                      (entries ?? []).filter((e) => e.status === key).length
+                    )}
                   </dd>
                 </div>
               ))}

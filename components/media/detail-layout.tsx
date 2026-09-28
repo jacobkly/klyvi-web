@@ -35,6 +35,7 @@ import {
   type TrackableSummary,
   type TrackingStatus,
 } from "@/lib/types";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * The shared cinematic detail layout for movies, series, and seasons
@@ -235,7 +236,7 @@ function DetailLayout({
               <div className="relative aspect-[2/3] overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
                 {posterPath ? (
                   <Image
-                    src={`https://image.tmdb.org/t/p/w500${posterPath}`}
+                    src={tmdbImage(posterPath)}
                     alt=""
                     fill
                     priority

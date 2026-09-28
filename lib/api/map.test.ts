@@ -83,6 +83,15 @@ describe("mapTrackingEntry", () => {
     expect(e.progress).toBeNull();
   });
 
+  it("keeps the backdrop, which the profile banner is built from", () => {
+    expect(mapTrackingEntry(MOVIE_ROW).backdropPath).toBe(
+      "/rr7E0NoGKxvbkb89eR1GwfoYjpA.jpg"
+    );
+    expect(
+      mapTrackingEntry({ ...MOVIE_ROW, backdrop_path: "" }).backdropPath
+    ).toBeNull();
+  });
+
   it("survives a cold row whose display fields are all null", () => {
     const e = mapTrackingEntry({
       ...MOVIE_ROW,

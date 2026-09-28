@@ -35,10 +35,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { getTvSeason } from "@/lib/api/catalog";
 import {
   STATUS_LABELS,
-  posterUrl,
   type LibraryEntry,
   type TrackingStatus,
 } from "@/lib/types";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 const STATUS_ORDER: TrackingStatus[] = [
   "watching",
@@ -179,7 +179,7 @@ function TrackingDialog({
               <div className="relative aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10 sm:w-full">
                 {entry.posterPath ? (
                   <Image
-                    src={posterUrl(entry.posterPath, "w342") as string}
+                    src={tmdbImage(entry.posterPath)}
                     alt=""
                     fill
                     sizes="200px"

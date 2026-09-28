@@ -23,8 +23,10 @@ export async function getServerSupabase(): Promise<SupabaseClient | null> {
             cookieStore.set(name, value, options)
           );
         } catch {
-          // Called from a Server Component. Safe to ignore, the proxy
-          // refreshes sessions.
+          // Called from a Server Component, which cannot set cookies. The
+          // proxy refreshes sessions first, but only on the routes it
+          // matches. Reading the session from a Server Component elsewhere
+          // can spend the refresh token without saving the new one.
         }
       },
     },

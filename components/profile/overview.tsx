@@ -7,6 +7,7 @@ import { useProfile } from "@/components/profile/profile-shell";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { SectionHeader } from "@/components/klyvi/section-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   STATUS_LABELS,
   type LibraryEntry,
@@ -95,7 +96,12 @@ export function ProfileOverview() {
           ))}
         </div>
 
-        {stats && stats.activity.length > 0 ? (
+        {stats === undefined ? (
+          <section className="mt-10">
+            <SectionHeader title="Activity" className="mb-4" />
+            <Skeleton className="h-28 rounded-lg" />
+          </section>
+        ) : stats && stats.activity.length > 0 ? (
           <section className="mt-10">
             <SectionHeader title="Activity" className="mb-4" />
             <ActivityHeatmap activity={stats.activity} />
@@ -153,7 +159,13 @@ export function ProfileOverview() {
       <aside className="min-w-0">
         <section>
           <SectionHeader title="Your taste" className="mb-4" />
-          {taste.length > 0 ? (
+          {taste === undefined ? (
+            <div className="flex flex-wrap gap-1.5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-5 w-20 rounded-full" />
+              ))}
+            </div>
+          ) : taste && taste.length > 0 ? (
             <>
               <ReasonChips reasons={taste} max={6} />
               <p className="mt-3 text-xs text-muted-foreground">
