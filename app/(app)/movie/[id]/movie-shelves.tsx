@@ -1,5 +1,5 @@
 import { DetailShelves } from "@/components/media/detail-shelves";
-import type { MediaSummary } from "@/lib/types";
+import type { MediaSummary, SimilarTitle } from "@/lib/types";
 
 /**
  * The movie page's collection and "more like this" shelves. The page starts
@@ -9,16 +9,13 @@ import type { MediaSummary } from "@/lib/types";
 export async function MovieShelves({
   tmdbId,
   collection,
-  recommendations,
+  similar,
 }: {
   tmdbId: number;
   collection: Promise<MediaSummary[]>;
-  recommendations: Promise<MediaSummary[]>;
+  similar: Promise<SimilarTitle[]>;
 }) {
-  const [inCollection, similar] = await Promise.all([
-    collection,
-    recommendations,
-  ]);
+  const [inCollection, like] = await Promise.all([collection, similar]);
   const related = inCollection.filter((c) => c.tmdbId !== tmdbId);
 
   return (
@@ -28,7 +25,7 @@ export async function MovieShelves({
           ? { heading: "In the same collection", items: related }
           : undefined
       }
-      moreLikeThis={similar.filter((c) => c.tmdbId !== tmdbId)}
+      moreLikeThis={like}
     />
   );
 }

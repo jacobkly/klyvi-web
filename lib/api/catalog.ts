@@ -3,13 +3,14 @@
  * server components and the browser alike.
  */
 
-import type { MediaSummary, Ranking } from "@/lib/types";
+import type { MediaSummary, Ranking, SimilarTitle } from "@/lib/types";
 
 import { apiFetch } from "./http";
 import {
   mapMovie,
   mapRanking,
   mapSearchResults,
+  mapSimilar,
   mapTvSeason,
   mapTvSeries,
   type SeasonDetail,
@@ -19,6 +20,7 @@ import type {
   WireMovie,
   WireRanking,
   WireSearchResponse,
+  WireSimilar,
   WireTvSeason,
   WireTvSeries,
 } from "./wire";
@@ -100,20 +102,20 @@ export async function getRankings(
 }
 
 /**
- * "More like this" for a movie. TMDB's own recommendations passthrough, used
- * as the stand-in until Klyvi's keyword/cast similarity ships (see
- * docs/planning/similar-movies-plan.md). Empty on 404 or a cold id.
+ * "More like this" for a movie or series: titles that share its rarest
+ * keywords, with those keywords as reasons. The API fills a thin shelf from
+ * TMDB's own list, so those titles arrive without reasons. Empty on 404.
  */
-export async function getMovieRecommendations(
+export async function getSimilar(
+  kind: "movies" | "tv",
   tmdbId: number,
   signal?: AbortSignal
-): Promise<MediaSummary[]> {
-  const w = await apiFetch<WireSearchResponse | null>(
-    `/v1/movies/${tmdbId}/recommendations`,
+): Promise<SimilarTitle[]> {
+  const w = await apiFetch<WireSimilar[] | null>(
+    `/v1/${kind}/${tmdbId}/similar`,
     { allow404: true, signal }
   );
-  if (!w) return [];
-  return mapSearchResults(w, "movie").movies;
+  return (w ?? []).map(mapSimilar);
 }
 
 export async function getTvSeries(

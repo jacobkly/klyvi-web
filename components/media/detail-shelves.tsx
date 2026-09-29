@@ -1,7 +1,8 @@
 import { PosterCard } from "@/components/klyvi/poster-card";
+import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { MediaSummary } from "@/lib/types";
+import type { MediaSummary, SimilarTitle } from "@/lib/types";
 
 const GRID =
   "grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6";
@@ -10,13 +11,17 @@ const GRID =
  * The poster shelves at the foot of a detail page: the rest of its
  * collection, then similar titles. Either one hides when it has nothing to
  * show, so a standalone film simply ends after the crew.
+ *
+ * Each similar title carries the keyword it shares under its card, one chip
+ * and a +N like the onboarding preview's grid. Titles from TMDB's fill have
+ * no reasons and show none.
  */
 export function DetailShelves({
   related,
   moreLikeThis,
 }: {
   related?: { heading: string; items: MediaSummary[] };
-  moreLikeThis?: MediaSummary[];
+  moreLikeThis?: SimilarTitle[];
 }) {
   const hasRelated = related != null && related.items.length > 0;
   const hasMore = moreLikeThis != null && moreLikeThis.length > 0;
@@ -44,11 +49,10 @@ export function DetailShelves({
           <SectionHeader title="More like this" className="mb-4" />
           <div className={GRID}>
             {moreLikeThis.slice(0, 12).map((m) => (
-              <PosterCard
-                key={`${m.mediaType}-${m.tmdbId}`}
-                media={m}
-                variant="below"
-              />
+              <div key={`${m.mediaType}-${m.tmdbId}`}>
+                <PosterCard media={m} variant="below" />
+                <ReasonChips reasons={m.reasons} max={1} className="mt-1.5" />
+              </div>
             ))}
           </div>
         </section>

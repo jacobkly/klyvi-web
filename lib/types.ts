@@ -126,6 +126,12 @@ export type Ranking = {
   score: number | null;
 };
 
+/** One title from GET /v1/{movies,tv}/{id}/similar. `reasons` is empty for
+ *  a title that came from TMDB's own list rather than keyword overlap. */
+export type SimilarTitle = MediaSummary & {
+  reasons: Reason[];
+};
+
 /** Aggregated profile stats (GET /v1/users/me/stats). */
 export type UserStats = {
   kpis: {

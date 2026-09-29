@@ -1,12 +1,15 @@
-import { cache } from "react";
+import { cache, Suspense } from "react";
 
 import { DetailError, DetailNotFound } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
+import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
-import { getTvSeries } from "@/lib/api/catalog";
+import { getSimilar, getTvSeries } from "@/lib/api/catalog";
 import { formatDate } from "@/lib/mock-media";
 import type { MediaSummary } from "@/lib/types";
+
+import { TvShelves } from "./tv-shelves";
 
 const load = cache(async (id: number) => {
   try {
@@ -39,6 +42,10 @@ export default async function TvPage({
   const { id } = await params;
   const tmdbId = Number(id);
   if (!Number.isFinite(tmdbId) || tmdbId <= 0) return <DetailNotFound />;
+
+  // Similar titles need only the TMDB id, so the request starts with the
+  // series. A failure hides the shelf and never the page.
+  const similar = getSimilar("tv", tmdbId).catch(() => []);
 
   const { tv: t, failed } = await load(tmdbId);
   if (failed) return <DetailError />;
@@ -90,6 +97,12 @@ export default async function TvPage({
       ]}
       keywords={t.keywords}
       cast={t.cast}
+      crew={t.crew}
+      shelves={
+        <Suspense fallback={<DetailShelvesSkeleton />}>
+          <TvShelves similar={similar} />
+        </Suspense>
+      }
       extra={
         seasons.length > 0 ? (
           <section className="mb-10">

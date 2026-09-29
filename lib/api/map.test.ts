@@ -6,6 +6,7 @@ import {
   mapRanking,
   mapScored,
   mapSearchResults,
+  mapSimilar,
   mapStats,
   mapTrackingEntry,
   mapTvSeries,
@@ -413,6 +414,54 @@ describe("mapRanking", () => {
     expect(r.mediaId).toBeNull();
     expect(r.genres).toEqual([]);
     expect(r.score).toBeNull();
+  });
+});
+
+describe("mapSimilar", () => {
+  it("maps a similar-titles item from API.md with its reasons", () => {
+    const s = mapSimilar({
+      tmdb_id: 272,
+      media_id: 10326,
+      media_type: "movie",
+      title: "Batman Begins",
+      year: 2005,
+      poster_path: "/sPX89Td70IDDjVr85jdSBb4rWGr.jpg",
+      score: 0.411,
+      reasons: [
+        { kind: "keyword", id: 10044, name: "tragic hero" },
+        { kind: "genre", id: 80, name: "Crime" },
+      ],
+    });
+    expect(s).toEqual({
+      mediaId: 10326,
+      mediaType: "movie",
+      tmdbId: 272,
+      title: "Batman Begins",
+      year: 2005,
+      posterPath: "/sPX89Td70IDDjVr85jdSBb4rWGr.jpg",
+      reasons: [
+        { kind: "keyword", id: 10044, name: "tragic hero" },
+        { kind: "genre", id: 80, name: "Crime" },
+      ],
+    });
+  });
+
+  it("links a series to /tv and treats an uncached TMDB fill as absent fields", () => {
+    const s = mapSimilar({
+      tmdb_id: 60059,
+      media_id: null,
+      media_type: "tv",
+      title: "Better Call Saul",
+      year: 0,
+      poster_path: "",
+      score: 0,
+      reasons: null,
+    });
+    expect(s.mediaType).toBe("tv");
+    expect(s.mediaId).toBe(0);
+    expect(s.year).toBeNull();
+    expect(s.posterPath).toBeNull();
+    expect(s.reasons).toEqual([]);
   });
 });
 

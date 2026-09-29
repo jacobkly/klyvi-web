@@ -197,6 +197,23 @@ export type WireRanking = {
   score: number | null;
 };
 
+/** One item of GET /v1/{movies,tv}/{id}/similar. */
+export type WireSimilar = {
+  tmdb_id: number;
+  /** null for a title from TMDB's list that the catalog has not cached. */
+  media_id: number | null;
+  media_type: string;
+  title: string;
+  /** 0 when unknown. */
+  year: number;
+  /** "" when TMDB has no poster. */
+  poster_path: string | null;
+  /** Similarity 0..1, 0 for a title from TMDB's list. The UI ignores it. */
+  score: number;
+  /** The server sends [], null is tolerated. */
+  reasons: { kind: string; id: number; name?: string }[] | null;
+};
+
 export type WireStats = {
   kpis: {
     total_films: number;

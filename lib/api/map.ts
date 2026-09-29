@@ -22,6 +22,7 @@ import type {
   Ranking,
   Reason,
   Scored,
+  SimilarTitle,
   TrackingStatus,
   UserProfile,
   UserStats,
@@ -34,6 +35,7 @@ import type {
   WireRanking,
   WireScored,
   WireSearchResponse,
+  WireSimilar,
   WireStats,
   WireTrackingEntry,
   WireTvSeason,
@@ -46,6 +48,17 @@ import type {
 /** TMDB stores paths as "" or null when absent; both mean "no artwork". */
 function orNull(s: string | null | undefined): string | null {
   return s ? s : null;
+}
+
+/** The feed and the similar shelves share one explainability token. */
+function mapReasons(
+  reasons: { kind: string; id: number; name?: string }[] | null
+): Reason[] {
+  return (reasons ?? []).map((r) => ({
+    kind: r.kind === "genre" ? "genre" : "keyword",
+    id: r.id,
+    name: r.name,
+  }));
 }
 
 function yearOf(date: string | null | undefined): number | null {
@@ -151,13 +164,21 @@ export function mapScored(w: WireScored): Scored {
     overview: orNull(w.overview),
     runtime: w.runtime > 0 ? w.runtime : null,
     genres: w.genres ?? [],
-    reasons: (w.reasons ?? []).map(
-      (r): Reason => ({
-        kind: r.kind === "genre" ? "genre" : "keyword",
-        id: r.id,
-        name: r.name,
-      })
-    ),
+    reasons: mapReasons(w.reasons),
+  };
+}
+
+// ---------- similar titles ----------
+
+export function mapSimilar(w: WireSimilar): SimilarTitle {
+  return {
+    mediaId: w.media_id ?? 0,
+    mediaType: w.media_type === "tv" ? "tv" : "movie",
+    tmdbId: w.tmdb_id,
+    title: w.title,
+    year: w.year > 0 ? w.year : null,
+    posterPath: orNull(w.poster_path),
+    reasons: mapReasons(w.reasons),
   };
 }
 
