@@ -139,9 +139,9 @@ export function mapTrackingEntry(w: WireTrackingEntry): LibraryEntry {
     status: (w.status ?? "planning") as TrackingStatus,
     score: w.score,
     progress: w.episode_progress,
-    // The list payload does not carry episode totals; the season detail
-    // call does. Progress renders bare until then.
-    progressTotal: null,
+    // Null for movies and for a season not cached yet, where progress
+    // renders bare.
+    progressTotal: w.episode_count ?? null,
     notes: w.notes,
     favorite: w.favorite ?? false,
     updatedAt: w.updated_at,

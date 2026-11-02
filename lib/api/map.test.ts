@@ -35,6 +35,7 @@ const SEASON_ROW = {
   title: "Breaking Bad",
   season_number: 1,
   season_name: "Season 1",
+  episode_count: 7,
   poster_path: "/1yeVJox3rjo2jBKrrihIMj7uoS9.jpg",
   backdrop_path: "/x.jpg",
   release_year: 2008,
@@ -58,6 +59,7 @@ const MOVIE_ROW = {
   release_year: 1999,
   season_number: null,
   season_name: null,
+  episode_count: null,
 } as WireTrackingEntry;
 
 describe("mapTrackingEntry", () => {
@@ -74,6 +76,17 @@ describe("mapTrackingEntry", () => {
       progress: 3,
       year: 2008,
     });
+  });
+
+  it("carries the season's episode total, so progress reads 3 / 7", () => {
+    expect(mapTrackingEntry(SEASON_ROW).progressTotal).toBe(7);
+    expect(mapTrackingEntry(MOVIE_ROW).progressTotal).toBeNull();
+  });
+
+  it("leaves the total unknown when the season is not cached", () => {
+    expect(
+      mapTrackingEntry({ ...SEASON_ROW, episode_count: null }).progressTotal
+    ).toBeNull();
   });
 
   it("maps the movie row with a score and no season fields", () => {

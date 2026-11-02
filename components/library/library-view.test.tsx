@@ -1,0 +1,59 @@
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { mapTrackingEntry } from "@/lib/api/map";
+import type { WireTrackingEntry } from "@/lib/api/wire";
+
+import { LibraryView } from "./library-view";
+
+/** A tracking row as GET /v1/tracking returns it. */
+function wire(over: Partial<WireTrackingEntry>): WireTrackingEntry {
+  return {
+    id: 1,
+    user_id: "u",
+    media_id: 955,
+    media_type: "season",
+    status: "watching",
+    score: null,
+    episode_progress: 3,
+    notes: null,
+    favorite: false,
+    updated_at: "2026-09-01T00:00:00Z",
+    tmdb_id: 1396,
+    title: "Breaking Bad",
+    poster_path: "/1yeVJox3rjo2jBKrrihIMj7uoS9.jpg",
+    backdrop_path: null,
+    release_year: 2008,
+    season_number: 1,
+    season_name: "Season 1",
+    episode_count: 10,
+    ...over,
+  };
+}
+
+describe("LibraryView progress", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows a season as 3 / 10 and a film with no total", async () => {
+    const rows = [
+      wire({}),
+      wire({
+        id: 2,
+        media_id: 142,
+        media_type: "movie",
+        status: "completed",
+        episode_progress: null,
+        tmdb_id: 550,
+        title: "Fight Club",
+        season_number: null,
+        season_name: null,
+        episode_count: null,
+      }),
+    ];
+    render(<LibraryView load={async () => rows.map(mapTrackingEntry)} />);
+
+    expect(await screen.findByText("3 / 10")).toBeInTheDocument();
+    expect(screen.getAllByText(/Fight Club/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/^\d+ \/ \d+$/)).toHaveLength(1);
+  });
+});

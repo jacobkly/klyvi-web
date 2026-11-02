@@ -124,6 +124,8 @@ export type WireTrackingEntry = {
   release_year: number | null;
   season_number: number | null;
   season_name: string | null;
+  /** Episodes in the cached season. Null on movies and uncached seasons. */
+  episode_count: number | null;
 };
 
 /** POST /v1/tracking/reset-scores and DELETE /v1/tracking. */

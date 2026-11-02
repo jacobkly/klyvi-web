@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { mapTrackingEntry } from "@/lib/api/map";
+import type { WireTrackingEntry } from "@/lib/api/wire";
 import type { LibraryEntry, Scored } from "@/lib/types";
 
 import { HomeClient } from "./home-client";
@@ -87,6 +89,42 @@ describe("HomeClient", () => {
     // has been written yet.
     expect(screen.queryByText(/Nothing to pick from yet/)).toBeNull();
     expect(screen.queryByText(/Could not load your picks/)).toBeNull();
+  });
+
+  it("shows a season's progress against its episode total", async () => {
+    const wire = {
+      media_id: 955,
+      media_type: "season",
+      status: "watching",
+      score: null,
+      episode_progress: 3,
+      notes: null,
+      favorite: false,
+      updated_at: "2026-09-01T00:00:00Z",
+      tmdb_id: 1396,
+      title: "Breaking Bad",
+      poster_path: "/1yeVJox3rjo2jBKrrihIMj7uoS9.jpg",
+      backdrop_path: null,
+      release_year: 2008,
+      season_number: 1,
+      season_name: "Season 1",
+      episode_count: 10,
+    } as WireTrackingEntry;
+    listTracking.mockResolvedValue([
+      mapTrackingEntry(wire),
+      entry({
+        mediaId: 2,
+        mediaType: "movie",
+        title: "Dune",
+        seasonNumber: undefined,
+        progress: null,
+      }),
+    ]);
+    render(<HomeClient />);
+
+    expect(await screen.findByText("3 / 10")).toBeInTheDocument();
+    // A film has no episodes, so nothing reads as a count out of a total.
+    expect(screen.queryAllByText(/^\d+ \/ \d+$/)).toHaveLength(1);
   });
 
   it("keeps the picks when the library fails", async () => {

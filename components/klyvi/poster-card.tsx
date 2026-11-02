@@ -173,10 +173,20 @@ function PosterCard({
             {media.title}
             {seasonSuffix}
           </p>
-          {media.year != null ? (
-            <p data-numeric className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-              {media.year}
-            </p>
+          {media.year != null || progressText ? (
+            <div className="mt-0.5 flex items-center gap-2">
+              {media.year != null ? (
+                <p data-numeric className="font-mono text-[11px] text-muted-foreground">
+                  {media.year}
+                </p>
+              ) : null}
+              {/* Episode progress (TV only), violet like the overlay's. */}
+              {progressText ? (
+                <span data-numeric className="ml-auto font-mono text-[11px] text-violet-text">
+                  {progressText}
+                </span>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}
