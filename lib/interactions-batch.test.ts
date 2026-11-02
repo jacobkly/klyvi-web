@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const recordInteractionsBatch = vi.fn((..._args: unknown[]) =>
-  Promise.resolve({ accepted: 0, rejected: 0 })
-);
+const recordInteractionsBatch = vi.fn<
+  (batch: unknown) => Promise<{ accepted: number; rejected: number }>
+>(() => Promise.resolve({ accepted: 0, rejected: 0 }));
 vi.mock("@/lib/api/interactions", () => ({
   recordInteractionsBatch: (a: unknown) => recordInteractionsBatch(a),
 }));

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { safeNext } from "@/lib/safe-next";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 /**
@@ -11,9 +12,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const rawNext = url.searchParams.get("next") ?? "/home";
-  // Only ever redirect within the app.
-  const next = rawNext.startsWith("/") ? rawNext : "/home";
+  const next = safeNext(url.searchParams.get("next"), url.origin);
 
   if (code) {
     const sb = await getServerSupabase();

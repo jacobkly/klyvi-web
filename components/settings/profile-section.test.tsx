@@ -14,6 +14,17 @@ vi.mock("@/lib/api/users", () => ({
   uploadAvatar: (...a: unknown[]) => uploadAvatar(...(a as [])),
   deleteAvatar: (...a: unknown[]) => deleteAvatar(...(a as [])),
 }));
+const compressAvatar = vi.fn<(file: Blob) => Promise<Blob>>(() =>
+  Promise.resolve(new Blob(["small"], { type: "image/jpeg" }))
+);
+vi.mock("@/lib/image/compress", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/image/compress")>()),
+  compressAvatar: (file: Blob) => compressAvatar(file),
+}));
+const toast = vi.fn();
+vi.mock("sonner", () => ({
+  toast: (...args: unknown[]) => toast(...args),
+}));
 vi.mock("@/lib/use-username-availability", () => ({
   useUsernameAvailability: () => ({ kind: "idle" }),
   availabilityMessage: () => null,
@@ -38,9 +49,11 @@ describe("ProfileSection avatar and birthday", () => {
     updateMe.mockClear();
     uploadAvatar.mockClear();
     deleteAvatar.mockClear();
+    compressAvatar.mockClear();
+    toast.mockReset();
   });
 
-  it("uploads an image through the API and reports the updated profile", async () => {
+  it("uploads the compressed image, not the original", async () => {
     const user = userEvent.setup();
     const onSaved = vi.fn();
     render(<ProfileSection me={me()} onSaved={onSaved} />);
@@ -50,8 +63,43 @@ describe("ProfileSection avatar and birthday", () => {
     });
     await user.upload(screen.getByLabelText(/upload a profile image/i), file);
 
-    await waitFor(() => expect(uploadAvatar).toHaveBeenCalledWith(file));
+    await waitFor(() => expect(uploadAvatar).toHaveBeenCalled());
+    expect(compressAvatar).toHaveBeenCalledWith(file);
+    const sent = (uploadAvatar.mock.calls[0] as unknown[])[0] as Blob;
+    expect(sent).not.toBe(file);
+    expect(sent.type).toBe("image/jpeg");
     expect(onSaved).toHaveBeenCalled();
+  });
+
+  it("accepts a phone-sized photo instead of refusing it", async () => {
+    const user = userEvent.setup();
+    render(<ProfileSection me={me()} onSaved={() => {}} />);
+
+    const file = new File([new Uint8Array(10 * 1024 * 1024)], "phone.jpg", {
+      type: "image/jpeg",
+    });
+    await user.upload(screen.getByLabelText(/upload a profile image/i), file);
+
+    await waitFor(() => expect(uploadAvatar).toHaveBeenCalled());
+  });
+
+  it("explains a photo the browser cannot read, and uploads nothing", async () => {
+    const { AvatarDecodeError } = await import("@/lib/image/compress");
+    compressAvatar.mockRejectedValueOnce(new AvatarDecodeError());
+    const user = userEvent.setup();
+    render(<ProfileSection me={me()} onSaved={() => {}} />);
+
+    const file = new File(["not really a jpeg"], "broken.jpg", {
+      type: "image/jpeg",
+    });
+    await user.upload(screen.getByLabelText(/upload a profile image/i), file);
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.stringMatching(/could not read that image/i)
+      )
+    );
+    expect(uploadAvatar).not.toHaveBeenCalled();
   });
 
   it("rejects a non-image without calling the API", async () => {

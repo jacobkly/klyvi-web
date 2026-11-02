@@ -5,6 +5,7 @@ import * as React from "react";
 import type { User } from "@supabase/supabase-js";
 
 import { getMe, updateMe } from "@/lib/api/users";
+import { supabaseConfigured } from "@/lib/env";
 import { seedPrefs, setPrefsPusher } from "@/lib/local-prefs";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import type { UserProfile } from "@/lib/types";
@@ -38,15 +39,19 @@ const SessionContext = React.createContext<SessionState>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = React.useState<User | null>(null);
-  const [profile, setProfile] = React.useState<UserProfile | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  // The profile is tagged with the user it belongs to, so signing out (or in
+  // as someone else) hides a stale one without an effect clearing it.
+  const [owned, setOwned] = React.useState<{
+    userId: string;
+    profile: UserProfile;
+  } | null>(null);
+  const profile = user && owned?.userId === user.id ? owned.profile : null;
+  // Without Supabase there is no session to wait for.
+  const [loading, setLoading] = React.useState(supabaseConfigured);
 
   React.useEffect(() => {
     const sb = getBrowserSupabase();
-    if (!sb) {
-      setLoading(false);
-      return;
-    }
+    if (!sb) return;
     let cancelled = false;
 
     sb.auth.getSession().then(({ data }) => {
@@ -78,10 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // that placeholder. A collision leaves the placeholder in place; Settings
   // is where it gets resolved.
   React.useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      return;
-    }
+    if (!user) return;
     let cancelled = false;
 
     (async () => {
@@ -111,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (cancelled) return;
-      setProfile(me);
+      setOwned({ userId: user.id, profile: me });
       // Adopt the server's settings blob, then let later changes push back
       // (debounced). Order matters: seed first so the pusher does not fire
       // on the values we just received.
@@ -141,9 +143,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.refresh();
   }, [router]);
 
+  const setProfile = React.useCallback(
+    (p: UserProfile) => {
+      if (user) setOwned({ userId: user.id, profile: p });
+    },
+    [user]
+  );
+
   const value = React.useMemo(
     () => ({ user, profile, loading, setProfile, signOut }),
-    [user, profile, loading, signOut]
+    [user, profile, loading, setProfile, signOut]
   );
 
   return (

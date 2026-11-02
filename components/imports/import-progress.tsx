@@ -2,6 +2,15 @@
 
 import { Progress } from "@/components/ui/progress";
 import type { ImportJob } from "@/lib/types";
+import type { StartFailure } from "@/lib/use-import-job";
+
+const START_FAILURE_COPY: Record<StartFailure, string> = {
+  active:
+    "You already have an import running. Wait for it to finish, then try again.",
+  "too-large":
+    "That file is too big to import. An import can hold up to 10,000 titles and 10 MB.",
+  other: "Could not start the import. Check the file and try again.",
+};
 
 /**
  * The determinate percentage for a running or finished import, or null while
@@ -28,15 +37,15 @@ export function importPercent(job: ImportJob): number | null {
  */
 export function ImportProgress({
   job,
-  startFailed,
+  startFailure,
 }: {
   job: ImportJob | null;
-  startFailed?: boolean;
+  startFailure?: StartFailure | null;
 }) {
-  if (startFailed) {
+  if (startFailure) {
     return (
       <p role="alert" className="text-sm text-destructive">
-        Could not start the import. Check the file and try again.
+        {START_FAILURE_COPY[startFailure]}
       </p>
     );
   }

@@ -102,8 +102,12 @@ describe("ImportProgress", () => {
     expect(screen.getByText("bad file")).toBeInTheDocument();
   });
 
-  it("reports a start failure without a job", () => {
-    render(<ImportProgress job={null} startFailed />);
-    expect(screen.getByText(/could not start the import/i)).toBeInTheDocument();
+  it.each([
+    ["active", /already have an import running/i],
+    ["too-large", /up to 10,000 titles and 10 MB/i],
+    ["other", /could not start the import/i],
+  ] as const)("explains the %s start failure without a job", (failure, copy) => {
+    render(<ImportProgress job={null} startFailure={failure} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(copy);
   });
 });

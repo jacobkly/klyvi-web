@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  AVATAR_MAX_BYTES,
+  AVATAR_MAX_SOURCE_BYTES,
   validateAvatarFile,
   validateBirthday,
 } from "./local-profile";
@@ -13,10 +13,16 @@ describe("validateAvatarFile", () => {
     );
   });
 
-  it("rejects oversized images", () => {
+  it("accepts a large phone photo, since it is shrunk before upload", () => {
     expect(
-      validateAvatarFile({ type: "image/png", size: AVATAR_MAX_BYTES + 1 })
-    ).toMatch(/2 MB/);
+      validateAvatarFile({ type: "image/jpeg", size: 12 * 1024 * 1024 })
+    ).toBeNull();
+  });
+
+  it("refuses a file too big to read in the browser", () => {
+    expect(
+      validateAvatarFile({ type: "image/png", size: AVATAR_MAX_SOURCE_BYTES + 1 })
+    ).toMatch(/50 MB/);
   });
 
   it("accepts a small png", () => {

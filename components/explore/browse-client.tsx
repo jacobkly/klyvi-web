@@ -54,8 +54,10 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
     [category]
   );
 
-  const loadFirst = React.useCallback(() => {
-    setState({ kind: "loading" });
+  /** Bumped by the error state's Try again to refetch the first page. */
+  const [attempt, setAttempt] = React.useState(0);
+
+  React.useEffect(() => {
     const ac = new AbortController();
     fetchPage(1, ac.signal)
       .then((items) =>
@@ -71,13 +73,13 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
         if (e instanceof DOMException && e.name === "AbortError") return;
         setState({ kind: "error" });
       });
-    return ac;
-  }, [fetchPage]);
-
-  React.useEffect(() => {
-    const ac = loadFirst();
     return () => ac.abort();
-  }, [loadFirst]);
+  }, [fetchPage, attempt]);
+
+  function retry() {
+    setState({ kind: "loading" });
+    setAttempt((n) => n + 1);
+  }
 
   const loadMore = React.useCallback(() => {
     const cur = stateRef.current;
@@ -155,7 +157,7 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
         <p className="mt-1 text-sm text-muted-foreground">
           Something went wrong on Klyvi&apos;s end.
         </p>
-        <Button className="mt-5" onClick={() => loadFirst()}>
+        <Button className="mt-5" onClick={retry}>
           Try again
         </Button>
       </div>

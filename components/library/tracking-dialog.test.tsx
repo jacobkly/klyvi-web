@@ -99,6 +99,21 @@ describe("TrackingDialog", () => {
     );
   });
 
+  it("resets the form when a different entry opens", async () => {
+    const user = userEvent.setup();
+    const props = {
+      open: true,
+      onOpenChange: () => {},
+      onSave: () => {},
+      onDelete: () => {},
+    };
+    const { rerender } = render(<TrackingDialog entry={severance} {...props} />);
+    await user.type(screen.getByLabelText("Score"), "91");
+
+    rerender(<TrackingDialog entry={parasite} {...props} />);
+    expect(screen.getByLabelText("Score")).toHaveValue(String(parasite.score));
+  });
+
   it("prefills notes from the entry and returns them on save", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();

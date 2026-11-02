@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteAvatar, updateMe, uploadAvatar } from "@/lib/api/users";
+import { AvatarDecodeError, compressAvatar } from "@/lib/image/compress";
 import {
   validateAvatarFile,
   validateBirthday,
@@ -65,12 +66,20 @@ export function ProfileSection({
       return;
     }
     setAvatarBusy(true);
-    uploadAvatar(file)
+    // Shrink first, so a 12 MB phone photo leaves the device small.
+    compressAvatar(file)
+      .then((small) => uploadAvatar(small))
       .then((u) => {
         onSaved(u);
         toast("Photo updated");
       })
-      .catch(() => toast("Could not upload that image. Try again."))
+      .catch((err: unknown) =>
+        toast(
+          err instanceof AvatarDecodeError
+            ? "Could not read that image. Try a JPG or PNG."
+            : "Could not upload that image. Try again."
+        )
+      )
       .finally(() => setAvatarBusy(false));
   }
 
@@ -176,8 +185,8 @@ export function ProfileSection({
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            PNG, JPG, WebP, or GIF up to 2 MB. Shown on your profile and in
-            the top bar.
+            PNG, JPG, WebP, or GIF. Large photos are shrunk before upload.
+            Shown on your profile and in the top bar.
           </p>
         </div>
         <FormField

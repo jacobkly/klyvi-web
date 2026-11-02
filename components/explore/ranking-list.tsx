@@ -25,9 +25,10 @@ export function RankingList({
   limit?: number;
 }) {
   const [state, setState] = React.useState<State>({ kind: "loading" });
+  /** Bumped by the error state's Try again to refetch. */
+  const [attempt, setAttempt] = React.useState(0);
 
-  const load = React.useCallback(() => {
-    setState({ kind: "loading" });
+  React.useEffect(() => {
     const ac = new AbortController();
     getRankings(kind, ac.signal)
       .then((items) =>
@@ -40,13 +41,13 @@ export function RankingList({
         if (e instanceof DOMException && e.name === "AbortError") return;
         setState({ kind: "error" });
       });
-    return ac;
-  }, [kind, limit]);
-
-  React.useEffect(() => {
-    const ac = load();
     return () => ac.abort();
-  }, [load]);
+  }, [kind, limit, attempt]);
+
+  function retry() {
+    setState({ kind: "loading" });
+    setAttempt((n) => n + 1);
+  }
 
   if (state.kind === "loading") {
     return (
@@ -66,7 +67,7 @@ export function RankingList({
         <p className="text-sm text-muted-foreground">
           Could not load the ranking right now.
         </p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={load}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={retry}>
           Try again
         </Button>
       </div>

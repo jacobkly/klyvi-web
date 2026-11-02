@@ -95,21 +95,24 @@ function TrackingDialog({
   const [favorite, setFavorite] = React.useState(entry.favorite);
   const [fetchedTotal, setFetchedTotal] = React.useState<number | null>(null);
 
-  // Reset the form when a different entry opens.
-  React.useEffect(() => {
+  // Reset the form when a different entry opens. Done during render, not in
+  // an effect, so the old entry's values never paint under the new title.
+  const [formEntry, setFormEntry] = React.useState(entry);
+  if (formEntry !== entry) {
+    setFormEntry(entry);
     setStatus(entry.status);
     setScore(entry.score?.toString() ?? "");
     setProgress(entry.progress?.toString() ?? "");
     setNotes(entry.notes ?? "");
     setFavorite(entry.favorite);
-  }, [entry]);
+    setFetchedTotal(null);
+  }
 
   // The tracking list carries no episode totals; the season detail call
   // does. Fetch lazily so "Episodes watched" gets an "of N", failing quietly
   // when offline or in mock mode.
   const total = entry.progressTotal ?? fetchedTotal;
   React.useEffect(() => {
-    setFetchedTotal(null);
     if (
       entry.mediaType !== "season" ||
       entry.progressTotal != null ||

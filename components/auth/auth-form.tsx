@@ -14,6 +14,7 @@ import { FormField } from "@/components/klyvi/form-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { safeNext } from "@/lib/safe-next";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { USERNAME_MAX, USERNAME_MIN, validateUsername } from "@/lib/username";
 import {
@@ -134,8 +135,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
 
   function nextPath(): string {
     const n = new URLSearchParams(window.location.search).get("next");
-    // Only ever redirect within the app.
-    return n && n.startsWith("/") ? n : "/home";
+    return safeNext(n, window.location.origin);
   }
 
   async function resendConfirmation() {

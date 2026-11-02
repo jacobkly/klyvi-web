@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LibraryEntry, Scored } from "@/lib/types";
@@ -110,5 +111,19 @@ describe("HomeClient", () => {
     expect(await screen.findAllByText(/Severance/)).not.toHaveLength(0);
     expect(getFeed).toHaveBeenCalledTimes(2);
     expect(listTracking).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the taste nudge away once dismissed, on later visits too", async () => {
+    const nudge = "Klyvi does not know your taste yet";
+    const { unmount } = render(<HomeClient />);
+    expect(await screen.findByText(nudge)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText(nudge)).toBeNull();
+    unmount();
+
+    render(<HomeClient />);
+    await expect(
+      screen.findByText(nudge, undefined, { timeout: 300 })
+    ).rejects.toThrow();
   });
 });

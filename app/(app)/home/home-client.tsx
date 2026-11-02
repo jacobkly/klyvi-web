@@ -76,7 +76,15 @@ export function HomeClient({ simulate }: { simulate?: string }) {
   const mock = simulate != null;
   const { profile } = useSession();
   const hydrated = useHydrated();
-  const [nudgeDismissed, setNudgeDismissed] = React.useState(true);
+  // Dismissed on an earlier visit (read after hydration; the server render
+  // assumes dismissed so the nudge never flashes), or just now.
+  const dismissedBefore = React.useSyncExternalStore(
+    subscribeNever,
+    () => window.localStorage.getItem(NUDGE_KEY) === "1",
+    () => true
+  );
+  const [dismissedNow, setDismissedNow] = React.useState(false);
+  const nudgeDismissed = dismissedBefore || dismissedNow;
   const [picks, setPicks] = React.useState<Loaded<Scored[]>>(() =>
     mock ? mockFeed(2, 3) : undefined
   );
@@ -88,10 +96,6 @@ export function HomeClient({ simulate }: { simulate?: string }) {
   );
   /** Bumped by the error state's Try again to refetch every section. */
   const [attempt, setAttempt] = React.useState(0);
-
-  React.useEffect(() => {
-    setNudgeDismissed(window.localStorage.getItem(NUDGE_KEY) === "1");
-  }, []);
 
   React.useEffect(() => {
     if (mock) return;
@@ -147,7 +151,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
   }, [mock, picks]);
 
   function dismissNudge() {
-    setNudgeDismissed(true);
+    setDismissedNow(true);
     // Permanent by design: one dismissal, no nagging (onboarding spec §3C).
     window.localStorage.setItem(NUDGE_KEY, "1");
   }

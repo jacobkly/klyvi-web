@@ -48,19 +48,23 @@ export function RateDeck() {
   const [deck, setDeck] = React.useState<DeckState>({ kind: "loading" });
   const [index, setIndex] = React.useState(0);
   const [rated, setRated] = React.useState(0);
-  const [unseenStreak, setUnseenStreak] = React.useState(0);
+  const [, setUnseenStreak] = React.useState(0);
   const [exit, setExit] = React.useState<"left" | "right" | "down" | null>(
     null
   );
 
-  const load = React.useCallback(() => {
-    setDeck({ kind: "loading" });
+  /** Bumped by the error state's Try again to reload the deck. */
+  const [attempt, setAttempt] = React.useState(0);
+
+  React.useEffect(() => {
+    let live = true;
     Promise.all([
       getPool(30),
       // Resume: what the server already knows beats local state.
       listInteractions().catch(() => []),
     ])
       .then(([films, interactions]) => {
+        if (!live) return;
         const done = interactions.filter(
           (i) => i.kind === "rated" && i.source === "onboarding"
         ).length;
@@ -75,10 +79,18 @@ export function RateDeck() {
         );
         setDeck({ kind: "ready", films });
       })
-      .catch(() => setDeck({ kind: "error" }));
-  }, []);
+      .catch(() => {
+        if (live) setDeck({ kind: "error" });
+      });
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
 
-  React.useEffect(load, [load]);
+  function retry() {
+    setDeck({ kind: "loading" });
+    setAttempt((n) => n + 1);
+  }
 
   const films = deck.kind === "ready" ? deck.films : [];
   const done = index >= films.length || rated >= TARGET;
@@ -185,7 +197,7 @@ export function RateDeck() {
         <p className="mt-1 text-sm text-muted-foreground">
           Something went wrong on Klyvi&apos;s end.
         </p>
-        <Button className="mt-5" onClick={load}>
+        <Button className="mt-5" onClick={retry}>
           Try again
         </Button>
       </main>

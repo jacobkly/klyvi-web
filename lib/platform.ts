@@ -16,8 +16,13 @@ export function isMacPlatform(): boolean {
   return /Macintosh|iPhone|iPad|iPod/.test(navigator.userAgent);
 }
 
+/** The platform never changes while the page is open. */
+function subscribeNever(): () => void {
+  return () => {};
+}
+
 /**
- * `null` until the component mounts, then the real answer.
+ * `null` on the server and during hydration, then the real answer.
  *
  * Deliberately not a guess: the server cannot know which platform is
  * asking, so committing to a symbol during render would be wrong for half
@@ -25,11 +30,7 @@ export function isMacPlatform(): boolean {
  * nothing while it is null.
  */
 export function useIsMac(): boolean | null {
-  const [isMac, setIsMac] = React.useState<boolean | null>(null);
-  React.useEffect(() => {
-    setIsMac(isMacPlatform());
-  }, []);
-  return isMac;
+  return React.useSyncExternalStore(subscribeNever, isMacPlatform, () => null);
 }
 
 /** The modifier label for keyboard hints: "⌘" on Apple, "Ctrl" elsewhere. */

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MediaSummary } from "@/lib/types";
@@ -14,7 +15,10 @@ vi.mock("@/lib/api/catalog", () => ({
   getTvList: (...a: unknown[]) => getTvList(...a),
   getRankings: (...a: unknown[]) => getRankings(...a),
 }));
-vi.mock("@/lib/api/search", () => ({ search: vi.fn() }));
+const search = vi.fn();
+vi.mock("@/lib/api/search", () => ({
+  search: (...a: unknown[]) => search(...a),
+}));
 
 function media(title: string, tmdbId: number): MediaSummary {
   return {
@@ -81,5 +85,53 @@ describe("ExploreClient browse rails", () => {
     );
     expect(popularCalls).toHaveLength(2);
     expect(trendingCalls).toHaveLength(1);
+  });
+});
+
+describe("ExploreClient search", () => {
+  beforeEach(() => {
+    getMovieList.mockReset().mockResolvedValue([]);
+    getTvList.mockReset().mockResolvedValue([]);
+    getRankings.mockReset().mockResolvedValue([]);
+    search.mockReset();
+  });
+
+  function results(title: string) {
+    return {
+      movies: [{ ...media(title, 9), genreIds: [], voteAverage: null }],
+      tv: [],
+      people: [],
+    };
+  }
+
+  it("recovers from a failed search with Try again", async () => {
+    search
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce(results("Parasite"));
+    render(<ExploreClient />);
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Search films, TV, and people" }),
+      "parasite"
+    );
+    expect(await screen.findByText("Search is not responding.")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findAllByText("Parasite")).not.toHaveLength(0);
+    expect(screen.queryByText("Search is not responding.")).toBeNull();
+  });
+
+  it("hides the last query's results while the next one is searching", async () => {
+    search
+      .mockResolvedValueOnce(results("Parasite"))
+      .mockReturnValueOnce(new Promise(() => {}));
+    render(<ExploreClient />);
+    const box = screen.getByRole("textbox", { name: "Search films, TV, and people" });
+
+    await userEvent.type(box, "parasite");
+    expect(await screen.findAllByText("Parasite")).not.toHaveLength(0);
+
+    await userEvent.type(box, "s");
+    expect(screen.queryByText("Parasite")).toBeNull();
   });
 });

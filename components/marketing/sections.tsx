@@ -5,21 +5,25 @@ import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { LandingHeader } from "@/components/marketing/landing-header";
 import { Reveal } from "@/components/marketing/reveal";
 import { buttonVariants } from "@/components/ui/button";
-import { CLOSING_CLAIM, STAT_CLAIMS } from "@/lib/marketing-claims";
+import {
+  CLOSING_CLAIM,
+  REASSURANCE_CLAIMS,
+  STAT_CLAIMS,
+} from "@/lib/marketing-claims";
 
 /**
  * The static landing sections: stats band, features row, closing CTA.
- * Every number renders from lib/marketing-claims.ts, which is the one
- * quarantine for invented figures.
+ * Every claim about Klyvi renders from lib/marketing-claims.ts, the one
+ * place such statements live.
  */
 
 /**
- * Small decorative data-viz glyphs for the stat cards, one per claim:
- * a timer dial, an accumulation of bars, a donut. All aria-hidden (the
- * numeral and line carry the meaning), all chart tokens.
+ * Small decorative data-viz glyphs for the stat cards: a timer dial, an
+ * accumulation of bars, a donut. Pure ornament that encodes no figure.
+ * All aria-hidden (the words carry the meaning), all chart tokens.
  */
 function TimerGlyph() {
-  // Quarter sweep on a dial: the 90 seconds, drawn as time on a clock.
+  // A quarter sweep on a dial.
   const r = 20;
   const c = 2 * Math.PI * r;
   return (
@@ -278,13 +282,6 @@ export function FeaturesRow() {
   );
 }
 
-const CLOSING_REASSURANCE = [
-  "Free while Klyvi grows",
-  "No card",
-  "No ads",
-  "Your ratings stay yours",
-];
-
 export function ClosingCta() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 pt-12 pb-28">
@@ -317,7 +314,7 @@ export function ClosingCta() {
           </Link>
         </div>
         <ul className="relative mx-auto mt-8 flex max-w-lg flex-wrap items-center justify-center gap-x-2 gap-y-2 text-xs text-muted-foreground">
-          {CLOSING_REASSURANCE.map((item, i) => (
+          {REASSURANCE_CLAIMS.map((item, i) => (
             <li key={item} className="flex items-center gap-2">
               {i > 0 ? (
                 <span aria-hidden="true" className="text-muted-foreground/40">

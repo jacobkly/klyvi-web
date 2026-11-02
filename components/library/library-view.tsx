@@ -31,7 +31,6 @@ import {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { FilterPanel } from "./filter-panel";
-import { StatusControl } from "./status-control";
 import { TrackingDialog, type TrackingEdit } from "./tracking-dialog";
 import { ViewSwitcher, type LibraryViewMode } from "./view-switcher";
 
@@ -44,6 +43,9 @@ const GROUP_ORDER: TrackingStatus[] = [
   "dropped",
   "planning",
 ];
+
+/** One empty list for every not-ready render, so memos keyed on it hold. */
+const NO_ENTRIES: LibraryEntry[] = [];
 
 type LoadState =
   | { phase: "loading" }
@@ -86,16 +88,29 @@ function LibraryView({
   const [editing, setEditing] = React.useState<LibraryEntry | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  const doLoad = React.useCallback(() => {
-    setState({ phase: "loading" });
+  /** Bumped by the error state's Try again to reload. */
+  const [attempt, setAttempt] = React.useState(0);
+
+  React.useEffect(() => {
+    let live = true;
     load()
-      .then((entries) => setState({ phase: "ready", entries }))
-      .catch(() => setState({ phase: "error" }));
-  }, [load]);
+      .then((entries) => {
+        if (live) setState({ phase: "ready", entries });
+      })
+      .catch(() => {
+        if (live) setState({ phase: "error" });
+      });
+    return () => {
+      live = false;
+    };
+  }, [load, attempt]);
 
-  React.useEffect(doLoad, [doLoad]);
+  function retry() {
+    setState({ phase: "loading" });
+    setAttempt((n) => n + 1);
+  }
 
-  const entries = state.phase === "ready" ? state.entries : [];
+  const entries = state.phase === "ready" ? state.entries : NO_ENTRIES;
   const filtered = sortLibrary(
     filterLibrary(entries, filters),
     sortKey,
@@ -214,7 +229,7 @@ function LibraryView({
         <p className="mt-1 text-sm text-muted-foreground">
           Something went wrong on Klyvi&apos;s end.
         </p>
-        <Button className="mt-5" onClick={doLoad}>
+        <Button className="mt-5" onClick={retry}>
           Try again
         </Button>
       </div>
@@ -419,11 +434,12 @@ function EntryCollection({
   entries,
   view,
   onEdit,
-  onStatusChange,
 }: {
   entries: LibraryEntry[];
   view: LibraryViewMode;
   onEdit: (e: LibraryEntry) => void;
+  /** Wired for a quick status control that no view renders yet. Edits go
+   *  through the dialog (onEdit) today. */
   onStatusChange: (e: LibraryEntry, s: TrackingStatus) => void;
 }) {
   if (view === "list") {

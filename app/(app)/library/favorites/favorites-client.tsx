@@ -22,22 +22,33 @@ type State =
  */
 export function FavoritesClient() {
   const [state, setState] = React.useState<State>({ kind: "loading" });
+  /** Bumped by the error state's Try again to refetch. */
+  const [attempt, setAttempt] = React.useState(0);
 
-  const load = React.useCallback(() => {
-    setState({ kind: "loading" });
+  React.useEffect(() => {
+    let live = true;
     listTracking()
-      .then((entries) =>
+      .then((entries) => {
+        if (!live) return;
         setState({
           kind: "ready",
           favorites: entries
             .filter((e) => e.favorite)
             .sort((a, b) => (b.score ?? -1) - (a.score ?? -1)),
-        })
-      )
-      .catch(() => setState({ kind: "error" }));
-  }, []);
+        });
+      })
+      .catch(() => {
+        if (live) setState({ kind: "error" });
+      });
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
 
-  React.useEffect(load, [load]);
+  function retry() {
+    setState({ kind: "loading" });
+    setAttempt((n) => n + 1);
+  }
 
   if (state.kind === "loading") {
     return (
@@ -63,7 +74,7 @@ export function FavoritesClient() {
           <p className="mt-1 text-sm text-muted-foreground">
             Something went wrong on Klyvi&apos;s end.
           </p>
-          <Button className="mt-5" onClick={load}>
+          <Button className="mt-5" onClick={retry}>
             Try again
           </Button>
         </div>

@@ -1,37 +1,50 @@
 /**
- * PLACEHOLDER MARKETING NUMBERS. Every figure in this file is invented.
- *
- * The user asked to see the landing page with sold-page numbers before any
- * real ones exist. That is a deliberate, temporary call: these MUST be
- * replaced with real figures or removed before any public deploy. Nothing
- * outside this file may state a number about Klyvi's usage or results.
+ * Every claim the landing page makes about Klyvi lives here, and only true
+ * ones go in. A number about Klyvi's usage or results needs a `source` note
+ * saying where it comes from (marketing-claims.test.ts rejects any digit
+ * without one). Nothing outside this file may state such a number.
  */
 
-export const TAGLINE_CLAIM = "Join 40,000+ people who stopped scrolling";
+export const TAGLINE_CLAIM = "For people who are done scrolling";
 
 export const STAT_CLAIMS: {
   category: string;
   value: string;
   line: string;
+  /** Where a number in this claim comes from. Required once it has one. */
+  source?: string;
 }[] = [
   {
-    category: "Decision time",
-    value: "90 sec",
-    line: "from opening Klyvi to pressing play",
+    category: "Price",
+    value: "Free",
+    line: "forever, with no paid tier",
   },
   {
-    category: "Taste signals",
-    value: "1.2M+",
-    line: "ratings powering the recommendations",
+    category: "Ads",
+    value: "None",
+    line: "and no card to sign up",
   },
   {
-    category: "Picks that land",
-    value: "87%",
-    line: "of first recommendations get watched to the end",
+    category: "Your data",
+    value: "Yours",
+    line: "export your ratings and library any time",
   },
 ];
 
-export const CLOSING_CLAIM = {
+export const CLOSING_CLAIM: {
+  heading: string;
+  line: string;
+  /** Where a number in this claim comes from. Required once it has one. */
+  source?: string;
+} = {
   heading: "Know what to watch tonight",
-  line: "Free while Klyvi grows. No ads, no card, and your ratings stay yours.",
+  line: "Free forever. No ads, no card, and your ratings stay yours.",
 };
+
+/** The fine print under the closing buttons. No numbers belong here. */
+export const REASSURANCE_CLAIMS = [
+  "Free forever",
+  "No card",
+  "No ads",
+  "Your ratings stay yours",
+];

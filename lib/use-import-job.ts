@@ -2,19 +2,32 @@
 
 import * as React from "react";
 
+import { ApiError } from "@/lib/api/http";
 import { getImport, startImport, type ImportSource } from "@/lib/api/imports";
 import type { ImportJob } from "@/lib/types";
 
 /** How often to poll a running job. Matches the backend's progress cadence. */
 const POLL_MS = 1500;
 
+/** Why the API refused to start an import: one already running (409), a
+ *  file over the size or title cap (413), or anything else. */
+export type StartFailure = "active" | "too-large" | "other";
+
+export function startFailure(err: unknown): StartFailure {
+  if (err instanceof ApiError) {
+    if (err.status === 409) return "active";
+    if (err.status === 413) return "too-large";
+  }
+  return "other";
+}
+
 export type ImportJobState = {
   job: ImportJob | null;
   /** True from submit until the job settles, or the start call fails. */
   running: boolean;
-  /** The startImport call itself failed (distinct from a job that ran and
-   *  reported status "failed"). */
-  startFailed: boolean;
+  /** Set when the startImport call itself failed (distinct from a job that
+   *  ran and reported status "failed"). */
+  startFailure: StartFailure | null;
   start: (source: ImportSource, file: File) => void;
   reset: () => void;
 };
@@ -28,7 +41,7 @@ export type ImportJobState = {
 export function useImportJob(): ImportJobState {
   const [job, setJob] = React.useState<ImportJob | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const [startFailed, setStartFailed] = React.useState(false);
+  const [failure, setFailure] = React.useState<StartFailure | null>(null);
 
   // Poll while the job is in flight; stop on a terminal status or unmount.
   React.useEffect(() => {
@@ -49,22 +62,22 @@ export function useImportJob(): ImportJobState {
 
   const start = React.useCallback((source: ImportSource, file: File) => {
     setBusy(true);
-    setStartFailed(false);
+    setFailure(null);
     setJob(null);
     startImport(source, file)
       .then((j) => setJob(j))
-      .catch(() => setStartFailed(true))
+      .catch((err: unknown) => setFailure(startFailure(err)))
       .finally(() => setBusy(false));
   }, []);
 
   const reset = React.useCallback(() => {
     setJob(null);
-    setStartFailed(false);
+    setFailure(null);
     setBusy(false);
   }, []);
 
   const running =
     busy || job?.status === "pending" || job?.status === "running";
 
-  return { job, running, startFailed, start, reset };
+  return { job, running, startFailure: failure, start, reset };
 }

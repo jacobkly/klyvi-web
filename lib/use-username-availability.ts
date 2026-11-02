@@ -14,6 +14,9 @@ export type AvailabilityState =
 
 const DEBOUNCE_MS = 400;
 
+const IDLE: AvailabilityState = { kind: "idle" };
+const CHECKING: AvailabilityState = { kind: "checking" };
+
 /**
  * Asks the API whether a username is free, once the user stops typing.
  *
@@ -33,37 +36,38 @@ export function useUsernameAvailability(
   options: { skip?: string } = {}
 ): AvailabilityState {
   const { skip } = options;
-  const [state, setState] = React.useState<AvailabilityState>({ kind: "idle" });
+  // The API's last answer, tagged with the name it was for. Anything else
+  // (idle, or checking a newer name) is derived during render.
+  const [answer, setAnswer] = React.useState<{
+    name: string;
+    state: AvailabilityState;
+  } | null>(null);
+
+  const name = username.trim();
+  const checkable =
+    name !== "" &&
+    !(skip && name.toLowerCase() === skip.toLowerCase()) &&
+    !validateUsername(name);
 
   React.useEffect(() => {
-    const name = username.trim();
-    if (name === "" || (skip && name.toLowerCase() === skip.toLowerCase())) {
-      setState({ kind: "idle" });
-      return;
-    }
-    if (validateUsername(name)) {
-      setState({ kind: "idle" });
-      return;
-    }
-
-    setState({ kind: "checking" });
+    if (!checkable) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
       checkUsernameAvailable(name, controller.signal)
         .then((result) => {
           if (controller.signal.aborted) return;
-          if (result.available) {
-            setState({ kind: "free" });
-            return;
-          }
-          setState({
-            kind: result.reason === "reserved" ? "reserved" : "taken",
+          setAnswer({
+            name,
+            state: result.available
+              ? { kind: "free" }
+              : { kind: result.reason === "reserved" ? "reserved" : "taken" },
           });
         })
         .catch(() => {
           // The check is an assist, not a gate: the write still enforces
           // uniqueness, so a failed lookup goes quiet rather than blocking.
-          if (!controller.signal.aborted) setState({ kind: "idle" });
+          if (!controller.signal.aborted)
+            setAnswer({ name, state: IDLE });
         });
     }, DEBOUNCE_MS);
 
@@ -71,9 +75,10 @@ export function useUsernameAvailability(
       clearTimeout(timer);
       controller.abort();
     };
-  }, [username, skip]);
+  }, [name, checkable]);
 
-  return state;
+  if (!checkable) return IDLE;
+  return answer?.name === name ? answer.state : CHECKING;
 }
 
 /** The message for a state, or null when there is nothing to say. */

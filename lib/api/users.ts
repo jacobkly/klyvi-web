@@ -59,10 +59,13 @@ export async function updateMe(patch: {
   return mapUser(w);
 }
 
-/** Multipart avatar upload; returns the updated profile with the new URL. */
-export async function uploadAvatar(file: File): Promise<UserProfile> {
+/**
+ * Multipart avatar upload of the JPEG from compressAvatar; returns the
+ * updated profile with the new URL.
+ */
+export async function uploadAvatar(file: Blob): Promise<UserProfile> {
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", file, "avatar.jpg");
   const w = await browserFetch<WireUser>("/v1/users/me/avatar", {
     method: "POST",
     body: form,

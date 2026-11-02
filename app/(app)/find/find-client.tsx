@@ -99,25 +99,26 @@ export function FindClient({ simulate }: { simulate?: string }) {
   const [mood, setMood] = React.useState("any");
   const [count, setCount] = React.useState<3 | 5 | 7>(5);
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
-  const [interactions, setInteractions] = React.useState<number | null>(null);
+  const [fetchedInteractions, setInteractions] = React.useState<
+    number | null
+  >(null);
   const [rating, setRating] = React.useState<Scored | null>(null);
 
   const mockTier: RecoTier =
     simulate === "tier0" ? 0 : simulate === "tier2" ? 2 : 1;
+  const interactions = mock
+    ? mockInteractionCount(mockTier)
+    : fetchedInteractions;
 
   // Real interaction count drives the tier copy.
   React.useEffect(() => {
-    if (mock) {
-      setInteractions(mockInteractionCount(mockTier));
-      return;
-    }
-    if (!user) return;
+    if (mock || !user) return;
     listInteractions()
       .then((list) =>
         setInteractions(list.filter((i) => i.kind === "rated").length)
       )
       .catch(() => setInteractions(null));
-  }, [mock, mockTier, user]);
+  }, [mock, user]);
 
   const remaining =
     interactions != null ? Math.max(0, TIER_THRESHOLD - interactions) : null;

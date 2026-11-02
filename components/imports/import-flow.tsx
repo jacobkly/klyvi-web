@@ -47,7 +47,7 @@ export function ImportFlow({
   const [file, setFile] = React.useState<File | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const { job, running, startFailed, start } = useImportJob();
+  const { job, running, startFailure, start } = useImportJob();
 
   // Fire the owner's callback once, when the job first reaches a terminal state.
   const settledRef = React.useRef(false);
@@ -146,8 +146,8 @@ export function ImportFlow({
         }}
       />
 
-      {job || startFailed ? (
-        <ImportProgress job={job} startFailed={startFailed} />
+      {job || startFailure ? (
+        <ImportProgress job={job} startFailure={startFailure} />
       ) : null}
 
       <div className="flex items-center justify-between gap-3">

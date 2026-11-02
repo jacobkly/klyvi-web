@@ -19,7 +19,7 @@ export const metadata = {
  * The marketing one-pager, phase 9 shape: marquee hero, stats band,
  * features row, the live Find Next demo, closing CTA. A server shell with
  * client islands (hero, demo); the copy sections stay static. Every
- * invented number lives in lib/marketing-claims.ts and nowhere else.
+ * claim about Klyvi lives in lib/marketing-claims.ts and nowhere else.
  */
 export default function MarketingPage() {
   return (

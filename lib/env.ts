@@ -22,7 +22,6 @@ function ensure(
     throw new Error(`Missing required env var: ${name}`);
   }
   if (typeof window === "undefined") {
-    // eslint-disable-next-line no-console
     console.warn(
       `[env] ${name} is not set. Features that depend on it are disabled.`
     );

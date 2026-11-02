@@ -114,9 +114,12 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
   const [decade, setDecade] = React.useState("all");
   const [sort, setSort] = React.useState("relevance");
   const [filtersOpen, setFiltersOpen] = React.useState(false);
-  const [searchState, setSearchState] = React.useState<SearchState>({
-    kind: "idle",
-  });
+  /** The last search to settle, tagged with the query and attempt it
+   *  answered. Idle and searching are derived from it during render. */
+  const [settled, setSettled] = React.useState<{
+    key: string;
+    state: SearchState;
+  } | null>(null);
   /** Bumped by the error state's Try again to rerun the same query. */
   const [retryNonce, setRetryNonce] = React.useState(0);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -129,26 +132,32 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
   const q = query.trim();
   const active = q.length >= 2;
 
+  const searchKey = `${retryNonce}:${q}`;
+
   React.useEffect(() => {
-    if (!active) {
-      setSearchState({ kind: "idle" });
-      return;
-    }
-    setSearchState({ kind: "searching" });
+    if (!active) return;
     const ac = new AbortController();
     const t = setTimeout(() => {
       apiSearch(q, "multi", ac.signal)
-        .then((results) => setSearchState({ kind: "ready", results }))
+        .then((results) =>
+          setSettled({ key: searchKey, state: { kind: "ready", results } })
+        )
         .catch((e) => {
           if (e instanceof DOMException && e.name === "AbortError") return;
-          setSearchState({ kind: "error" });
+          setSettled({ key: searchKey, state: { kind: "error" } });
         });
     }, 300);
     return () => {
       clearTimeout(t);
       ac.abort();
     };
-  }, [q, active, retryNonce]);
+  }, [q, active, searchKey]);
+
+  const searchState: SearchState = !active
+    ? { kind: "idle" }
+    : settled?.key === searchKey
+      ? settled.state
+      : { kind: "searching" };
 
   const filterCount =
     (genre !== "all" ? 1 : 0) +
