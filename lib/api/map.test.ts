@@ -193,6 +193,26 @@ describe("mapScored", () => {
     expect(s.year).toBeNull();
     expect(s.voteAverage).toBeNull();
   });
+
+  it("keeps a series as tv, with its season count", () => {
+    const s = mapScored({
+      ...SCORED,
+      media_id: 3322,
+      media_type: "tv",
+      tmdb_id: 46648,
+      title: "True Detective",
+      runtime: 0,
+      season_count: 4,
+    });
+    expect(s.mediaType).toBe("tv");
+    expect(s.tmdbId).toBe(46648);
+    expect(s.seasonCount).toBe(4);
+    expect(s.runtime).toBeNull();
+  });
+
+  it("gives a film no season count", () => {
+    expect(mapScored({ ...SCORED, season_count: 0 }).seasonCount).toBeNull();
+  });
 });
 
 describe("mapMovie", () => {

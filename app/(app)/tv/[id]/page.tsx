@@ -3,6 +3,7 @@ import { cache, Suspense } from "react";
 import { DetailError, DetailNotFound } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
+import { SeriesActions } from "@/components/media/series-actions";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { getSimilar, getTvSeries } from "@/lib/api/catalog";
@@ -72,6 +73,12 @@ export default async function TvPage({
         year: t.year,
       }}
       trackable={false}
+      actions={
+        <SeriesActions
+          tmdbId={t.tmdbId}
+          seasonNumbers={t.seasons.map((s) => s.seasonNumber)}
+        />
+      }
       backdropPath={t.backdropPath}
       posterPath={t.posterPath}
       title={t.title}

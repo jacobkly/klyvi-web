@@ -154,7 +154,7 @@ export function mapTrackingEntry(w: WireTrackingEntry): LibraryEntry {
 export function mapScored(w: WireScored): Scored {
   return {
     mediaId: w.media_id,
-    mediaType: w.media_type === "season" ? "season" : "movie",
+    mediaType: w.media_type === "tv" ? "tv" : "movie",
     tmdbId: w.tmdb_id,
     title: w.title,
     posterPath: orNull(w.poster_path),
@@ -163,6 +163,7 @@ export function mapScored(w: WireScored): Scored {
     voteAverage: w.vote_average > 0 ? w.vote_average : null,
     overview: orNull(w.overview),
     runtime: w.runtime > 0 ? w.runtime : null,
+    seasonCount: w.season_count && w.season_count > 0 ? w.season_count : null,
     genres: w.genres ?? [],
     reasons: mapReasons(w.reasons),
   };

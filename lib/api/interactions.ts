@@ -8,17 +8,19 @@ import type {
   Interaction,
   InteractionKind,
   InteractionSource,
-  MediaType,
+  SummaryKind,
 } from "@/lib/types";
 
 import { browserFetch } from "./http";
 import { mapInteraction } from "./map";
 import type { WireBatchResult, WireInteraction } from "./wire";
 
-/** One row of a batch, the same shape as a single POST /v1/interactions. */
+/** One row of a batch, the same shape as a single POST /v1/interactions.
+ *  A "tv" row is a series-level signal: tmdbId is the series and no season
+ *  number is sent. */
 export type InteractionInput = {
   tmdbId: number;
-  mediaType: MediaType;
+  mediaType: SummaryKind;
   seasonNumber?: number | null;
   kind: InteractionKind;
   rating?: number;

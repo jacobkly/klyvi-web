@@ -21,6 +21,7 @@ export const DEMO_PICKS: Scored[] = [
     year: 2010,
     voteAverage: 8.4,
     runtime: 148,
+    seasonCount: null,
     genres: ["Action", "Sci-Fi", "Adventure"],
     overview:
       "A thief who steals secrets from inside dreams is offered a way home: plant an idea in a sleeping mind and make it stick.",
@@ -40,6 +41,7 @@ export const DEMO_PICKS: Scored[] = [
     year: 2008,
     voteAverage: 8.5,
     runtime: 152,
+    seasonCount: null,
     genres: ["Drama", "Action", "Crime"],
     overview:
       "Batman raises the stakes in his war on crime, setting out to dismantle the remaining criminal organisations that plague Gotham.",
@@ -59,6 +61,7 @@ export const DEMO_PICKS: Scored[] = [
     year: 2024,
     voteAverage: 8.2,
     runtime: 167,
+    seasonCount: null,
     genres: ["Sci-Fi", "Adventure"],
     overview:
       "Paul Atreides unites with the Fremen to wage war on House Harkonnen, torn between the love of his life and the fate of the known universe.",
@@ -78,6 +81,7 @@ export const DEMO_PICKS: Scored[] = [
     year: 1999,
     voteAverage: 8.4,
     runtime: 139,
+    seasonCount: null,
     genres: ["Drama", "Thriller"],
     overview:
       "An insomniac office worker and a devil-may-care soap maker build an underground club where men fight, until the idea outgrows its basement.",
@@ -97,6 +101,7 @@ export const DEMO_PICKS: Scored[] = [
     year: 2014,
     voteAverage: 8.4,
     runtime: 107,
+    seasonCount: null,
     genres: ["Drama", "Music"],
     overview:
       "A young drummer enrols at a cutthroat conservatory, where a feared instructor pushes his obsession with greatness to the edge.",

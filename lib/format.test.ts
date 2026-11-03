@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDate, formatRuntime } from "./mock-media";
+import { formatDate, formatRuntime, formatSeasons } from "./mock-media";
 
 describe("formatRuntime", () => {
   it("formats hours and minutes with no leading zero", () => {
@@ -11,6 +11,16 @@ describe("formatRuntime", () => {
   });
   it("returns null for unknown", () => {
     expect(formatRuntime(null)).toBeNull();
+  });
+});
+
+describe("formatSeasons", () => {
+  it("counts seasons as a numeral, singular for one", () => {
+    expect(formatSeasons(1)).toBe("1 season");
+    expect(formatSeasons(8)).toBe("8 seasons");
+  });
+  it("returns null for unknown", () => {
+    expect(formatSeasons(null)).toBeNull();
   });
 });
 

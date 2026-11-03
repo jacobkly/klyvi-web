@@ -43,8 +43,9 @@ export type Reason = {
 
 /**
  * What a poster card can point at. Tracking knows only movie | season, but
- * catalog surfaces (search, TV rails) also show series-level cards, which
- * link to /tv/{id}.
+ * catalog surfaces (search, TV rails) and the feed also show series-level
+ * cards, which link to /tv/{id}. Interactions take a series too, as feed
+ * signal on the whole show.
  */
 export type SummaryKind = MediaType | "tv";
 
@@ -84,14 +85,18 @@ export type LibraryEntry = TrackableSummary & {
   backdropPath?: string | null;
 };
 
-/** One item from GET /v1/reco/feed, enriched server-side. The card details
- *  (overview, runtime, genres) ride along in the feed, so a pick never needs
- *  a follow-up /v1/movies/{id} request. */
+/** One item from GET /v1/reco/feed, enriched server-side: a film or a whole
+ *  series, never a season. The card details (overview, runtime, season
+ *  count, genres) ride along in the feed, so a pick never needs a follow-up
+ *  detail request. */
 export type Scored = MediaSummary & {
   backdropPath: string | null;
   voteAverage: number | null;
   overview: string | null;
+  /** Minutes, null for a series or when unknown. */
   runtime: number | null;
+  /** Null for a film. */
+  seasonCount: number | null;
   genres: string[];
   reasons: Reason[];
 };
@@ -185,7 +190,7 @@ export type InteractionSource = "search" | "detail" | "feed" | "onboarding";
 export type Interaction = {
   id: number;
   mediaId: number;
-  mediaType: MediaType;
+  mediaType: SummaryKind;
   kind: InteractionKind;
   rating: number | null;
   source: string | null;

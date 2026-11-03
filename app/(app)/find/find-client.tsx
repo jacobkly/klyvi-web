@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
   Bookmark,
@@ -26,8 +27,10 @@ import { getFeed } from "@/lib/api/reco";
 import { addTracking } from "@/lib/api/tracking";
 import { listInteractions } from "@/lib/api/interactions";
 import { queueSignal } from "@/lib/interactions-batch";
+import { trackFirstUntrackedSeason } from "@/lib/track-show";
 import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
-import { formatRuntime } from "@/lib/mock-media";
+import { mediaHref } from "@/lib/media-href";
+import { formatRuntime, formatSeasons } from "@/lib/mock-media";
 import { watchWindowPhrase } from "@/lib/time-of-day";
 import type { Scored } from "@/lib/types";
 
@@ -94,6 +97,7 @@ type Phase =
  */
 export function FindClient({ simulate }: { simulate?: string }) {
   const { user } = useSession();
+  const router = useRouter();
   const mock = simulate != null;
 
   const [mood, setMood] = React.useState("any");
@@ -130,7 +134,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
       if (!p || mock) return;
       queueSignal({
         tmdbId: p.tmdbId,
-        mediaType: "movie",
+        mediaType: p.mediaType,
         kind: "impression",
         source: "feed",
       });
@@ -186,6 +190,13 @@ export function FindClient({ simulate }: { simulate?: string }) {
     });
   }
 
+  /** A show is recommended whole but tracked season by season, so a toast
+   *  about one points at its page, where the seasons are. */
+  const trackSeasons = (p: Scored) => ({
+    label: "Track seasons",
+    onClick: () => router.push(mediaHref(p)),
+  });
+
   function act(kind: "save" | "seen" | "dismiss") {
     if (phase.kind !== "ready") return;
     const cur = phase.picks[phase.index];
@@ -199,16 +210,33 @@ export function FindClient({ simulate }: { simulate?: string }) {
     }
 
     if (kind === "save") {
-      toast("Added to your watchlist");
+      if (!mock && cur.mediaType === "tv") {
+        // Never tracked as a film (the ids overlap, so that would list an
+        // unrelated film). Its first untracked season goes in instead.
+        trackFirstUntrackedSeason(cur.tmdbId)
+          .then((season) =>
+            toast(
+              season != null
+                ? `Season ${season} added to your watchlist`
+                : "Every season is already in your library",
+              { action: trackSeasons(cur) }
+            )
+          )
+          .catch(() => toast("Could not update that. Try again"));
+      } else {
+        toast("Added to your watchlist");
+        if (!mock) {
+          addTracking({
+            tmdbId: cur.tmdbId,
+            mediaType: "movie",
+            status: "planning",
+          }).catch(() => toast("Could not update that. Try again"));
+        }
+      }
       if (!mock) {
-        addTracking({
-          tmdbId: cur.tmdbId,
-          mediaType: "movie",
-          status: "planning",
-        }).catch(() => toast("Could not update that. Try again"));
         recordInteraction({
           tmdbId: cur.tmdbId,
-          mediaType: "movie",
+          mediaType: cur.mediaType,
           kind: "saved",
           source: "feed",
         }).catch(() => {});
@@ -219,7 +247,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
       if (!mock) {
         recordInteraction({
           tmdbId: cur.tmdbId,
-          mediaType: "movie",
+          mediaType: cur.mediaType,
           kind: "dismissed",
           source: "feed",
         }).catch(() => {});
@@ -232,12 +260,16 @@ export function FindClient({ simulate }: { simulate?: string }) {
     const cur = rating;
     setRating(null);
     if (!cur) return;
-    toast(score != null ? "Rated" : "Marked as seen");
+    const done = score != null ? "Rated" : "Marked as seen";
+    // A show's rating and "seen" are series-level signals. Nothing is
+    // tracked for the whole series, so the toast offers its seasons.
+    if (cur.mediaType === "tv") toast(done, { action: trackSeasons(cur) });
+    else toast(done);
     if (!mock) {
       if (score != null) {
         recordInteraction({
           tmdbId: cur.tmdbId,
-          mediaType: "movie",
+          mediaType: cur.mediaType,
           kind: "rated",
           rating: score,
           source: "feed",
@@ -246,17 +278,19 @@ export function FindClient({ simulate }: { simulate?: string }) {
       } else {
         recordInteraction({
           tmdbId: cur.tmdbId,
-          mediaType: "movie",
+          mediaType: cur.mediaType,
           kind: "logged",
           source: "feed",
         }).catch(() => {});
       }
-      addTracking({
-        tmdbId: cur.tmdbId,
-        mediaType: "movie",
-        status: "completed",
-        score,
-      }).catch(() => {});
+      if (cur.mediaType === "movie") {
+        addTracking({
+          tmdbId: cur.tmdbId,
+          mediaType: "movie",
+          status: "completed",
+          score,
+        }).catch(() => {});
+      }
     }
     removeCurrent();
   }
@@ -404,7 +438,12 @@ export function FindClient({ simulate }: { simulate?: string }) {
 
   // ---------- the pick ----------
   const pick = phase.picks[phase.index];
-  const { overview, runtime, genres } = pick;
+  const { overview, genres } = pick;
+  // A show's length is its season count, where a film's is its runtime.
+  const length =
+    pick.mediaType === "tv"
+      ? formatSeasons(pick.seasonCount)
+      : formatRuntime(pick.runtime);
   // Read at render, which only ever happens on the client here: the pick
   // view appears after the user asks for a set, so there is no server pass
   // to disagree with about the hour.
@@ -480,12 +519,9 @@ export function FindClient({ simulate }: { simulate?: string }) {
             </p>
           ) : null}
 
-          {genres.length > 0 || runtime != null ? (
+          {genres.length > 0 || length != null ? (
             <p className="mt-3 text-center text-sm text-muted-foreground">
-              {[
-                genres.join(" · "),
-                runtime != null ? formatRuntime(runtime) : null,
-              ]
+              {[genres.join(" · "), length]
                 .filter(Boolean)
                 .join("  •  ")}
             </p>
@@ -499,13 +535,13 @@ export function FindClient({ simulate }: { simulate?: string }) {
               Add to watchlist
             </Button>
             <Link
-              href={`/movie/${pick.tmdbId}`}
+              href={mediaHref(pick)}
               className={buttonVariants({ variant: "outline", size: "touch" })}
               onClick={() => {
                 if (!mock)
                   queueSignal({
                     tmdbId: pick.tmdbId,
-                    mediaType: "movie",
+                    mediaType: pick.mediaType,
                     kind: "clicked",
                     source: "feed",
                   });

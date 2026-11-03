@@ -48,6 +48,7 @@ import { tmdbImage } from "@/lib/tmdb-image";
 function DetailLayout({
   media,
   trackable = true,
+  actions,
   episodeCount,
   backdropPath,
   posterPath,
@@ -71,6 +72,9 @@ function DetailLayout({
    * status control that would write a bogus entry.
    */
   trackable?: boolean;
+  /** The action row for an untrackable page, in the status control's slot
+   *  under the poster (the series page's SeriesActions). */
+  actions?: React.ReactNode;
   /** Total episodes, for the season progress field. */
   episodeCount?: number | null;
   backdropPath: string | null;
@@ -265,9 +269,12 @@ function DetailLayout({
                   ) : null}
                 </div>
               ) : (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Track this show season by season below.
-                </p>
+                <div className="mt-3 flex flex-col gap-2">
+                  {actions}
+                  <p className="text-xs text-muted-foreground">
+                    Track this show season by season below.
+                  </p>
+                </div>
               )}
             </div>
 

@@ -154,6 +154,12 @@ export function formatRuntime(minutes: number | null): string | null {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+/** "1 season" / "8 seasons", a numeral per the number rules in 06-copy.md. */
+export function formatSeasons(count: number | null): string | null {
+  if (count == null) return null;
+  return count === 1 ? "1 season" : `${count} seasons`;
+}
+
 /** "4 November 2023", no ordinal. */
 export function formatDate(iso: string | null): string | null {
   if (!iso) return null;

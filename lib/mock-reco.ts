@@ -16,7 +16,7 @@ const BASE: Omit<Scored, "reasons">[] = [
     mediaId: 142, mediaType: "movie", tmdbId: 419430, title: "Get Out",
     overview:
       "A young Black man visits his white girlfriend’s family estate for the weekend, where his unease about their reception of him eventually reaches a boiling point.",
-    runtime: 104, genres: ["Horror", "Mystery", "Thriller"],
+    runtime: 104, seasonCount: null, genres: ["Horror", "Mystery", "Thriller"],
     posterPath: "/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg",
     backdropPath: null,
     year: 2017, voteAverage: 7.8,
@@ -25,7 +25,7 @@ const BASE: Omit<Scored, "reasons">[] = [
     mediaId: 143, mediaType: "movie", tmdbId: 496, title: "Oldboy",
     overview:
       "After being kidnapped and imprisoned for fifteen years, a man is released and given four days to find his captor and understand why.",
-    runtime: 120, genres: ["Drama", "Thriller", "Action"],
+    runtime: 120, seasonCount: null, genres: ["Drama", "Thriller", "Action"],
     posterPath: "/pWDtjs568ZfOTMbURQBYuT4Qxka.jpg",
     backdropPath: null,
     year: 2003, voteAverage: 8.3,
@@ -34,7 +34,7 @@ const BASE: Omit<Scored, "reasons">[] = [
     mediaId: 144, mediaType: "movie", tmdbId: 546554, title: "Knives Out",
     overview:
       "A detective investigates the death of the patriarch of an eccentric, combative family after his eighty-fifth birthday party.",
-    runtime: 130, genres: ["Comedy", "Crime", "Mystery"],
+    runtime: 130, seasonCount: null, genres: ["Comedy", "Crime", "Mystery"],
     posterPath: "/pThyQovXQrw2m0s9x82twj48Jq4.jpg",
     backdropPath: null,
     year: 2019, voteAverage: 7.8,
@@ -43,7 +43,7 @@ const BASE: Omit<Scored, "reasons">[] = [
     mediaId: 145, mediaType: "movie", tmdbId: 375262, title: "The Handmaiden",
     overview:
       "A woman is hired as a handmaiden to a Japanese heiress, but secretly she is involved in a plot to defraud her.",
-    runtime: 145, genres: ["Drama", "Romance", "Thriller"],
+    runtime: 145, seasonCount: null, genres: ["Drama", "Romance", "Thriller"],
     posterPath: "/dLlH4aNHdnmf62umnInL8xPlPzw.jpg",
     backdropPath: null,
     year: 2016, voteAverage: 8.3,
@@ -52,7 +52,7 @@ const BASE: Omit<Scored, "reasons">[] = [
     mediaId: 146, mediaType: "movie", tmdbId: 493922, title: "Hereditary",
     overview:
       "When the matriarch of a family passes away, her daughter and grandchildren begin to unravel cryptic and increasingly terrifying secrets about their ancestry.",
-    runtime: 127, genres: ["Horror", "Mystery", "Thriller"],
+    runtime: 127, seasonCount: null, genres: ["Horror", "Mystery", "Thriller"],
     posterPath: "/p9fmuz2Oj3HtEJEqbIwkFGUhVXD.jpg",
     backdropPath: null,
     year: 2018, voteAverage: 7.3,
@@ -61,7 +61,7 @@ const BASE: Omit<Scored, "reasons">[] = [
     mediaId: 147, mediaType: "movie", tmdbId: 155, title: "The Dark Knight",
     overview:
       "Batman raises the stakes in his war on crime, setting out to dismantle the remaining criminal organisations that plague Gotham.",
-    runtime: 152, genres: ["Drama", "Action", "Crime"],
+    runtime: 152, seasonCount: null, genres: ["Drama", "Action", "Crime"],
     posterPath: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
     backdropPath: null,
     year: 2008, voteAverage: 8.5,
@@ -70,7 +70,7 @@ const BASE: Omit<Scored, "reasons">[] = [
     mediaId: 148, mediaType: "movie", tmdbId: 129, title: "Spirited Away",
     overview:
       "A young girl wanders into a world ruled by gods and witches, where humans are turned into beasts, and must find a way to free her family.",
-    runtime: 125, genres: ["Animation", "Family", "Fantasy"],
+    runtime: 125, seasonCount: null, genres: ["Animation", "Family", "Fantasy"],
     posterPath: "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
     backdropPath: null,
     year: 2001, voteAverage: 8.5,

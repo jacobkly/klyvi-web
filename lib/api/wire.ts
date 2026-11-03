@@ -136,7 +136,8 @@ export type WireAffected = { affected: number };
 export type WireInteraction = {
   id: number;
   media_id: number;
-  media_type: "movie" | "season";
+  /** "tv" is a series-level feed signal on the whole show. */
+  media_type: "movie" | "season" | "tv";
   kind: string;
   rating: number | null;
   source: string | null;
@@ -147,6 +148,7 @@ export type WireInteraction = {
 
 export type WireScored = {
   media_id: number;
+  /** "movie" or "tv". The feed recommends whole series, never seasons. */
   media_type: string;
   tmdb_id: number;
   title: string;
@@ -156,8 +158,10 @@ export type WireScored = {
   vote_average: number;
   /** "" when TMDB has no synopsis. */
   overview: string;
-  /** Minutes, 0 when unknown. */
+  /** Minutes, 0 when unknown and always 0 for a series. */
   runtime: number;
+  /** Seasons in a series, 0 for a film. Optional to tolerate an older API. */
+  season_count?: number;
   /** Names in TMDB order. The server sends [], null is tolerated. */
   genres: string[] | null;
   /** Debug/explainability passthrough; the frontend ignores it. */

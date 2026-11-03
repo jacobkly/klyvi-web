@@ -58,6 +58,7 @@ function pick(over: Partial<Scored>): Scored {
     voteAverage: 8.5,
     overview: null,
     runtime: null,
+    seasonCount: null,
     genres: [],
     reasons: [],
     ...over,
@@ -136,6 +137,16 @@ describe("HomeClient", () => {
     expect(
       screen.getByText("Could not load your library right now.")
     ).toBeInTheDocument();
+  });
+
+  it("links a show pick to its series page, not a film page", async () => {
+    getFeed.mockResolvedValue([
+      pick({ mediaId: 9, mediaType: "tv", tmdbId: 1399, title: "Game of Thrones" }),
+    ]);
+    render(<HomeClient />);
+
+    const title = await screen.findByText("Game of Thrones");
+    expect(title.closest("a")).toHaveAttribute("href", "/tv/1399");
   });
 
   it("offers a retry only when both pillars are down", async () => {

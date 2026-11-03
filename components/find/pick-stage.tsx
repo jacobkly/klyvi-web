@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
+import { mediaHref } from "@/lib/media-href";
 import type { Scored } from "@/lib/types";
 import { tmdbImage } from "@/lib/tmdb-image";
 
@@ -32,8 +33,7 @@ export function PickHero({
 }) {
   const backdropPath = pick.backdropPath;
   const poster = tmdbImage(pick.posterPath);
-  const href =
-    detailHref === undefined ? `/movie/${pick.tmdbId}` : detailHref;
+  const href = detailHref === undefined ? mediaHref(pick) : detailHref;
 
   const posterBox = (
     <div className="relative aspect-[2/3] overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">

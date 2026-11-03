@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { listInteractions } from "@/lib/api/interactions";
 import { getFeed } from "@/lib/api/reco";
 import { queueSignal } from "@/lib/interactions-batch";
+import { mediaHref } from "@/lib/media-href";
 import { listTracking } from "@/lib/api/tracking";
 import { mockFeed } from "@/lib/mock-reco";
 import { MOCK_LIBRARY } from "@/lib/mock-library";
@@ -143,7 +144,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
     for (const p of picks.slice(0, 2)) {
       queueSignal({
         tmdbId: p.tmdbId,
-        mediaType: "movie",
+        mediaType: p.mediaType,
         kind: "impression",
         source: "feed",
       });
@@ -261,12 +262,12 @@ export function HomeClient({ simulate }: { simulate?: string }) {
                 {topPicks.map((p) => (
                   <Link
                     key={p.mediaId}
-                    href={`/movie/${p.tmdbId}`}
+                    href={mediaHref(p)}
                     onClick={() => {
                       if (!mock)
                         queueSignal({
                           tmdbId: p.tmdbId,
-                          mediaType: "movie",
+                          mediaType: p.mediaType,
                           kind: "clicked",
                           source: "feed",
                         });

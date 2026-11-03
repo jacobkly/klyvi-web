@@ -1,7 +1,7 @@
 "use client";
 
 import { recordInteractionsBatch } from "@/lib/api/interactions";
-import type { InteractionSource, MediaType } from "@/lib/types";
+import type { InteractionSource, SummaryKind } from "@/lib/types";
 
 /**
  * Batcher for the passive recommender signals, impression and clicked.
@@ -17,7 +17,7 @@ import type { InteractionSource, MediaType } from "@/lib/types";
 
 export type PassiveSignal = {
   tmdbId: number;
-  mediaType: MediaType;
+  mediaType: SummaryKind;
   kind: "impression" | "clicked";
   source: InteractionSource;
 };

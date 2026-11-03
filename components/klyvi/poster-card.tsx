@@ -7,6 +7,7 @@ import {
   type MediaSummary,
   type TrackingStatus,
 } from "@/lib/types";
+import { mediaHref } from "@/lib/media-href";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb-image";
 
@@ -40,12 +41,7 @@ function PosterCard({
   score?: number | null;
   className?: string;
 }) {
-  const href =
-    media.mediaType === "season"
-      ? `/tv/${media.tmdbId}/season/${media.seasonNumber ?? 1}`
-      : media.mediaType === "tv"
-        ? `/tv/${media.tmdbId}`
-        : `/movie/${media.tmdbId}`;
+  const href = mediaHref(media);
   const src = tmdbImage(media.posterPath);
   const seasonSuffix =
     media.mediaType === "season" && media.seasonNumber != null
