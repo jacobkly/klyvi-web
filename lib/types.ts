@@ -49,6 +49,9 @@ export type Reason = {
  */
 export type SummaryKind = MediaType | "tv";
 
+/** The feed's `?media=` filter. `all` mixes films and series. */
+export type FeedMedia = "all" | "movie" | "tv";
+
 /** The minimum a poster card needs to render. */
 export type MediaSummary = {
   /** Internal media_index id. 0 for catalog cards that never carried one. */

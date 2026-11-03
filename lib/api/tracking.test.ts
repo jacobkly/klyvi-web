@@ -27,6 +27,7 @@ const MOVIE_ROW: WireTrackingEntry = {
   release_year: 2003,
   season_number: null,
   season_name: null,
+  episode_count: null,
 };
 
 describe("lookupTracking", () => {

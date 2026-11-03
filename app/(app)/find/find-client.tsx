@@ -29,10 +29,11 @@ import { listInteractions } from "@/lib/api/interactions";
 import { queueSignal } from "@/lib/interactions-batch";
 import { trackFirstUntrackedSeason } from "@/lib/track-show";
 import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
+import { usePref } from "@/lib/local-prefs";
 import { mediaHref } from "@/lib/media-href";
 import { formatRuntime, formatSeasons } from "@/lib/mock-media";
 import { watchWindowPhrase } from "@/lib/time-of-day";
-import type { Scored } from "@/lib/types";
+import type { FeedMedia, Scored } from "@/lib/types";
 
 const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
 
@@ -40,16 +41,19 @@ const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
  * Moods are honest client-side lenses over the feed, not server queries.
  * Each one reads only what the feed carries (runtime, genres, year, and the
  * keywords named in its reasons); a pick missing that data does not fit.
+ * A films-only mood reads a runtime, which a whole show does not have.
  */
 const MOODS: {
   id: string;
   label: string;
+  filmsOnly?: boolean;
   fits: (s: Scored) => boolean;
 }[] = [
   { id: "any", label: "Anything", fits: () => true },
   {
     id: "short",
     label: "Under 2 hours",
+    filmsOnly: true,
     fits: (s) => s.runtime != null && s.runtime <= 120,
   },
   {
@@ -83,6 +87,13 @@ const MOODS: {
   },
 ];
 
+/** The feed filter. The labels match the Library's type filter. */
+const MEDIA: { value: FeedMedia; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "movie", label: "Films" },
+  { value: "tv", label: "TV" },
+];
+
 type Phase =
   | { kind: "idle" }
   | { kind: "loading" }
@@ -101,6 +112,8 @@ export function FindClient({ simulate }: { simulate?: string }) {
   const mock = simulate != null;
 
   const [mood, setMood] = React.useState("any");
+  const [media, setMedia] = usePref("findMedia");
+  const filmsOnlyMood = MOODS.find((x) => x.id === mood)?.filmsOnly === true;
   const [count, setCount] = React.useState<3 | 5 | 7>(5);
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
   const [fetchedInteractions, setInteractions] = React.useState<
@@ -161,14 +174,22 @@ export function FindClient({ simulate }: { simulate?: string }) {
     }
 
     try {
-      const feed = await getFeed();
       const m = MOODS.find((x) => x.id === mood) ?? MOODS[0];
+      // A films-only mood asks for the films feed, so every slot is a
+      // candidate instead of the share a mixed feed leaves to films.
+      const feed = await getFeed({ media: m.filmsOnly ? "movie" : media });
       const picks = feed.filter(m.fits).slice(0, count);
       setPhase({ kind: "ready", picks, index: 0 });
       sawPick(picks[0]);
     } catch {
       setPhase({ kind: "error" });
     }
+  }
+
+  function chooseMedia(next: FeedMedia) {
+    setMedia(next);
+    // A films-only mood cannot hold under TV, so it goes back to Anything.
+    if (next === "tv" && filmsOnlyMood) setMood("any");
   }
 
   function step(dir: 1 | -1) {
@@ -324,8 +345,9 @@ export function FindClient({ simulate }: { simulate?: string }) {
               type="button"
               onClick={() => setMood(m.id)}
               aria-pressed={mood === m.id}
+              disabled={m.filmsOnly === true && media === "tv"}
               className={
-                "tap-target rounded-full px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 " +
+                "tap-target rounded-full px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 " +
                 (mood === m.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-card text-muted-foreground ring-1 ring-foreground/10 hover:text-foreground")
@@ -335,8 +357,35 @@ export function FindClient({ simulate }: { simulate?: string }) {
             </button>
           ))}
         </div>
+        {filmsOnlyMood || media === "tv" ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Under 2 hours picks films only.
+          </p>
+        ) : null}
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
+          <span className="text-sm text-muted-foreground">Films or TV?</span>
+          <ToggleGroup
+            value={[media]}
+            onValueChange={(v: unknown[]) => {
+              // Pressing the chosen item again empties the group. Ignore
+              // that, so one choice is always on.
+              const next = MEDIA.find((o) => o.value === v.at(-1));
+              if (next) chooseMedia(next.value);
+            }}
+            spacing={0}
+            variant="outline"
+            aria-label="Films or TV"
+          >
+            {MEDIA.map((o) => (
+              <ToggleGroupItem key={o.value} value={o.value}>
+                {o.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <span className="text-sm text-muted-foreground">How many?</span>
           <ToggleGroup
             value={[String(count)]}
@@ -364,10 +413,6 @@ export function FindClient({ simulate }: { simulate?: string }) {
           <Sparkles aria-hidden="true" data-icon="inline-start" />
           Find something
         </Button>
-
-        <p className="mt-8 text-xs text-muted-foreground">
-          Films only for now. Klyvi tracks TV but does not recommend it yet.
-        </p>
       </main>
     );
   }
@@ -421,7 +466,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
           <EmptyState
             icon={Sparkles}
             title="Not enough to go on yet"
-            body="Rate about 20 films and Klyvi can make a real recommendation. It takes about 90 seconds."
+            body="Rate about 20 films and Klyvi can make real recommendations, shows included. It takes about 90 seconds."
             action={{ label: "Start rating", href: "/onboarding/rate" }}
           />
         ) : (

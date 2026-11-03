@@ -255,7 +255,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
               </p>
             ) : topPicks.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nothing to pick from yet. Rate a few films and this fills in.
+                Nothing to pick from yet. Rate a few films or shows and this fills in.
               </p>
             ) : (
               <div className="flex flex-col gap-3">
@@ -425,8 +425,8 @@ export function HomeClient({ simulate }: { simulate?: string }) {
               </>
             ) : (
               <p className="mt-3 text-xs text-muted-foreground">
-                Klyvi cannot describe your taste yet. Rate a few films and the
-                picture forms here.
+                Klyvi cannot describe your taste yet. Rate a few films or shows
+                and the picture forms here.
               </p>
             )}
           </section>

@@ -116,6 +116,7 @@ describe("FindClient", () => {
     queueSignal.mockReset();
     toast.mockReset();
     push.mockReset();
+    window.localStorage.clear();
   });
 
   /** The "Track seasons" action on the most recent toast. */
@@ -226,6 +227,59 @@ describe("FindClient", () => {
     expect(action?.label).toBe("Track seasons");
     action?.onClick();
     expect(push).toHaveBeenCalledWith("/tv/1399");
+  });
+
+  it("asks for films and shows by default, and no longer says films only", async () => {
+    render(<FindClient />);
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.queryByText(/Films only/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+
+    await screen.findByRole("heading", { name: "Memories of Murder" });
+    expect(getFeed).toHaveBeenCalledWith({ media: "all" });
+  });
+
+  it("asks for shows only when TV is chosen, and remembers the choice", async () => {
+    getFeed.mockResolvedValue([SHOW]);
+    const first = render(<FindClient />);
+    fireEvent.click(screen.getByRole("button", { name: "TV" }));
+    fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+
+    await screen.findByRole("heading", { name: "Game of Thrones" });
+    expect(getFeed).toHaveBeenCalledWith({ media: "tv" });
+    first.unmount();
+
+    render(<FindClient />);
+    expect(screen.getByRole("button", { name: "TV" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
+  it("keeps Under 2 hours to films and says so", async () => {
+    render(<FindClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Under 2 hours" }));
+    expect(screen.getByText("Under 2 hours picks films only.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "TV" }));
+    expect(screen.getByRole("button", { name: "Under 2 hours" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Anything" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByText("Under 2 hours picks films only.")).toBeInTheDocument();
+  });
+
+  it("asks for the films feed for Under 2 hours, even with All chosen", async () => {
+    render(<FindClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Under 2 hours" }));
+    fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+
+    await screen.findByRole("heading", { name: "City of God" });
+    expect(getFeed).toHaveBeenCalledWith({ media: "movie" });
   });
 
   it("shows the pick's synopsis, genres, and runtime straight from the feed", async () => {

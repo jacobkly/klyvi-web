@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import type { FeedMedia } from "@/lib/types";
+
 /**
  * Device-local preferences behind the settings panes that have no backend
  * persistence yet. One JSON blob under one key, typed keys, defaults in
@@ -19,6 +21,8 @@ export type Prefs = {
   combineLists: boolean;
   /** Library layout the user last chose; remembered so it does not reset. */
   libraryView: "grid" | "list" | "compact";
+  /** Films, TV or both in Find, the last choice, kept the same way. */
+  findMedia: FeedMedia;
   /** Which tracking updates create activity feed entries, keyed by status. */
   activityFeed: Record<string, boolean>;
   /** In-app notification switches, keyed by id. */
@@ -36,6 +40,7 @@ export const DEFAULT_PREFS: Prefs = {
   listOrder: "updated",
   combineLists: true,
   libraryView: "grid",
+  findMedia: "all",
   activityFeed: {},
   notifications: {},
   emails: {},
