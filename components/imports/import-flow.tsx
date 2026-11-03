@@ -23,6 +23,29 @@ const SOURCES: Record<string, string> = {
   csv: "A CSV file",
 };
 
+/** What each source expects, and what an import of it becomes. The API reads
+ *  a ZIP only from Trakt, so the picker offers one only there. */
+export const SOURCE_HELP: Record<
+  ImportSource,
+  { hint: string; accept: string; result: string }
+> = {
+  letterboxd: {
+    hint: "Or click to browse. Upload ratings.csv from your Letterboxd export.",
+    accept: ".csv",
+    result: "Matched films land as completed entries.",
+  },
+  trakt: {
+    hint: "Or click to browse. Upload the ZIP from Trakt's Settings, Data page.",
+    accept: ".zip,.json",
+    result: "Films land as completed, and seasons as completed or watching.",
+  },
+  csv: {
+    hint: "Or click to browse. Columns are title, year and rating (0 to 100), plus type, season and tmdb_id for TV.",
+    accept: ".csv",
+    result: "Films land as completed, and seasons as completed or watching.",
+  },
+};
+
 function prettySize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -43,7 +66,8 @@ export function ImportFlow({
   onDone?: (job: ImportJob) => void;
   onFailed?: (job: ImportJob) => void;
 }) {
-  const [source, setSource] = React.useState("letterboxd");
+  const [source, setSource] = React.useState<ImportSource>("letterboxd");
+  const help = SOURCE_HELP[source];
   const [file, setFile] = React.useState<File | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -68,7 +92,7 @@ export function ImportFlow({
         <p className="text-sm text-foreground">Where is it from?</p>
         <Select
           value={source}
-          onValueChange={(v) => setSource(v ?? "letterboxd")}
+          onValueChange={(v) => setSource((v as ImportSource | null) ?? "letterboxd")}
           items={SOURCES}
         >
           <SelectTrigger aria-label="Import source" className="min-w-36">
@@ -128,7 +152,7 @@ export function ImportFlow({
               Drop the export here
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Or click to browse. CSV or ZIP works.
+              {help.hint}
             </p>
           </>
         )}
@@ -136,7 +160,7 @@ export function ImportFlow({
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,.zip,.json"
+        accept={help.accept}
         aria-label="Choose an export file"
         className="sr-only"
         onChange={(e) => {
@@ -152,10 +176,10 @@ export function ImportFlow({
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          Matched titles land as completed entries.
+          {help.result}
         </p>
         <Button
-          onClick={() => file && start(source as ImportSource, file)}
+          onClick={() => file && start(source, file)}
           disabled={!file || running}
         >
           {running ? "Importing" : "Import"}
