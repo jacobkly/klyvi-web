@@ -42,12 +42,20 @@ export async function updateMe(patch: {
   bio?: string;
   birthday?: string | null;
   settings?: Record<string, unknown>;
+  notifyPremieres?: boolean;
+  notifyReleases?: boolean;
 }): Promise<UserProfile> {
   const body: Record<string, unknown> = {};
   if (patch.username !== undefined) body.username = patch.username;
   if (patch.bio !== undefined) body.bio = patch.bio;
   if (patch.birthday !== undefined) body.birthday = patch.birthday;
   if (patch.settings !== undefined) body.settings = patch.settings;
+  if (patch.notifyPremieres !== undefined) {
+    body.notify_premieres = patch.notifyPremieres;
+  }
+  if (patch.notifyReleases !== undefined) {
+    body.notify_releases = patch.notifyReleases;
+  }
   const w = await browserFetch<WireUser>("/v1/users/me", {
     method: "PATCH",
     body,

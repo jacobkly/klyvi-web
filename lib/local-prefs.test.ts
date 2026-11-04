@@ -1,7 +1,13 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { DEFAULT_PREFS, readPref, usePref, writePref } from "./local-prefs";
+import {
+  DEFAULT_PREFS,
+  readAllPrefs,
+  readPref,
+  usePref,
+  writePref,
+} from "./local-prefs";
 
 beforeEach(() => window.localStorage.clear());
 
@@ -21,6 +27,23 @@ describe("local prefs", () => {
   it("survives corrupted storage", () => {
     window.localStorage.setItem("klyvi:prefs", "{not json");
     expect(readPref("textSize")).toBe(DEFAULT_PREFS.textSize);
+  });
+
+  it("stops pushing keys it no longer knows, like the old notification switches", () => {
+    window.localStorage.setItem(
+      "klyvi:prefs",
+      JSON.stringify({
+        textSize: "large",
+        notifications: { premieres: false },
+        emails: { digest: true },
+      })
+    );
+
+    const pushed = readAllPrefs();
+
+    expect(pushed.textSize).toBe("large");
+    expect(pushed).not.toHaveProperty("notifications");
+    expect(pushed).not.toHaveProperty("emails");
   });
 
   it("updates hook consumers when a pref changes", () => {

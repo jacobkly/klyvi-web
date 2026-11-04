@@ -365,6 +365,8 @@ describe("mapUser + mapPoolEntry", () => {
       banner_url: null,
       birthday: null,
       settings: null,
+      notify_premieres: true,
+      notify_releases: false,
       is_active: true,
       created_at: "2026-07-01T00:00:00Z",
     });
@@ -372,6 +374,8 @@ describe("mapUser + mapPoolEntry", () => {
     expect(u.avatarUrl).toBeNull();
     expect(u.birthday).toBeNull();
     expect(u.settings).toEqual({});
+    expect(u.notifyPremieres).toBe(true);
+    expect(u.notifyReleases).toBe(false);
   });
 
   it("carries through birthday and the settings blob", () => {
@@ -384,6 +388,8 @@ describe("mapUser + mapPoolEntry", () => {
       banner_url: null,
       birthday: "1999-04-12",
       settings: { themeAccent: "blue", textSize: "large" },
+      notify_premieres: true,
+      notify_releases: true,
       is_active: true,
       created_at: "2026-01-01T00:00:00Z",
     });

@@ -12,12 +12,14 @@ import type {
 } from "@/lib/mock-media";
 import type { PoolEntry } from "@/lib/mock-onboarding";
 import type {
+  AppNotification,
   ImportJob,
   ImportStatus,
   Interaction,
   InteractionKind,
   LibraryEntry,
   MediaSummary,
+  NotificationPage,
   PersonResult,
   Ranking,
   Reason,
@@ -31,6 +33,8 @@ import type {
   WireImportJob,
   WireInteraction,
   WireMovie,
+  WireNotification,
+  WireNotificationPage,
   WirePoolEntry,
   WireRanking,
   WireScored,
@@ -283,7 +287,34 @@ export function mapUser(w: WireUser): UserProfile {
     bannerUrl: orNull(w.banner_url),
     birthday: w.birthday ?? null,
     settings: w.settings ?? {},
+    notifyPremieres: w.notify_premieres,
+    notifyReleases: w.notify_releases,
     createdAt: w.created_at,
+  };
+}
+
+// ---------- notifications ----------
+
+export function mapNotification(w: WireNotification): AppNotification {
+  return {
+    id: w.id,
+    kind: w.kind,
+    tmdbId: w.tmdb_id,
+    seasonNumber: w.season_number,
+    title: w.title,
+    posterPath: orNull(w.poster_path),
+    eventDate: w.event_date,
+    readAt: w.read_at,
+  };
+}
+
+export function mapNotificationPage(
+  w: WireNotificationPage
+): NotificationPage {
+  return {
+    notifications: (w.notifications ?? []).map(mapNotification),
+    unreadCount: w.unread_count,
+    hasMore: w.has_more,
   };
 }
 

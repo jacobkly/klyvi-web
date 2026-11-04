@@ -186,8 +186,35 @@ export type WireUser = {
   birthday: string | null;
   /** Opaque client-owned blob; `{}` for a fresh user. */
   settings: Record<string, unknown> | null;
+  notify_premieres: boolean;
+  notify_releases: boolean;
   is_active: boolean;
   created_at: string;
+};
+
+// ---------- notifications ----------
+
+export type WireNotification = {
+  id: number;
+  kind: "season_premiere" | "film_release";
+  /** "tv" for a premiere, "movie" for a film. */
+  media_type: "tv" | "movie";
+  tmdb_id: number;
+  season_number: number | null;
+  title: string;
+  /** Null when the title has since left the catalog cache. */
+  poster_path: string | null;
+  /** Plain "YYYY-MM-DD", no time zone. */
+  event_date: string;
+  created_at: string;
+  read_at: string | null;
+};
+
+export type WireNotificationPage = {
+  notifications: WireNotification[] | null;
+  /** Covers every notice the user has, not just this page. */
+  unread_count: number;
+  has_more: boolean;
 };
 
 // ---------- rankings / stats / imports ----------

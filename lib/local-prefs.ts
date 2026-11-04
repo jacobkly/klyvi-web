@@ -25,10 +25,6 @@ export type Prefs = {
   findMedia: FeedMedia;
   /** Which tracking updates create activity feed entries, keyed by status. */
   activityFeed: Record<string, boolean>;
-  /** In-app notification switches, keyed by id. */
-  notifications: Record<string, boolean>;
-  /** Email opt-ins, keyed by id. */
-  emails: Record<string, boolean>;
 };
 
 export const DEFAULT_PREFS: Prefs = {
@@ -42,8 +38,6 @@ export const DEFAULT_PREFS: Prefs = {
   libraryView: "grid",
   findMedia: "all",
   activityFeed: {},
-  notifications: {},
-  emails: {},
 };
 
 const KEY = "klyvi:prefs";
@@ -80,9 +74,20 @@ export function readPref<K extends keyof Prefs>(key: K): Prefs[K] {
   return (stored ?? DEFAULT_PREFS[key]) as Prefs[K];
 }
 
-/** The whole blob, stored values over defaults. What we push to the server. */
+/**
+ * The whole blob, stored values over defaults. What we push to the server.
+ * Only known keys, so a key retired since this browser last saved stops being
+ * sent.
+ */
 export function readAllPrefs(): Prefs {
-  return { ...DEFAULT_PREFS, ...readAll() };
+  const stored: Partial<Prefs> = readAll();
+  const all: Prefs = { ...DEFAULT_PREFS };
+  for (const key of Object.keys(DEFAULT_PREFS) as (keyof Prefs)[]) {
+    if (stored[key] !== undefined) {
+      (all as Record<keyof Prefs, unknown>)[key] = stored[key];
+    }
+  }
+  return all;
 }
 
 // Server sync. Injected by the auth provider so this module stays free of

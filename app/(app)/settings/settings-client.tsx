@@ -86,7 +86,7 @@ export function SettingsClient() {
     account: <AccountSection />,
     appearance: <AppearanceSection />,
     lists: <ListsSection />,
-    notifications: <NotificationsSection />,
+    notifications: <NotificationsSection me={me} onSaved={onProfileSaved} />,
     data: <DataSection />,
     delete: <DeleteSection />,
   };

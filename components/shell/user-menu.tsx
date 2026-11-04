@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
+import { useUnreadNotices } from "@/components/notifications/unread-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 /**
  * The avatar dropdown: primary rows, then legal and sign out.
@@ -29,6 +31,7 @@ import {
  */
 function UserMenu() {
   const { user, profile, loading, signOut } = useSession();
+  const { unread } = useUnreadNotices();
   const avatarSrc = profile?.avatarUrl ?? null;
 
   if (loading) {
@@ -37,7 +40,10 @@ function UserMenu() {
 
   if (!user) {
     return (
-      <Link href="/signin" className={buttonVariants({ size: "sm" })}>
+      <Link
+        href="/signin"
+        className={cn(buttonVariants({ size: "sm" }), "hit-44 relative")}
+      >
         Sign in
       </Link>
     );
@@ -50,16 +56,28 @@ function UserMenu() {
     "K"
   ).toUpperCase();
 
+  const unreadLabel =
+    unread > 0
+      ? `${unread} unread notification${unread === 1 ? "" : "s"}`
+      : null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label="Your account"
-        className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+        aria-label={unreadLabel ? `Your account, ${unreadLabel}` : "Your account"}
+        className="hit-44 relative rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
       >
         <Avatar className="size-8">
           {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
           <AvatarFallback className="text-xs">{initial}</AvatarFallback>
         </Avatar>
+        {unreadLabel ? (
+          <span
+            aria-hidden="true"
+            data-slot="unread-dot"
+            className="absolute top-0 right-0 size-2 rounded-full bg-violet-text ring-2 ring-background"
+          />
+        ) : null}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-52">
         <DropdownMenuGroup>
@@ -74,6 +92,16 @@ function UserMenu() {
           <DropdownMenuItem render={<Link href="/notifications" />}>
             <Bell aria-hidden="true" data-icon="inline-start" />
             Notifications
+            {unreadLabel ? (
+              <>
+                <span
+                  aria-hidden="true"
+                  data-slot="unread-dot"
+                  className="ml-auto size-2 rounded-full bg-violet-text"
+                />
+                <span className="sr-only">{unreadLabel}</span>
+              </>
+            ) : null}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

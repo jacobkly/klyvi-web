@@ -117,7 +117,35 @@ export type UserProfile = {
   birthday: string | null;
   /** Opaque client-owned preferences blob. `{}` for a fresh user. */
   settings: Record<string, unknown>;
+  /** Whether the nightly job writes season premiere notices for this user. */
+  notifyPremieres: boolean;
+  /** Whether the nightly job writes film release notices for this user. */
+  notifyReleases: boolean;
   createdAt: string;
+};
+
+/**
+ * One notice from GET /v1/notifications. Named to stay clear of the browser's
+ * own `Notification`.
+ */
+export type AppNotification = {
+  id: number;
+  kind: "season_premiere" | "film_release";
+  tmdbId: number;
+  /** Null for a film. */
+  seasonNumber: number | null;
+  title: string;
+  posterPath: string | null;
+  /** Plain "YYYY-MM-DD". */
+  eventDate: string;
+  readAt: string | null;
+};
+
+export type NotificationPage = {
+  notifications: AppNotification[];
+  /** Every unread notice the user has, not just those on this page. */
+  unreadCount: number;
+  hasMore: boolean;
 };
 
 /** One row of a public Top 100 ranking (GET /v1/rankings/{movies,tv}). */

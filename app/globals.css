@@ -257,6 +257,7 @@
   [data-slot="toggle-group-item"],
   [data-slot="select-trigger"],
   [data-slot="tabs-trigger"],
+  [data-slot="dropdown-menu-item"],
   .tap-target {
     min-height: 44px;
   }

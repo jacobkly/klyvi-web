@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 
 import { PRIMARY_NAV, isActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "./user-menu";
 
 /**
- * Mobile primary navigation. Fixed to the bottom, the one piece of chrome that
- * is always reachable (05-responsive.md §2). Hidden at md+ where the top bar
- * takes over. Every target meets the 44px floor.
+ * Mobile primary navigation: four tabs plus the avatar. Fixed to the bottom, the
+ * one piece of chrome that is always reachable (05-responsive.md §2). Hidden at
+ * md+ where the top bar takes over. Every target meets the 44px floor.
  */
 function BottomTabBar() {
   const pathname = usePathname();
@@ -44,6 +45,9 @@ function BottomTabBar() {
             </Link>
           );
         })}
+        <div className="flex min-h-11 min-w-11 flex-1 items-center justify-center">
+          <UserMenu />
+        </div>
       </div>
     </nav>
   );
