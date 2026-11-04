@@ -2,7 +2,7 @@ import type * as React from "react";
 
 import { ProseLayout } from "@/components/klyvi/prose-layout";
 
-export const metadata = { title: "Terms of use \u00b7 Klyvi" };
+export const metadata = { title: "Terms of use · Klyvi" };
 
 function S({ children }: { children: React.ReactNode }) {
   return (
@@ -11,13 +11,10 @@ function S({ children }: { children: React.ReactNode }) {
     </p>
   );
 }
-function Decide({ children }: { children: React.ReactNode }) {
-  return <mark className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-status-paused">[{children}]</mark>;
-}
 
 export default function TermsPage() {
   return (
-    <ProseLayout title="Terms of use" updated="30 July 2026">
+    <ProseLayout title="Terms of use" updated="4 November 2026">
       <S>
         Klyvi is a free tool for tracking what you watch and finding what to
         watch next. Use it reasonably, your data stays yours, and you can
@@ -26,16 +23,16 @@ export default function TermsPage() {
 
       <h2>What Klyvi is</h2>
       <p>
-        Klyvi is a personal movie and TV tracker with recommendations. It is
-        provided free of charge. These terms apply whenever you use it.
+        Klyvi is a personal movie and TV tracker with recommendations, run by
+        one person in Washington State, USA, not a company. It is provided free
+        of charge. These terms apply whenever you use it.
       </p>
 
       <h2>Your account</h2>
       <p>
         You need an account to track anything. You are responsible for what
         happens under your account, so keep your sign-in details to yourself.
-        You must be at least <Decide>13 OR 16, DEPENDS ON JURISDICTION</Decide>{" "}
-        years old to create an account.
+        You must be at least 16 years old to create an account.
       </p>
 
       <h2>Acceptable use</h2>
@@ -49,7 +46,8 @@ export default function TermsPage() {
       <p>
         Your ratings, lists, and notes stay yours. Klyvi stores them to run the
         service, uses them to build your recommendations, and does not sell
-        them to anyone.
+        them to anyone. The <a href="/privacy">privacy policy</a> has the
+        details.
       </p>
 
       <h2>Availability</h2>
@@ -62,34 +60,34 @@ export default function TermsPage() {
       <h2>Third-party data</h2>
       <p>
         Film and TV data comes from TMDB. Klyvi does not control it and cannot
-        guarantee it is accurate or complete. See the{" "}
-        <a href="/attribution">attribution page</a>.
+        guarantee it is accurate or complete. Klyvi is not affiliated with or
+        endorsed by TMDB. See the <a href="/attribution">attribution page</a>.
       </p>
 
       <h2>Ending your account</h2>
       <p>
-        You can delete your account at any time from Settings, which deletes
-        your data with it. Klyvi can suspend or close accounts that break
+        You can delete your account at any time from Settings. The{" "}
+        <a href="/privacy">privacy policy</a> explains what happens to your
+        data. Klyvi can suspend or close an account for abuse or for breaking
         these terms.
       </p>
 
       <h2>Liability</h2>
       <p>
-        Klyvi is a free service run by{" "}
-        <Decide>INDIVIDUAL OR ENTITY, DECIDE</Decide>. To the maximum extent
-        the law allows, liability for damages arising from use of the service
-        is excluded.
+        To the maximum extent the law allows, liability for damages arising
+        from use of the service is excluded. Nothing here takes away rights
+        that the law where you live does not let you give up.
       </p>
 
       <h2>Changes and governing law</h2>
       <p>
-        These terms can change; material changes get notice in the app. They
-        are governed by the law of <Decide>JURISDICTION NEEDED</Decide>.
+        These terms can change. Material changes get notice in the app. They
+        are governed by the law of the State of Washington, USA.
       </p>
 
       <h2>Contact</h2>
       <p>
-        <Decide>CONTACT EMAIL NEEDED</Decide>
+        <a href="mailto:hello@klyvi.net">hello@klyvi.net</a>
       </p>
     </ProseLayout>
   );

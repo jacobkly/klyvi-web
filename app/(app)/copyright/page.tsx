@@ -2,7 +2,7 @@ import type * as React from "react";
 
 import { ProseLayout } from "@/components/klyvi/prose-layout";
 
-export const metadata = { title: "Copyright \u00b7 Klyvi" };
+export const metadata = { title: "Copyright · Klyvi" };
 
 function S({ children }: { children: React.ReactNode }) {
   return (
@@ -11,13 +11,10 @@ function S({ children }: { children: React.ReactNode }) {
     </p>
   );
 }
-function Decide({ children }: { children: React.ReactNode }) {
-  return <mark className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs text-status-paused">[{children}]</mark>;
-}
 
 export default function CopyrightPage() {
   return (
-    <ProseLayout title="Copyright and takedowns" updated="30 July 2026">
+    <ProseLayout title="Copyright and takedowns" updated="4 November 2026">
       <S>
         The posters and images on Klyvi belong to their rights holders and are
         shown to identify titles. If something of yours should not be here,
@@ -37,15 +34,13 @@ export default function CopyrightPage() {
       <h2>Reporting</h2>
       <p>
         If you hold rights to something shown here and want it removed, email{" "}
-        <Decide>CONTACT EMAIL NEEDED</Decide> with the title, the URL where it
-        appears, and evidence that you hold the rights.
+        <a href="mailto:hello@klyvi.net">hello@klyvi.net</a> with the title,
+        the URL where it appears, and evidence that you hold the rights. The
+        same goes for a profile photo that uses your work.
       </p>
 
       <h2>Response</h2>
-      <p>
-        Reports are acted on promptly, within{" "}
-        <Decide>TARGET RESPONSE TIME, e.g. 7 days</Decide>.
-      </p>
+      <p>Reports are acted on within 7 days.</p>
     </ProseLayout>
   );
 }
