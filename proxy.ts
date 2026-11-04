@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { env, supabaseConfigured } from "@/lib/env";
+import { AUTH_SCREENS, PROTECTED_PREFIXES } from "@/lib/gated-routes";
 
 /**
  * Next 16 proxy (the middleware rename). Two jobs:
@@ -86,18 +87,6 @@ function redirect(url: URL, refreshed: NextResponse) {
   refreshed.cookies.getAll().forEach((c) => res.cookies.set(c));
   return res;
 }
-
-const PROTECTED_PREFIXES = [
-  "/home",
-  "/find",
-  "/library",
-  "/profile",
-  "/settings",
-  "/notifications",
-  "/onboarding",
-];
-
-const AUTH_SCREENS = ["/signin", "/signup"];
 
 export const config = {
   // The gated routes above, as literals: Next reads the matcher at build

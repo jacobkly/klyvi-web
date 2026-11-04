@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { rootMetadata } from "@/lib/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,11 +15,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Klyvi",
-  description:
-    "A personalized movie and TV discovery app that learns your taste and helps you find what to watch next.",
-};
+export const metadata: Metadata = rootMetadata;
 
 export default function RootLayout({
   children,

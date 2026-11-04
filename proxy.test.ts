@@ -52,6 +52,7 @@ vi.mock("@/lib/env", () => ({
   supabaseConfigured: true,
 }));
 
+import { AUTH_SCREENS, PROTECTED_PREFIXES } from "@/lib/gated-routes";
 import { config, proxy } from "./proxy";
 
 const origin = "https://klyvi.test";
@@ -78,6 +79,24 @@ describe("proxy", () => {
 
     expect(getRedirectUrl(res)).toBe(
       `${origin}/signin?next=%2Flibrary%2Ffavorites`
+    );
+  });
+
+  // Literals on purpose. Reading the shared list here would let a route fall
+  // off it, and lose its gate, with every test still passing.
+  it.each([
+    "/home",
+    "/find",
+    "/library",
+    "/profile",
+    "/settings",
+    "/notifications",
+    "/onboarding",
+  ])("gates %s for a signed-out visitor", async (path) => {
+    const res = await visit(path);
+
+    expect(getRedirectUrl(res)).toBe(
+      `${origin}/signin?next=${encodeURIComponent(path)}`
     );
   });
 
@@ -142,6 +161,15 @@ describe("proxy matcher", () => {
   ])("runs on %s", (path) => {
     expect(matches(path)).toBe(true);
   });
+
+  // Next reads the matcher as literals at build time, so nothing else ties it
+  // to the list the proxy gates from.
+  it.each([...PROTECTED_PREFIXES, ...AUTH_SCREENS])(
+    "runs on gated route %s",
+    (path) => {
+      expect(matches(path)).toBe(true);
+    }
+  );
 
   // The browser client keeps the session fresh on these, so the proxy has
   // nothing to do and the page skips a Supabase round trip.
