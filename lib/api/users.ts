@@ -40,16 +40,12 @@ export async function getMe(): Promise<UserProfile> {
 export async function updateMe(patch: {
   username?: string;
   bio?: string;
-  avatarUrl?: string;
-  bannerUrl?: string;
   birthday?: string | null;
   settings?: Record<string, unknown>;
 }): Promise<UserProfile> {
   const body: Record<string, unknown> = {};
   if (patch.username !== undefined) body.username = patch.username;
   if (patch.bio !== undefined) body.bio = patch.bio;
-  if (patch.avatarUrl !== undefined) body.avatar_url = patch.avatarUrl;
-  if (patch.bannerUrl !== undefined) body.banner_url = patch.bannerUrl;
   if (patch.birthday !== undefined) body.birthday = patch.birthday;
   if (patch.settings !== undefined) body.settings = patch.settings;
   const w = await browserFetch<WireUser>("/v1/users/me", {

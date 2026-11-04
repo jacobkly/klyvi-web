@@ -1,6 +1,20 @@
 import type { NextConfig } from "next";
 
+import { securityHeaders } from "./lib/security-headers";
+
 const nextConfig: NextConfig = {
+  headers() {
+    return Promise.resolve([
+      {
+        source: "/(.*)",
+        headers: securityHeaders({
+          apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "",
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+          dev: process.env.NODE_ENV === "development",
+        }),
+      },
+    ]);
+  },
   images: {
     // All artwork comes from TMDB, which already serves each image at fixed
     // widths. The loader picks one per srcset entry, so there is no
