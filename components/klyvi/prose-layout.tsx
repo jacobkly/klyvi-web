@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The 720px reading column for terms, privacy, donate, and other prose pages.
+ * The 720px reading column for terms, privacy, and other prose pages.
  * Content styled through descendant selectors so the legal pages can be plain
  * markup without per-element classes.
  */

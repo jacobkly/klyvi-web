@@ -20,7 +20,7 @@ describe("ProseLayout", () => {
 
   it("omits the updated line when not given", () => {
     render(
-      <ProseLayout title="Donate">
+      <ProseLayout title="Copyright">
         <p>Body.</p>
       </ProseLayout>
     );

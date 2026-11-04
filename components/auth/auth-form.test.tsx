@@ -1,21 +1,24 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthForm } from "./auth-form";
 
 const push = vi.fn();
 const refresh = vi.fn();
+let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
+  useSearchParams: () => searchParams,
 }));
 
 const signInWithPassword = vi.fn();
+const signInWithOAuth = vi.fn();
 const signUp = vi.fn();
 const resend = vi.fn();
 vi.mock("@/lib/supabase/browser", () => ({
   getBrowserSupabase: () => ({
-    auth: { signInWithPassword, signUp, resend },
+    auth: { signInWithPassword, signInWithOAuth, signUp, resend },
   }),
 }));
 
@@ -243,12 +246,109 @@ describe("AuthForm", () => {
     expect(push).toHaveBeenCalledWith("/home");
   });
 
-  it("renders the disabled coming-soon providers", () => {
-    render(<AuthForm mode="signin" />);
-    const google = screen.getByRole("button", {
-      name: /Continue with Google/,
+  describe("providers", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      window.history.pushState({}, "", "/");
     });
-    expect(google).toBeDisabled();
-    expect(screen.getAllByText("Coming soon")).toHaveLength(3);
+
+    it("hides provider sign-in until it is switched on", () => {
+      render(<AuthForm mode="signin" />);
+      expect(screen.queryByRole("button", { name: /Continue with/ })).toBeNull();
+      expect(screen.queryByText("or")).toBeNull();
+      expect(screen.queryByText("Coming soon")).toBeNull();
+    });
+
+    it("offers only the providers that are switched on, never Apple", () => {
+      vi.stubEnv("NEXT_PUBLIC_AUTH_PROVIDERS", "google, apple");
+      render(<AuthForm mode="signup" />);
+      expect(
+        screen.getByRole("button", { name: "Continue with Google" })
+      ).toBeEnabled();
+      expect(screen.queryByRole("button", { name: /Microsoft/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Apple/ })).toBeNull();
+      expect(screen.getByText("or")).toBeInTheDocument();
+    });
+
+    it("starts Google with the callback and the page to return to", async () => {
+      vi.stubEnv("NEXT_PUBLIC_AUTH_PROVIDERS", "google,azure");
+      window.history.pushState({}, "", "/signin?next=/tv/95396");
+      signInWithOAuth.mockResolvedValue({ error: null });
+      const user = userEvent.setup();
+      render(<AuthForm mode="signin" />);
+      await user.click(
+        screen.getByRole("button", { name: "Continue with Google" })
+      );
+      expect(signInWithOAuth).toHaveBeenCalledWith({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=%2Ftv%2F95396`,
+        },
+      });
+    });
+
+    it("asks Microsoft for the email scope", async () => {
+      vi.stubEnv("NEXT_PUBLIC_AUTH_PROVIDERS", "google,azure");
+      signInWithOAuth.mockResolvedValue({ error: null });
+      const user = userEvent.setup();
+      render(<AuthForm mode="signin" />);
+      await user.click(
+        screen.getByRole("button", { name: "Continue with Microsoft" })
+      );
+      expect(signInWithOAuth).toHaveBeenCalledWith({
+        provider: "azure",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=%2Fhome`,
+          scopes: "email",
+        },
+      });
+    });
+
+    it("says so when the provider cannot start", async () => {
+      vi.stubEnv("NEXT_PUBLIC_AUTH_PROVIDERS", "google");
+      signInWithOAuth.mockResolvedValue({
+        error: { status: 500, message: "down" },
+      });
+      const user = userEvent.setup();
+      render(<AuthForm mode="signin" />);
+      const google = screen.getByRole("button", {
+        name: "Continue with Google",
+      });
+      await user.click(google);
+      expect(
+        await screen.findByText(
+          "Sign-in is not responding. Something went wrong on Klyvi's end."
+        )
+      ).toBeInTheDocument();
+      expect(google).toBeEnabled();
+    });
+  });
+
+  describe("after a failed link", () => {
+    afterEach(() => {
+      searchParams = new URLSearchParams();
+    });
+
+    it("explains an expired or used email link", () => {
+      searchParams = new URLSearchParams("error=link");
+      render(<AuthForm mode="signin" />);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "That link has expired or was already used."
+      );
+    });
+
+    it("explains a provider sign-in that did not finish", () => {
+      searchParams = new URLSearchParams("error=provider");
+      render(<AuthForm mode="signin" />);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "That sign-in did not finish."
+      );
+    });
+
+    it("ignores an error code it does not know", () => {
+      searchParams = new URLSearchParams("error=constructor");
+      render(<AuthForm mode="signin" />);
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
   });
 });

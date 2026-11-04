@@ -23,10 +23,7 @@ const COLUMNS: { heading: string; links: [string, string][] }[] = [
   },
   {
     heading: "Support",
-    links: [
-      ["Donate", "/donate"],
-      ["Settings", "/settings"],
-    ],
+    links: [["Settings", "/settings"]],
   },
 ];
 

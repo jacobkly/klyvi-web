@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   Bell,
   FileText,
-  Heart,
   LogOut,
   Settings,
   Shield,
@@ -24,8 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 /**
- * The avatar dropdown, structured per 06-copy.md §3: primary rows, then
- * Donate in its own group with the accent heart, then legal and sign out.
+ * The avatar dropdown: primary rows, then legal and sign out.
  * Signed out it collapses to a Sign in button; while the first session
  * check resolves it shows nothing rather than flashing the wrong state.
  */
@@ -78,15 +76,6 @@ function UserMenu() {
             Notifications
           </DropdownMenuItem>
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href="/donate" />}>
-          <Heart
-            aria-hidden="true"
-            data-icon="inline-start"
-            className="text-violet-text"
-          />
-          Donate
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem render={<Link href="/terms" />}>

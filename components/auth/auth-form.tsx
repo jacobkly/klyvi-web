@@ -5,13 +5,9 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Eye, EyeOff, MailCheck } from "lucide-react";
 
-import {
-  AppleMark,
-  GoogleMark,
-  MicrosoftMark,
-} from "@/components/auth/provider-logos";
+import { AuthNotice } from "@/components/auth/auth-notice";
+import { GoogleMark, MicrosoftMark } from "@/components/auth/provider-logos";
 import { FormField } from "@/components/klyvi/form-field";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { safeNext } from "@/lib/safe-next";
@@ -28,20 +24,22 @@ import {
   validatePasswordConfirm,
 } from "@/lib/validation";
 
+const PROVIDERS = [
+  { id: "google", name: "Google", Mark: GoogleMark },
+  { id: "azure", name: "Microsoft", Mark: MicrosoftMark },
+] as const;
+
 /**
- * OAuth is configured off for now; the buttons stay visible with their real
- * brand marks so the option reads as coming, not missing. Flip `enabled`
- * once the provider is turned on in the Supabase project.
+ * The providers switched on with NEXT_PUBLIC_AUTH_PROVIDERS, a comma-separated
+ * list of ids. Clicking a provider the Supabase project has not enabled shows
+ * raw JSON from Supabase, so a button only appears once its setup is done.
  */
-const PROVIDERS: {
-  name: string;
-  enabled: boolean;
-  Mark: (p: { className?: string }) => React.ReactElement;
-}[] = [
-  { name: "Google", enabled: false, Mark: GoogleMark },
-  { name: "Microsoft", enabled: false, Mark: MicrosoftMark },
-  { name: "Apple", enabled: false, Mark: AppleMark },
-];
+function enabledProviders() {
+  const on = (process.env.NEXT_PUBLIC_AUTH_PROVIDERS ?? "")
+    .split(",")
+    .map((id) => id.trim());
+  return PROVIDERS.filter(({ id }) => on.includes(id));
+}
 
 /** Form-level copy per 06-copy.md. The collision is deliberate: an already
  *  registered email returns the SAME string as a failed sign-in, so the form
@@ -79,6 +77,7 @@ type FieldErrors = Partial<Record<FieldName, string>>;
 export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const router = useRouter();
   const signin = mode === "signin";
+  const providers = enabledProviders();
 
   const [username, setUsername] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -136,6 +135,32 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   function nextPath(): string {
     const n = new URLSearchParams(window.location.search).get("next");
     return safeNext(n, window.location.origin);
+  }
+
+  async function startProvider(provider: (typeof PROVIDERS)[number]["id"]) {
+    setError(null);
+    const sb = getBrowserSupabase();
+    if (!sb) {
+      setError({ message: COPY.notConfigured });
+      return;
+    }
+    setPending(true);
+    try {
+      const { error: err } = await sb.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath())}`,
+          // Without this scope Microsoft sends no email, and Supabase refuses
+          // the sign-in.
+          ...(provider === "azure" ? { scopes: "email" } : {}),
+        },
+      });
+      if (err) setError({ message: COPY.server });
+    } catch {
+      setError({ message: COPY.network });
+    } finally {
+      setPending(false);
+    }
   }
 
   async function resendConfirmation() {
@@ -301,36 +326,43 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         {signin ? "Sign in to your account" : "Free, and it stays free"}
       </p>
 
-      <div className="mt-7 flex flex-col gap-2.5">
-        {PROVIDERS.map(({ name, enabled, Mark }) => (
-          <Button
-            key={name}
-            variant="outline"
-            size="touch"
-            className="relative w-full gap-2.5"
-            disabled={!enabled}
-          >
-            <Mark className="size-[18px]" />
-            Continue with {name}
-            {!enabled ? (
-              <Badge
-                variant="secondary"
-                className="absolute right-3 text-[10px]"
+      {signin ? (
+        <React.Suspense fallback={null}>
+          <AuthNotice />
+        </React.Suspense>
+      ) : null}
+
+      {providers.length > 0 ? (
+        <>
+          <div className="mt-7 flex flex-col gap-2.5">
+            {providers.map(({ id, name, Mark }) => (
+              <Button
+                key={id}
+                variant="outline"
+                size="touch"
+                className="w-full gap-2.5"
+                disabled={pending}
+                onClick={() => void startProvider(id)}
               >
-                Coming soon
-              </Badge>
-            ) : null}
-          </Button>
-        ))}
-      </div>
+                <Mark className="size-[18px]" />
+                Continue with {name}
+              </Button>
+            ))}
+          </div>
 
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" aria-hidden="true" />
-        <span className="text-xs text-muted-foreground">or</span>
-        <div className="h-px flex-1 bg-border" aria-hidden="true" />
-      </div>
+          <div className="mt-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" aria-hidden="true" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" aria-hidden="true" />
+          </div>
+        </>
+      ) : null}
 
-      <form onSubmit={submitEmail} className="flex flex-col gap-4" noValidate>
+      <form
+        onSubmit={submitEmail}
+        className="mt-6 flex flex-col gap-4"
+        noValidate
+      >
         {!signin ? (
           <FormField
             id="auth-username"
