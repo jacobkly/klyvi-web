@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import {
+  passwordReauthProblem,
   validateEmail,
   validateOnBlur,
   validatePassword,
@@ -86,9 +87,10 @@ export function ResetPasswordForm() {
       const { error: err } = await sb.auth.updateUser({ password });
       if (err) {
         setError(
-          err.status === 429
-            ? "Too many attempts. Wait a minute and try again."
-            : "Could not update the password. Try again."
+          passwordReauthProblem(err) ??
+            (err.status === 429
+              ? "Too many attempts. Wait a minute and try again."
+              : "Could not update the password. Try again.")
         );
         return;
       }

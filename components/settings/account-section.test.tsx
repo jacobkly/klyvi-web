@@ -77,4 +77,30 @@ describe("AccountSection password change", () => {
       await screen.findByText(/different from your current one/i)
     ).toBeInTheDocument();
   });
+
+  it("tells someone with an old session to sign in again", async () => {
+    updateUser.mockResolvedValue({
+      error: {
+        code: "reauthentication_needed",
+        message: "Password update requires reauthentication",
+      },
+    });
+    const user = userEvent.setup();
+    render(<AccountSection />);
+
+    await user.type(screen.getByLabelText("New password"), "longenough1");
+    await user.type(
+      screen.getByLabelText("Retype new password"),
+      "longenough1"
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Change password" })
+    );
+
+    expect(
+      await screen.findByText(
+        "For your security, sign out and sign back in, then change your password."
+      )
+    ).toBeInTheDocument();
+  });
 });

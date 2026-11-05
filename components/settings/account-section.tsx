@@ -12,6 +12,7 @@ import { downloadAccountData } from "@/lib/api/users";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import {
   validateOnBlur,
+  passwordReauthProblem,
   validatePassword,
   validatePasswordConfirm,
 } from "@/lib/validation";
@@ -57,9 +58,11 @@ export function AccountSection() {
     setChanging(true);
     sb.auth
       .updateUser({ password })
-      .then(({ error }: { error: { message: string } | null }) => {
+      .then(({ error }: { error: { code?: string; message: string } | null }) => {
         if (error) {
-          setPasswordError(passwordChangeError(error.message));
+          setPasswordError(
+            passwordReauthProblem(error) ?? passwordChangeError(error.message)
+          );
           return;
         }
         setPassword("");

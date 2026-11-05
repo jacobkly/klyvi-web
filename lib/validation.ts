@@ -33,6 +33,17 @@ export function validatePasswordConfirm(
 }
 
 /**
+ * With "Secure password change" on, Supabase refuses a password change from a
+ * session over a day old. A fresh sign-in gets past it.
+ */
+export function passwordReauthProblem(error: {
+  code?: string;
+}): string | null {
+  if (error.code !== "reauthentication_needed") return null;
+  return "For your security, sign out and sign back in, then change your password.";
+}
+
+/**
  * Blur is the wrong moment to complain about an empty field: the user may
  * be tabbing through, or may have opened the form and clicked away. Empty
  * is caught on submit instead, where it is actually a problem.

@@ -24,9 +24,8 @@ import { SectionHeading } from "./section";
 const CONFIRM_PHRASE = "delete my account";
 
 /**
- * The full type-to-confirm shape, so wiring the real endpoint later is a
- * one-line swap. Until then the confirm says plainly that deletion is not
- * built, rather than pretending.
+ * Deleting is permanent, so the button stays disabled until the phrase is
+ * typed out. Signing out after the delete clears the session cookies.
  */
 export function DeleteSection() {
   const { signOut } = useSession();
