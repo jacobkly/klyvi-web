@@ -184,3 +184,9 @@ describe("the copyright page", () => {
     expect(textOf(CopyrightPage)).toMatch(/within 7 days/);
   });
 });
+
+describe("the attribution page", () => {
+  it("credits Wikidata and its license", () => {
+    expect(textOf(AttributionPage)).toMatch(/Wikidata.*CC0/);
+  });
+});
