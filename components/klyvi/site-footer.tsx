@@ -74,8 +74,8 @@ export function SiteFooter({ wide = false }: { wide?: boolean }) {
         </div>
 
         <p className="mt-10 text-xs text-muted-foreground">
-          This product uses the TMDB API but is not endorsed or certified by
-          TMDB.
+          This website uses TMDB and the TMDB APIs but is not endorsed,
+          certified, or otherwise approved by TMDB.
         </p>
       </div>
     </footer>
