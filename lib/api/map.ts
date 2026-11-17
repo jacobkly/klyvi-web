@@ -59,10 +59,15 @@ function mapReasons(
   reasons: { kind: string; id: number; name?: string }[] | null
 ): Reason[] {
   return (reasons ?? []).map((r) => ({
-    kind: r.kind === "genre" ? "genre" : "keyword",
+    kind: reasonKind(r.kind),
     id: r.id,
     name: r.name,
   }));
+}
+
+/** An unknown kind reads as a keyword, the most common token. */
+function reasonKind(kind: string): Reason["kind"] {
+  return kind === "because" || kind === "genre" ? kind : "keyword";
 }
 
 function yearOf(date: string | null | undefined): number | null {

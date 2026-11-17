@@ -34,9 +34,13 @@ export const STATUS_VERBS: Record<TrackingStatus, string> = {
   dropped: "Dropped",
 };
 
-/** The reco feed's structured explainability token. `name` can be absent. */
+/**
+ * The reco feed's structured explainability token. A "because" reason names a
+ * title the user rated highly (id is its TMDB id, name its title). Keyword and
+ * genre reasons carry the TMDB feature id, and `name` can be absent.
+ */
 export type Reason = {
-  kind: "keyword" | "genre";
+  kind: "because" | "keyword" | "genre";
   id: number;
   name?: string;
 };

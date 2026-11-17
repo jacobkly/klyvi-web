@@ -58,6 +58,27 @@ describe("ReasonChips", () => {
     expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
   });
 
+  it("says which title a because reason names", () => {
+    render(
+      <ReasonChips
+        reasons={[
+          { kind: "because", id: 496243, name: "Parasite" },
+          { kind: "keyword", id: 9826, name: "slow-burn" },
+        ]}
+      />
+    );
+    expect(screen.getByText("because you liked Parasite")).toBeInTheDocument();
+    expect(screen.getByText("slow-burn")).toBeInTheDocument();
+  });
+
+  it("keeps the full title of a long because reason in its tooltip", () => {
+    const name = "Harry Potter and the Prisoner of Azkaban";
+    render(<ReasonChips reasons={[{ kind: "because", id: 673, name }]} />);
+    expect(
+      screen.getByText(`because you liked ${name}`).closest("li")
+    ).toHaveAttribute("title", `because you liked ${name}`);
+  });
+
   it("labels the group for assistive tech", () => {
     render(<ReasonChips reasons={reasons.slice(0, 2)} />);
     expect(

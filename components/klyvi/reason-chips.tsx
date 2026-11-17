@@ -33,14 +33,18 @@ function ReasonChips({
       aria-label="Why this was picked"
       className={cn("flex flex-wrap items-center gap-1.5", className)}
     >
-      {shown.map((r) => (
-        <li
-          key={`${r.kind}-${r.id}`}
-          className="inline-flex h-5 items-center rounded-full bg-muted px-2 text-xs font-medium text-violet-text"
-        >
-          {r.name}
-        </li>
-      ))}
+      {shown.map((r) => {
+        const label = chipLabel(r);
+        return (
+          <li
+            key={`${r.kind}-${r.id}`}
+            title={r.kind === "because" ? label : undefined}
+            className="inline-flex h-5 min-w-0 max-w-full items-center rounded-full bg-muted px-2 text-xs font-medium text-violet-text"
+          >
+            <span className="truncate">{label}</span>
+          </li>
+        );
+      })}
       {hidden > 0 ? (
         <li
           aria-label={`${hidden} more reasons`}
@@ -51,6 +55,11 @@ function ReasonChips({
       ) : null}
     </ul>
   );
+}
+
+/** A because reason names the title. The others show their label as it is. */
+function chipLabel(r: Reason & { name: string }): string {
+  return r.kind === "because" ? `because you liked ${r.name}` : r.name;
 }
 
 export { ReasonChips };

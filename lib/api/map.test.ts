@@ -180,6 +180,16 @@ describe("mapScored", () => {
     expect(mapScored({ ...SCORED, reasons: null }).reasons).toEqual([]);
   });
 
+  it("keeps a because reason, which names a title the user rated", () => {
+    const s = mapScored({
+      ...SCORED,
+      reasons: [{ kind: "because", id: 496243, name: "Parasite" }],
+    });
+    expect(s.reasons).toEqual([
+      { kind: "because", id: 496243, name: "Parasite" },
+    ]);
+  });
+
   it("treats empty display strings and zero year as absent", () => {
     const s = mapScored({
       ...SCORED,
