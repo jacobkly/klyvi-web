@@ -36,6 +36,17 @@ export default function AttributionPage() {
         Creative Commons CC0 License.
       </p>
 
+      <h2>Wikipedia</h2>
+      <p>
+        Klyvi finds films and shows with similar stories by comparing the plot
+        sections of their English Wikipedia articles. That text is by
+        Wikipedia&apos;s contributors and is available under the{" "}
+        <a href="https://creativecommons.org/licenses/by-sa/4.0/">
+          Creative Commons Attribution-ShareAlike 4.0 License
+        </a>
+        . Klyvi keeps a numeric summary of each plot, not the text itself.
+      </p>
+
       <h2>Type</h2>
       <p>
         Geist Sans and Geist Mono, used under the SIL Open Font License.

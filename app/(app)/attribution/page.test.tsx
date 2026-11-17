@@ -16,4 +16,14 @@ describe("AttributionPage", () => {
       )
     ).toBeInTheDocument();
   });
+
+  it("credits Wikipedia's plot text under its license", () => {
+    render(<AttributionPage />);
+    expect(screen.getByRole("heading", { name: "Wikipedia" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Creative Commons Attribution-ShareAlike 4.0 License",
+      })
+    ).toHaveAttribute("href", "https://creativecommons.org/licenses/by-sa/4.0/");
+  });
 });
