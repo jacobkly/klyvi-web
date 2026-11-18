@@ -188,4 +188,141 @@ describe("TrackingDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(onSave.mock.calls[0][0].notes).toBeNull();
   });
+
+  it("throws away unsaved edits on Cancel, so reopening shows the saved values", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onSave = vi.fn();
+    const props = { entry: parasite, onOpenChange, onSave, onDelete: () => {} };
+    const { rerender } = render(<TrackingDialog {...props} open />);
+
+    await user.click(screen.getByRole("switch", { name: "Favorite" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onSave).not.toHaveBeenCalled();
+
+    rerender(<TrackingDialog {...props} open={false} />);
+    rerender(<TrackingDialog {...props} open />);
+    expect(screen.getByRole("switch", { name: "Favorite" })).toHaveAttribute(
+      "aria-checked",
+      String(parasite.favorite)
+    );
+  });
+
+  it("keeps edits when the parent re-renders the same entry", async () => {
+    const user = userEvent.setup();
+    const props = { open: true, onOpenChange: () => {}, onSave: () => {}, onDelete: () => {} };
+    const { rerender } = render(<TrackingDialog entry={{ ...severance }} {...props} />);
+    await user.type(screen.getByLabelText("Score"), "91");
+
+    rerender(<TrackingDialog entry={{ ...severance }} {...props} />);
+    expect(screen.getByLabelText("Score")).toHaveValue("91");
+  });
+
+  it("fills episodes watched with the season's count when Completed is picked", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <TrackingDialog
+        entry={severance}
+        open
+        onOpenChange={() => {}}
+        onSave={onSave}
+        onDelete={() => {}}
+      />
+    );
+    await user.click(screen.getByLabelText("Status"));
+    await user.click(await screen.findByRole("option", { name: "Completed" }));
+
+    expect(screen.getByLabelText("Episodes watched")).toHaveValue(
+      String(severance.progressTotal)
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "completed", progress: severance.progressTotal })
+    );
+  });
+
+  it.each([
+    ["150", /Score must be a whole number from 0 to 100/],
+    ["-4", /Score must be a whole number from 0 to 100/],
+    ["7.5", /Score must be a whole number from 0 to 100/],
+  ])("refuses a score of %s with an inline message and doesn't save", async (value, message) => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const onOpenChange = vi.fn();
+    render(
+      <TrackingDialog
+        entry={severance}
+        open
+        onOpenChange={onOpenChange}
+        onSave={onSave}
+        onDelete={() => {}}
+      />
+    );
+    const score = screen.getByLabelText("Score");
+    await user.type(score, value);
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(score).toHaveAttribute("aria-invalid", "true");
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("refuses more episodes than the season has", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <TrackingDialog
+        entry={severance}
+        open
+        onOpenChange={() => {}}
+        onSave={onSave}
+        onDelete={() => {}}
+      />
+    );
+    const episodes = screen.getByLabelText("Episodes watched");
+    await user.clear(episodes);
+    await user.type(episodes, "11");
+    expect(
+      screen.getByText(`Episodes must be 0 to ${severance.progressTotal}`)
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("lets only Save submit the form", () => {
+    render(
+      <TrackingDialog
+        entry={severance}
+        open
+        onOpenChange={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+      />
+    );
+    const submitters = screen
+      .getAllByRole("button")
+      .concat(screen.getAllByRole("switch"))
+      .filter((b) => b.closest("form") && b.getAttribute("type") !== "button");
+    expect(submitters.map((b) => b.textContent)).toEqual(["Save"]);
+  });
+
+  it("saves on Enter", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <TrackingDialog
+        entry={severance}
+        open
+        onOpenChange={() => {}}
+        onSave={onSave}
+        onDelete={() => {}}
+      />
+    );
+    await user.type(screen.getByLabelText("Score"), "88{Enter}");
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ score: 88 }));
+  });
 });

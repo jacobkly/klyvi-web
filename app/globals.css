@@ -214,7 +214,10 @@
      the progress stepper) where a 44px visual box would be too heavy.
      The ELEMENT must be positioned (relative, absolute, ...). The utility does
      not set position itself: doing so silently overrode `absolute` on callers,
-     which is how the library edit button ended up below its card. */
+     which is how the library edit button ended up below its card. Unpositioned,
+     the ::after grows to the nearest positioned ancestor instead: the library
+     editor's Favorite switch once covered the whole dialog on phones.
+     app/hit-target.test.ts fails any hit-44 class list with no position. */
   .hit-44::after {
     content: "";
     position: absolute;

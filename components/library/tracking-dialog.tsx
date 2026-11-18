@@ -62,11 +62,44 @@ export type TrackingEdit = {
   favorite: boolean;
 };
 
+const SCORE_ERROR = "Score must be a whole number from 0 to 100";
+
+/** Blank is null. Anything that isn't a whole number is NaN. */
+function parseWhole(raw: string): number | null {
+  const t = raw.trim();
+  if (t === "") return null;
+  return /^-?\d+$/.test(t) ? Number(t) : NaN;
+}
+
+/** The API refuses the same limits with a 400, so these only say it sooner. */
+function scoreError(raw: string): string | null {
+  const n = parseWhole(raw);
+  if (n == null) return null;
+  return Number.isNaN(n) || n < 0 || n > 100 ? SCORE_ERROR : null;
+}
+
+function progressError(raw: string, total: number | null): string | null {
+  const n = parseWhole(raw);
+  if (n == null) return null;
+  if (total != null) {
+    return Number.isNaN(n) || n < 0 || n > total
+      ? `Episodes must be 0 to ${total}`
+      : null;
+  }
+  return Number.isNaN(n) || n < 0 ? "Episodes must be 0 or more" : null;
+}
+
+/** Which title the dialog is editing. The detail page rebuilds the entry
+ *  object every render, so identity alone would wipe edits mid-typing. */
+function entryKey(e: LibraryEntry) {
+  return `${e.mediaType}:${e.tmdbId}:${e.seasonNumber ?? ""}`;
+}
+
 /**
  * The tracking edit dialog (04-components.md tier 2): field grid per the
  * AniList reference, labels and helpers verbatim from 06-copy.md, and delete
- * separated from save behind a confirm that names the title. Forms are plain
- * inputs plus labels; `form` does not exist in this shadcn.
+ * separated from save behind a confirm that names the title. The fields are a
+ * plain form, so Enter saves.
  */
 function TrackingDialog({
   entry,
@@ -95,11 +128,13 @@ function TrackingDialog({
   const [favorite, setFavorite] = React.useState(entry.favorite);
   const [fetchedTotal, setFetchedTotal] = React.useState<number | null>(null);
 
-  // Reset the form when a different entry opens. Done during render, not in
-  // an effect, so the old entry's values never paint under the new title.
-  const [formEntry, setFormEntry] = React.useState(entry);
-  if (formEntry !== entry) {
-    setFormEntry(entry);
+  // Reset the form each time it opens and when a different entry opens, so
+  // Cancel and close throw the draft away. Done during render, not in an
+  // effect, so the old values never paint under the new title.
+  const formKey = open ? entryKey(entry) : null;
+  const [shownKey, setShownKey] = React.useState(formKey);
+  if (shownKey !== formKey) {
+    setShownKey(formKey);
     setStatus(entry.status);
     setScore(entry.score?.toString() ?? "");
     setProgress(entry.progress?.toString() ?? "");
@@ -136,18 +171,24 @@ function TrackingDialog({
     ? `${entry.title} · Season ${entry.seasonNumber}`
     : entry.title;
 
-  function handleSave() {
-    const parsedScore = score.trim() === "" ? null : Number(score);
+  const scoreProblem = scoreError(score);
+  const progressProblem = isSeason ? progressError(progress, total) : null;
+
+  function changeStatus(next: TrackingStatus) {
+    setStatus(next);
+    // Completed means every episode, so say so instead of leaving 7 of 10.
+    if (next === "completed" && isSeason && total != null) {
+      setProgress(String(total));
+    }
+  }
+
+  function handleSave(event: React.FormEvent) {
+    event.preventDefault();
+    if (scoreProblem || progressProblem) return;
     onSave({
       status,
-      score:
-        parsedScore == null || Number.isNaN(parsedScore)
-          ? null
-          : Math.min(100, Math.max(0, parsedScore)),
-      progress:
-        progress.trim() === "" || Number.isNaN(Number(progress))
-          ? null
-          : Number(progress),
+      score: parseWhole(score),
+      progress: isSeason ? parseWhole(progress) : null,
       notes: notes.trim() === "" ? null : notes,
       favorite,
     });
@@ -173,6 +214,9 @@ function TrackingDialog({
           <DialogTitle>{displayTitle}</DialogTitle>
         </DialogHeader>
 
+        {/* A form, so Enter in any field saves. Every other button in it is
+            type="button", so only Save submits. */}
+        <form noValidate onSubmit={handleSave}>
         {/* Left third: what you are editing. Right two-thirds: the edit.
             Seeing the poster while scoring is the whole point, so the
             identity column is not decoration. */}
@@ -260,7 +304,7 @@ function TrackingDialog({
             <Label htmlFor="td-status">Status</Label>
             <Select
               value={status}
-              onValueChange={(v) => setStatus(v as TrackingStatus)}
+              onValueChange={(v) => changeStatus(v as TrackingStatus)}
               items={STATUS_LABELS}
             >
               <SelectTrigger id="td-status" className="w-full">
@@ -283,8 +327,15 @@ function TrackingDialog({
               inputMode="numeric"
               value={score}
               onChange={(e) => setScore(e.target.value)}
+              aria-invalid={scoreProblem ? true : undefined}
+              aria-describedby={scoreProblem ? "td-score-error" : undefined}
               className="font-mono"
             />
+            {scoreProblem ? (
+              <p id="td-score-error" className="text-xs text-destructive">
+                {scoreProblem}
+              </p>
+            ) : null}
           </div>
 
           {isSeason ? (
@@ -295,9 +346,15 @@ function TrackingDialog({
                 inputMode="numeric"
                 value={progress}
                 onChange={(e) => setProgress(e.target.value)}
+                aria-invalid={progressProblem ? true : undefined}
+                aria-describedby={progressProblem ? "td-progress-error" : undefined}
                 className="font-mono"
               />
-              {total != null ? (
+              {progressProblem ? (
+                <p id="td-progress-error" className="text-xs text-destructive">
+                  {progressProblem}
+                </p>
+              ) : total != null ? (
                 <p data-numeric className="font-mono text-xs text-muted-foreground">
                   of {total}
                 </p>
@@ -336,7 +393,7 @@ function TrackingDialog({
               aria-label="Favorite"
               onClick={() => setFavorite((f) => !f)}
               className={
-                "hit-44 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 " +
+                "hit-44 relative inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 " +
                 (favorite
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:text-foreground")
@@ -397,9 +454,10 @@ function TrackingDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button type="submit">Save</Button>
           </div>
         </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
