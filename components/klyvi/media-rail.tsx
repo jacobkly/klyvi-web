@@ -4,14 +4,18 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { SectionHeader } from "./section-header";
 
 /**
- * Paged carousel rail. The row always shows a whole number of cards (the
- * rail owns item widths as exact fractions per breakpoint), the scrollbar is
- * hidden, and the arrows slide one full row at a time with scroll-snap
- * keeping pages aligned. Touch users swipe the same track; the arrows stay
- * pointer-only since fingers never press them.
+ * Paged carousel rail. On a phone the row shows 2.4 cards, so the cut card
+ * says "swipe for more". From sm up it shows a whole number of cards (the
+ * rail owns item widths as exact fractions per breakpoint) and the arrows
+ * slide one full row at a time, with scroll-snap keeping pages aligned.
+ *
+ * The arrows sit over the row's edges and only where there is more to see.
+ * They are pointer-only, since fingers swipe the same track. A cut edge fades
+ * out rather than chopping a poster in half.
  */
 function MediaRail({
   title,
@@ -36,11 +40,15 @@ function MediaRail({
   React.useEffect(() => {
     update();
     const el = ref.current;
-    if (!el) return;
+    if (!el || typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
   }, [update]);
+
+  // Rails usually mount on skeletons and fill in later. The track's own size
+  // doesn't change when they do, so the observer above can't see it.
+  React.useEffect(update, [children, update]);
 
   function page(dir: 1 | -1) {
     const el = ref.current;
@@ -50,50 +58,69 @@ function MediaRail({
     el.scrollBy({ left: dir * (el.clientWidth + GAP_PX), behavior: "smooth" });
   }
 
+  const fade = `linear-gradient(to right, ${canLeft ? "transparent" : "#000"}, #000 ${FADE_PX}px, #000 calc(100% - ${FADE_PX}px), ${canRight ? "transparent" : "#000"})`;
+
   return (
     <section>
-      <div className="mb-4 flex items-center gap-4">
-        <div className="min-w-0 flex-1">
-          <SectionHeader title={title} action={action} />
-        </div>
-        <div className="fine-only flex shrink-0 gap-1">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={`Scroll ${title} left`}
-            disabled={!canLeft}
-            onClick={() => page(-1)}
-          >
-            <ChevronLeft aria-hidden="true" className="size-4" strokeWidth={2} />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={`Scroll ${title} right`}
-            disabled={!canRight}
-            onClick={() => page(1)}
-          >
-            <ChevronRight aria-hidden="true" className="size-4" strokeWidth={2} />
-          </Button>
-        </div>
-      </div>
+      <SectionHeader title={title} action={action} className="mb-4" />
 
-      <div
-        ref={ref}
-        onScroll={update}
-        className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [--rail-n:3] sm:[--rail-n:4] md:[--rail-n:5] lg:[--rail-n:6] xl:[--rail-n:7]"
-      >
-        {React.Children.map(children, (child) =>
-          child == null ? null : (
-            <div className="w-[calc((100%-(var(--rail-n)-1)*0.75rem)/var(--rail-n))] shrink-0 snap-start">
-              {child}
-            </div>
-          )
-        )}
+      <div className="relative">
+        <div
+          ref={ref}
+          onScroll={update}
+          data-can-left={canLeft}
+          data-can-right={canRight}
+          style={{ maskImage: fade, WebkitMaskImage: fade }}
+          className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [--rail-n:2.4] sm:[--rail-n:4] md:[--rail-n:5] lg:[--rail-n:6] xl:[--rail-n:7]"
+        >
+          {React.Children.map(children, (child) =>
+            child == null ? null : (
+              <div className="w-[calc((100%-(var(--rail-n)-1)*0.75rem)/var(--rail-n))] shrink-0 snap-start pt-1">
+                {child}
+              </div>
+            )
+          )}
+        </div>
+
+        {canLeft ? (
+          <RailArrow side="left" title={title} onClick={() => page(-1)} />
+        ) : null}
+        {canRight ? (
+          <RailArrow side="right" title={title} onClick={() => page(1)} />
+        ) : null}
       </div>
     </section>
   );
 }
+
+function RailArrow({
+  side,
+  title,
+  onClick,
+}: {
+  side: "left" | "right";
+  title: string;
+  onClick: () => void;
+}) {
+  const Icon = side === "left" ? ChevronLeft : ChevronRight;
+  return (
+    <Button
+      variant="outline"
+      size="icon-sm"
+      aria-label={`Scroll ${title} ${side}`}
+      onClick={onClick}
+      className={cn(
+        "fine-only absolute top-[38%] z-10 -translate-y-1/2 bg-background/90 backdrop-blur-sm",
+        side === "left" ? "-left-3" : "-right-3"
+      )}
+    >
+      <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
+    </Button>
+  );
+}
+
+/** How far a cut edge fades. */
+const FADE_PX = 24;
 
 /** Matches the track's gap-3. */
 const GAP_PX = 12;

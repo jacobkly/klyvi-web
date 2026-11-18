@@ -1,15 +1,55 @@
-import Image from "next/image";
 import Link from "next/link";
+import {
+  Bookmark,
+  Check,
+  Pause,
+  Play,
+  RotateCcw,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
   STATUS_LABELS,
   type MediaSummary,
   type TrackingStatus,
 } from "@/lib/types";
+import {
+  FadeImage,
+  PosterActions,
+  type PosterAction,
+} from "@/components/klyvi/poster-parts";
 import { ScoreValue } from "@/components/klyvi/score-value";
 import { mediaHref } from "@/lib/media-href";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb-image";
+
+/** Each status has its own shape, so it never rests on color alone. */
+const STATUS_GLYPHS: Record<TrackingStatus, LucideIcon> = {
+  watching: Play,
+  planning: Bookmark,
+  completed: Check,
+  rewatching: RotateCcw,
+  paused: Pause,
+  dropped: X,
+};
+
+function StatusGlyph({ status }: { status: TrackingStatus }) {
+  const Glyph = STATUS_GLYPHS[status];
+  return (
+    <span
+      role="img"
+      aria-label={STATUS_LABELS[status]}
+      data-status={status}
+      className="inline-flex"
+      style={{
+        color: `var(--status-${status === "rewatching" ? "watching" : status})`,
+      }}
+    >
+      <Glyph aria-hidden="true" className="size-3" strokeWidth={2.5} />
+    </span>
+  );
+}
 
 /**
  * The atom of the app. Three variants (04-components.md §4):
@@ -21,6 +61,11 @@ import { tmdbImage } from "@/lib/tmdb-image";
  * - `compact`: artwork only, maximum density. Accessible name stays on the
  *   link.
  *
+ * One badge carries what you've said about the title: a status glyph, then
+ * episode progress, then your score. It rides the scrim in overlay and sits
+ * bottom-left on the artwork otherwise. The season tag is top-left and the
+ * quick-actions menu, when given, is top-right.
+ *
  * Missing artwork is a first-class state, not a broken image: a muted block
  * with the title set in it. TMDB has gaps and freshly-tracked entries can
  * arrive before their art does.
@@ -31,14 +76,17 @@ function PosterCard({
   status,
   progress,
   score,
+  actions,
   className,
 }: {
   media: MediaSummary;
   variant: "overlay" | "below" | "compact";
   status?: TrackingStatus;
   progress?: { watched: number; total: number | null };
-  /** The user's own score (0..100), shown bottom-right. Null renders nothing. */
+  /** The user's own score (0..100). Null renders nothing. */
   score?: number | null;
+  /** Quick actions for the corner menu. None, no menu. */
+  actions?: PosterAction[];
   className?: string;
 }) {
   const href = mediaHref(media);
@@ -55,132 +103,129 @@ function PosterCard({
       : `${progress.watched}`
     : null;
 
+  const inScrim = variant === "overlay" && src != null;
+  // Below shows progress in its meta row, next to the year.
+  const badgeProgress = variant === "below" ? null : progressText;
+  const hasBadge = status != null || badgeProgress != null || score != null;
+
   return (
-    <Link
-      href={href}
-      aria-label={variant === "below" ? undefined : accessibleName}
+    <div
       className={cn(
-        "group block outline-none focus-visible:ring-3 focus-visible:ring-ring/30 rounded-art",
+        "group relative transition-transform duration-(--dur-base) ease-(--ease-enter) pointer-fine:hover:-translate-y-1",
         className
       )}
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
-        {src ? (
-          <Image
-            src={src}
-            alt=""
-            fill
-            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 25vw, 180px"
-            className="object-cover transition-transform duration-(--dur-base) group-hover:scale-[1.03]"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center p-3 text-center">
-            <span className="text-xs leading-snug text-muted-foreground">
-              {media.title}
-              {seasonSuffix}
+      <Link
+        href={href}
+        aria-label={variant === "below" ? undefined : accessibleName}
+        className="block rounded-art outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <div className="relative aspect-[2/3] overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
+          {src ? (
+            <FadeImage
+              src={src}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 45vw, (max-width: 1024px) 25vw, 180px"
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center p-3 text-center">
+              <span className="text-xs leading-snug text-muted-foreground">
+                {media.title}
+                {seasonSuffix}
+              </span>
+            </div>
+          )}
+
+          {/* Seasons of the same show usually share one poster, so the
+              artwork alone cannot say which season this is. The tag carries
+              it in every variant, including compact where there is no title
+              at all. Top-left, opposite the quick-actions menu. */}
+          {media.mediaType === "season" && media.seasonNumber != null ? (
+            <span
+              aria-hidden="true"
+              data-numeric
+              className="absolute top-1 left-1 rounded-sm bg-black/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-medium text-white backdrop-blur-sm"
+            >
+              S{media.seasonNumber}
             </span>
-          </div>
-        )}
+          ) : null}
 
-        {status ? (
-          <span
-            aria-label={STATUS_LABELS[status]}
-            className="absolute top-1.5 left-1.5 block size-2 rounded-full ring-2 ring-black/50"
-            style={{ backgroundColor: `var(--status-${status === "rewatching" ? "watching" : status})` }}
-          />
-        ) : null}
+          {inScrim ? (
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-2">
+              <p className="line-clamp-2 text-xs font-medium leading-snug text-white">
+                {media.title}
+                {seasonSuffix}
+              </p>
+              {hasBadge ? (
+                <div className="mt-1 flex items-center gap-1.5">
+                  {status ? <StatusGlyph status={status} /> : null}
+                  {/* Episode progress (TV only): violet, the app speaking. */}
+                  {progressText ? (
+                    <span data-numeric className="font-mono text-[11px] text-violet-text">
+                      {progressText}
+                    </span>
+                  ) : null}
+                  {/* Your score: neutral (user data, not the app), on the
+                      right where a rating is read. The star names it, so it
+                      can never be mistaken for a count. */}
+                  {score != null ? (
+                    <ScoreValue
+                      score={score}
+                      mine
+                      className="ml-auto font-mono text-[11px] font-medium text-white"
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : hasBadge ? (
+            <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] leading-none font-medium backdrop-blur-sm">
+              {status ? <StatusGlyph status={status} /> : null}
+              {badgeProgress ? (
+                <span data-numeric className="text-violet-text">
+                  {badgeProgress}
+                </span>
+              ) : null}
+              {score != null ? (
+                <ScoreValue score={score} mine className="text-white" />
+              ) : null}
+            </span>
+          ) : null}
+        </div>
 
-        {/* Seasons of the same show usually share one poster, so the artwork
-            alone cannot say which season this is. The badge carries it in
-            every variant, including compact where there is no title at all.
-            Top-right rather than bottom-right: the bottom edge holds the
-            scrim (overlay) or the progress counter, and the badge would sit
-            on top of both. Top-right balances the status dot at top-left. */}
-        {media.mediaType === "season" && media.seasonNumber != null ? (
-          <span
-            aria-hidden="true"
-            data-numeric
-            className="absolute top-1 right-1 rounded-sm bg-black/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-medium text-white backdrop-blur-sm"
-          >
-            S{media.seasonNumber}
-          </span>
-        ) : null}
-
-        {variant === "overlay" && src ? (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-2">
-            <p className="line-clamp-2 text-xs font-medium leading-snug text-white">
+        {variant === "below" ? (
+          <div className="mt-1.5">
+            <p className="line-clamp-2 text-xs font-medium leading-snug text-foreground">
               {media.title}
               {seasonSuffix}
             </p>
-            {progressText || score != null ? (
-              <div className="mt-1 flex items-center justify-between gap-2">
-                {/* Episode progress (TV only): violet, the app speaking. */}
-                <span data-numeric className="font-mono text-[11px] text-violet-text">
-                  {progressText}
-                </span>
-                {/* Your score: neutral (user data, not the app), on the right
-                    where a rating is read. The star names it, so it can never
-                    be mistaken for a count again. */}
-                {score != null ? (
-                  <ScoreValue
-                    score={score}
-                    mine
-                    className="font-mono text-[11px] font-medium text-white"
-                  />
+            {media.year != null || progressText ? (
+              <div className="mt-0.5 flex items-center gap-2">
+                {media.year != null ? (
+                  <p data-numeric className="font-mono text-[11px] text-muted-foreground">
+                    {media.year}
+                  </p>
+                ) : null}
+                {/* Episode progress (TV only), violet like the overlay's. */}
+                {progressText ? (
+                  <span data-numeric className="ml-auto font-mono text-[11px] text-violet-text">
+                    {progressText}
+                  </span>
                 ) : null}
               </div>
             ) : null}
           </div>
         ) : null}
+      </Link>
 
-        {/* Compact has no title bar, so progress and score ride the artwork as
-            corner chips: progress bottom-left (TV), score bottom-right. */}
-        {variant === "compact" && src ? (
-          <>
-            {progressText ? (
-              <span
-                data-numeric
-                className="absolute bottom-1 left-1 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] font-medium text-violet-text backdrop-blur-sm"
-              >
-                {progressText}
-              </span>
-            ) : null}
-            {score != null ? (
-              <ScoreValue
-                score={score}
-                mine
-                className="absolute bottom-1 right-1 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] font-medium text-white backdrop-blur-sm"
-              />
-            ) : null}
-          </>
-        ) : null}
-      </div>
-
-      {variant === "below" ? (
-        <div className="mt-1.5">
-          <p className="line-clamp-2 text-xs font-medium leading-snug text-foreground">
-            {media.title}
-            {seasonSuffix}
-          </p>
-          {media.year != null || progressText ? (
-            <div className="mt-0.5 flex items-center gap-2">
-              {media.year != null ? (
-                <p data-numeric className="font-mono text-[11px] text-muted-foreground">
-                  {media.year}
-                </p>
-              ) : null}
-              {/* Episode progress (TV only), violet like the overlay's. */}
-              {progressText ? (
-                <span data-numeric className="ml-auto font-mono text-[11px] text-violet-text">
-                  {progressText}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+      {actions && actions.length > 0 ? (
+        <PosterActions name={accessibleName} actions={actions} />
       ) : null}
-    </Link>
+    </div>
   );
 }
 
 export { PosterCard };
+export type { PosterAction };

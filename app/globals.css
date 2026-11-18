@@ -129,6 +129,8 @@
   --dur-max: 400ms;
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  /* Toasts sit this far from the bottom: clear of the tab bar on phones. */
+  --toast-bottom: 24px;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.541 0.281 293.009);
@@ -137,6 +139,13 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
+}
+
+/* Below md the bottom tab bar is showing (components/shell/bottom-tab-bar). */
+@media (width < 48rem) {
+  :root {
+    --toast-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
 }
 
 .dark {

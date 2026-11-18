@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { getFeed } from "@/lib/api/reco";
 import type { Scored } from "@/lib/types";
 
@@ -30,7 +30,7 @@ export function FirstPicksPreview() {
     return (
       <div className="mt-8 grid w-full grid-cols-3 gap-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="aspect-[2/3] rounded-art" />
+          <PosterCardSkeleton key={i} variant="below" />
         ))}
       </div>
     );

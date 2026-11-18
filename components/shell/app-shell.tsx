@@ -63,7 +63,13 @@ function AppShell({ children }: { children: ReactNode }) {
           <BottomTabBar />
         </div>
       </UnreadProvider>
-      <Toaster position="bottom-center" />
+      {/* Bottom-right on desktop, out of the content's way. Sonner goes full
+          width under 600px, and both offsets clear the tab bar. */}
+      <Toaster
+        position="bottom-right"
+        offset={{ bottom: "var(--toast-bottom)", right: 24 }}
+        mobileOffset={{ bottom: "var(--toast-bottom)" }}
+      />
     </TooltipProvider>
   );
 }

@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/klyvi/empty-state";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { listTracking } from "@/lib/api/tracking";
 import type { LibraryEntry } from "@/lib/types";
 
@@ -56,7 +56,7 @@ export function FavoritesClient() {
         <h1 className="text-3xl font-semibold tracking-tight">Favorites</h1>
         <div className="mt-8 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
           {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-[2/3] rounded-art" />
+            <PosterCardSkeleton key={i} variant="compact" />
           ))}
         </div>
       </main>

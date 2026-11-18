@@ -6,7 +6,7 @@ import { SearchX } from "lucide-react";
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { getMovieList, getTvList } from "@/lib/api/catalog";
 import type { BrowseCategory } from "@/lib/browse-categories";
 import type { MediaSummary } from "@/lib/types";
@@ -142,7 +142,7 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
     return (
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
         {Array.from({ length: 16 }).map((_, i) => (
-          <Skeleton key={i} className="aspect-[2/3] rounded-art" />
+          <PosterCardSkeleton key={i} variant="compact" />
         ))}
       </div>
     );

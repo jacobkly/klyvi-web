@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMovieList, getTvList } from "@/lib/api/catalog";
@@ -511,7 +512,7 @@ function CatalogRail({ rail }: { rail: Rail }) {
     <MediaRail title={rail.title} action={action}>
       {state.kind === "loading"
         ? Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-[2/3] rounded-art" />
+            <PosterCardSkeleton key={i} variant="below" />
           ))
         : state.items.map((m) => (
             <PosterCard

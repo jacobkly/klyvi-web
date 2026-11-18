@@ -15,7 +15,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   filterLibrary,
@@ -231,7 +231,7 @@ function LibraryView({
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-[2/3] rounded-art" />
+            <PosterCardSkeleton key={i} variant="compact" />
           ))}
         </div>
       </LibraryFrame>

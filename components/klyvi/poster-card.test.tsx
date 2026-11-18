@@ -1,8 +1,13 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import { PosterCard } from "./poster-card";
-import type { MediaSummary } from "@/lib/types";
+import {
+  STATUS_LABELS,
+  type MediaSummary,
+  type TrackingStatus,
+} from "@/lib/types";
 
 const media: MediaSummary = {
   mediaId: 142,
@@ -111,5 +116,59 @@ describe("PosterCard", () => {
   it("renders no score element when the score is null", () => {
     render(<PosterCard media={media} variant="overlay" score={null} />);
     expect(screen.queryByText(/your score/i)).not.toBeInTheDocument();
+  });
+
+  it.each(Object.keys(STATUS_LABELS) as TrackingStatus[])(
+    "badges %s with its own glyph and its name",
+    (status) => {
+      render(<PosterCard media={media} variant="below" status={status} />);
+      const glyph = screen.getByLabelText(STATUS_LABELS[status]);
+      expect(glyph).toHaveAttribute("data-status", status);
+      expect(glyph.querySelector("svg")).not.toBeNull();
+    }
+  );
+
+  it("puts your score in the badge in the below variant too", () => {
+    render(
+      <PosterCard media={media} variant="below" status="completed" score={92} />
+    );
+    expect(screen.getByText("Your score 92 out of 100")).toBeInTheDocument();
+  });
+
+  it("fades the poster in once its image has loaded", async () => {
+    const { container } = render(<PosterCard media={media} variant="below" />);
+    const img = container.querySelector("img")!;
+    expect(img).toHaveAttribute("data-loaded", "false");
+    fireEvent.load(img);
+    // next/image reports the load after decoding, a tick later.
+    await waitFor(() => expect(img).toHaveAttribute("data-loaded", "true"));
+  });
+
+  it("offers no quick actions unless it's given some", () => {
+    render(<PosterCard media={media} variant="below" />);
+    expect(
+      screen.queryByRole("button", { name: /quick actions/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("runs the quick action you pick from its menu", async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <PosterCard
+        media={media}
+        variant="below"
+        status="watching"
+        actions={[
+          { label: "Watching", onSelect: vi.fn(), active: true },
+          { label: "Completed", onSelect },
+        ]}
+      />
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Quick actions for Memories of Murder" })
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "Completed" }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
   });
 });

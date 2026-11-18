@@ -1,6 +1,7 @@
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { SectionHeader } from "@/components/klyvi/section-header";
+import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MediaSummary, SimilarTitle } from "@/lib/types";
 
@@ -69,10 +70,7 @@ export function DetailShelvesSkeleton() {
       <Skeleton className="mb-4 h-5 w-32 rounded-lg" />
       <div className={GRID}>
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i}>
-            <Skeleton className="aspect-[2/3] w-full rounded-art" />
-            <Skeleton className="mt-1.5 h-3 w-3/4 rounded-lg" />
-          </div>
+          <PosterCardSkeleton key={i} variant="below" />
         ))}
       </div>
     </section>
