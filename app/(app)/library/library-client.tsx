@@ -7,8 +7,9 @@ import type { TrackingEdit } from "@/components/library/tracking-dialog";
 import { recordInteraction } from "@/lib/api/interactions";
 import {
   deleteTracking,
-  listTracking,
+  listTrackingPaged,
   updateTracking,
+  type PageSink,
 } from "@/lib/api/tracking";
 import { MOCK_LIBRARY } from "@/lib/mock-library";
 import type { LibraryEntry, TrackingStatus } from "@/lib/types";
@@ -21,8 +22,8 @@ import type { LibraryEntry, TrackingStatus } from "@/lib/types";
 export function LibraryClient({ simulate }: { simulate?: string }) {
   const mock = simulate != null;
 
-  const load = React.useCallback((): Promise<LibraryEntry[]> => {
-    if (!mock) return listTracking();
+  const load = React.useCallback((more?: PageSink): Promise<LibraryEntry[]> => {
+    if (!mock) return listTrackingPaged(more);
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         if (simulate === "error") reject(new Error("simulated"));

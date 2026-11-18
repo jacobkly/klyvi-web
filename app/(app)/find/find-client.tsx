@@ -130,7 +130,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
   // Real interaction count drives the tier copy.
   React.useEffect(() => {
     if (mock || !user) return;
-    listInteractions()
+    listInteractions({ kind: "rated" })
       .then((list) =>
         setInteractions(list.filter((i) => i.kind === "rated").length)
       )

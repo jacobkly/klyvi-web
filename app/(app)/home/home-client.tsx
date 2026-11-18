@@ -15,7 +15,7 @@ import { listInteractions } from "@/lib/api/interactions";
 import { getFeed } from "@/lib/api/reco";
 import { queueSignal } from "@/lib/interactions-batch";
 import { mediaHref } from "@/lib/media-href";
-import { listTracking } from "@/lib/api/tracking";
+import { listTrackingPaged } from "@/lib/api/tracking";
 import { mockFeed } from "@/lib/mock-reco";
 import { MOCK_LIBRARY } from "@/lib/mock-library";
 import { recentActivity } from "@/lib/library-filter";
@@ -113,7 +113,14 @@ export function HomeClient({ simulate }: { simulate?: string }) {
         if (live) setPicks(null);
       }
     );
-    listTracking().then(
+    // The first page paints the sections. Later pages fill in the counts,
+    // and if one fails the library shows its error rather than a short count.
+    listTrackingPaged({
+      live: () => live,
+      page: (more) =>
+        setEntries((prev) => (Array.isArray(prev) ? [...prev, ...more] : prev)),
+      failed: () => setEntries(null),
+    }).then(
       (v) => {
         if (live) setEntries(v);
       },
@@ -121,7 +128,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
         if (live) setEntries(null);
       }
     );
-    listInteractions().then(
+    listInteractions({ kind: "rated" }).then(
       (v) => {
         if (live) setRatedCount(v.filter((i) => i.kind === "rated").length);
       },

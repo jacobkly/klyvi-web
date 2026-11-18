@@ -63,10 +63,18 @@ export async function recordInteractionsBatch(
   });
 }
 
-export async function listInteractions(
-  sinceDays?: number
-): Promise<Interaction[]> {
-  const qs = sinceDays != null ? `?since_days=${sinceDays}` : "";
+/** The user's history, newest first. The API caps it (500 rows unless
+ *  `limit` asks for up to 1000), so a count of one kind asks for that kind. */
+export async function listInteractions(opts?: {
+  sinceDays?: number;
+  kind?: InteractionKind;
+  limit?: number;
+}): Promise<Interaction[]> {
+  const params = new URLSearchParams();
+  if (opts?.sinceDays != null) params.set("since_days", String(opts.sinceDays));
+  if (opts?.kind) params.set("kind", opts.kind);
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  const qs = params.size > 0 ? `?${params}` : "";
   const rows = await browserFetch<WireInteraction[] | null>(
     `/v1/interactions${qs}`
   );

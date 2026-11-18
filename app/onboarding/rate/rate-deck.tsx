@@ -61,7 +61,7 @@ export function RateDeck() {
     Promise.all([
       getPool(30),
       // Resume: what the server already knows beats local state.
-      listInteractions().catch(() => []),
+      listInteractions({ kind: "rated" }).catch(() => []),
     ])
       .then(([films, interactions]) => {
         if (!live) return;

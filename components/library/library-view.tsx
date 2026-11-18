@@ -25,6 +25,7 @@ import {
   type LibrarySortKey,
   type SortOrder,
 } from "@/lib/library-filter";
+import type { PageSink } from "@/lib/api/tracking";
 import { usePref } from "@/lib/local-prefs";
 import {
   STATUS_LABELS,
@@ -60,15 +61,24 @@ type LoadState =
  * The golden screen's client orchestrator. Owns the slice state, the three
  * view modes, the tracking dialog, and the optimistic edit loop. Data arrives
  * through `load` so the mock layer swaps for the API client without touching
- * this file.
+ * this file. A big library arrives in pages: `load` resolves with the first
+ * and hands the rest to its sink as they land.
  */
+/** Adds a later page's rows to the ones on screen. A row already held stays
+ *  as it is: the user may have changed it here since the page was read. */
+function appendNew(held: LibraryEntry[], more: LibraryEntry[]): LibraryEntry[] {
+  const ids = new Set(held.map((e) => e.mediaId));
+  const fresh = more.filter((e) => !ids.has(e.mediaId));
+  return fresh.length > 0 ? [...held, ...fresh] : held;
+}
+
 function LibraryView({
   load,
   onStatusChange,
   onSave,
   onDelete,
 }: {
-  load: () => Promise<LibraryEntry[]>;
+  load: (more?: PageSink) => Promise<LibraryEntry[]>;
   /** Persist a quick status change. Absent = optimistic-only (mock mode). */
   onStatusChange?: (e: LibraryEntry, next: TrackingStatus) => Promise<void>;
   /** Persist a dialog edit. Absent = optimistic-only (mock mode). */
@@ -106,7 +116,19 @@ function LibraryView({
 
   React.useEffect(() => {
     let live = true;
-    load()
+    load({
+      live: () => live,
+      page: (more) =>
+        setState((s) =>
+          s.phase === "ready"
+            ? { phase: "ready", entries: appendNew(s.entries, more) }
+            : s
+        ),
+      failed: () =>
+        toast("Could not load all of your library", {
+          action: { label: "Try again", onClick: retry },
+        }),
+    })
       .then((entries) => {
         if (live) setState({ phase: "ready", entries });
       })

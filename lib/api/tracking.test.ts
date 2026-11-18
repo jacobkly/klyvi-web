@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { browserFetch } from "./http";
-import { lookupTracking } from "./tracking";
+import { listTrackingPaged, lookupTracking, TRACKING_PAGE } from "./tracking";
 import type { WireTrackingEntry } from "./wire";
 
 vi.mock("./http", () => ({ browserFetch: vi.fn() }));
@@ -69,5 +69,94 @@ describe("lookupTracking", () => {
     expect(
       await lookupTracking({ tmdbId: 550, mediaType: "movie" })
     ).toBeNull();
+  });
+});
+
+/** n rows with ids from `from` downward, as one page of the list. */
+function rows(from: number, n: number): WireTrackingEntry[] {
+  return Array.from({ length: n }, (_, i) => ({
+    ...MOVIE_ROW,
+    id: from - i,
+    media_id: 1000 + from - i,
+    updated_at: `2026-09-20T10:00:${String(59 - i).padStart(2, "0")}.5+02:00`,
+  }));
+}
+
+describe("listTrackingPaged", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it("resolves with the first page, then hands over the rest a page at a time", async () => {
+    const first = rows(900, TRACKING_PAGE);
+    const second = rows(500, TRACKING_PAGE);
+    const last = rows(100, 3);
+    fetchMock
+      .mockResolvedValueOnce(first)
+      .mockResolvedValueOnce(second)
+      .mockResolvedValueOnce(last);
+    const pages: number[][] = [];
+    let done!: () => void;
+    const finished = new Promise<void>((r) => (done = r));
+
+    const head = await listTrackingPaged({
+      page: (p) => {
+        pages.push(p.map((e) => e.mediaId));
+        if (pages.length === 2) done();
+      },
+      failed: () => {},
+      live: () => true,
+    });
+
+    expect(head).toHaveLength(TRACKING_PAGE);
+    await finished;
+    expect(pages.map((p) => p.length)).toEqual([TRACKING_PAGE, 3]);
+
+    const paths = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(paths[0]).toBe(`/v1/tracking?limit=${TRACKING_PAGE}`);
+    // The cursor is the last row's updated_at and id, URL-encoded.
+    const tail = first[first.length - 1];
+    expect(paths[1]).toBe(
+      `/v1/tracking?limit=${TRACKING_PAGE}&cursor=${encodeURIComponent(`${tail.updated_at},${tail.id}`)}`
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops after a short first page", async () => {
+    fetchMock.mockResolvedValueOnce(rows(10, 4));
+    const page = vi.fn();
+    const head = await listTrackingPaged({ page, failed: vi.fn(), live: () => true });
+    expect(head).toHaveLength(4);
+    await Promise.resolve();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(page).not.toHaveBeenCalled();
+  });
+
+  it("stops asking once the screen has gone", async () => {
+    fetchMock.mockResolvedValueOnce(rows(900, TRACKING_PAGE));
+    let live = true;
+    const head = listTrackingPaged({ page: vi.fn(), failed: vi.fn(), live: () => live });
+    await head;
+    live = false;
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so when a later page fails", async () => {
+    fetchMock
+      .mockResolvedValueOnce(rows(900, TRACKING_PAGE))
+      .mockRejectedValueOnce(new Error("down"));
+    let failed!: () => void;
+    const sawFailure = new Promise<void>((r) => (failed = r));
+    await listTrackingPaged({ page: vi.fn(), failed, live: () => true });
+    await sawFailure;
+  });
+
+  it("fetches every page when nobody is listening for them", async () => {
+    fetchMock
+      .mockResolvedValueOnce(rows(900, TRACKING_PAGE))
+      .mockResolvedValueOnce(rows(100, 2));
+    const all = await listTrackingPaged();
+    expect(all).toHaveLength(TRACKING_PAGE + 2);
   });
 });

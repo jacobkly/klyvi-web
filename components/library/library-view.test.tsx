@@ -1,8 +1,9 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mapTrackingEntry } from "@/lib/api/map";
+import type { PageSink } from "@/lib/api/tracking";
 import { writePref } from "@/lib/local-prefs";
 import type { WireTrackingEntry } from "@/lib/api/wire";
 
@@ -174,5 +175,79 @@ describe("LibraryView saves", () => {
       expect(toast).toHaveBeenCalledWith("Could not update that. Try again")
     );
     expect(await order()).toEqual(["Whiplash", "Arrival"]);
+  });
+});
+
+describe("LibraryView paging", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    toast.mockReset();
+  });
+
+  async function completed() {
+    const heading = await screen.findByRole("heading", { name: /Completed/ });
+    return within(heading.closest("section")!)
+      .getAllByRole("button", { name: /^Edit / })
+      .map((b) => b.getAttribute("aria-label")!.replace(/^Edit /, ""));
+  }
+
+  it("shows the first page, then adds the next page when it lands", async () => {
+    let sink!: PageSink;
+    const load = async (s?: PageSink) => {
+      sink = s!;
+      return [film(10, "Whiplash", { score: 88 })].map(mapTrackingEntry);
+    };
+    render(<LibraryView load={load} />);
+    expect(await completed()).toEqual(["Whiplash"]);
+
+    act(() => sink.page([film(11, "Arrival", { score: 95 })].map(mapTrackingEntry)));
+
+    expect(await completed()).toEqual(["Arrival", "Whiplash"]);
+  });
+
+  // A row the user has already changed here is newer than any page.
+  it("keeps a row it already holds rather than the page's copy", async () => {
+    let sink!: PageSink;
+    const load = async (s?: PageSink) => {
+      sink = s!;
+      return [film(10, "Whiplash", { score: 88 })].map(mapTrackingEntry);
+    };
+    render(<LibraryView load={load} />);
+    await completed();
+
+    act(() =>
+      sink.page([film(10, "Whiplash (stale)", { score: 10 })].map(mapTrackingEntry))
+    );
+
+    expect(await completed()).toEqual(["Whiplash"]);
+  });
+
+  it("says so, with a retry, when a later page fails", async () => {
+    let sink!: PageSink;
+    const load = async (s?: PageSink) => {
+      sink = s!;
+      return [film(10, "Whiplash", {})].map(mapTrackingEntry);
+    };
+    render(<LibraryView load={load} />);
+    await completed();
+
+    act(() => sink.failed());
+
+    expect(toast).toHaveBeenCalledWith(
+      "Could not load all of your library",
+      expect.objectContaining({ action: expect.objectContaining({ label: "Try again" }) })
+    );
+  });
+
+  it("stops listening once it has gone", async () => {
+    let sink!: PageSink;
+    const load = async (s?: PageSink) => {
+      sink = s!;
+      return [];
+    };
+    const { unmount } = render(<LibraryView load={load} />);
+    await waitFor(() => expect(sink).toBeDefined());
+    unmount();
+    expect(sink.live()).toBe(false);
   });
 });

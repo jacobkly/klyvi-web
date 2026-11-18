@@ -1,8 +1,9 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mapTrackingEntry } from "@/lib/api/map";
+import type { PageSink } from "@/lib/api/tracking";
 import { writePref } from "@/lib/local-prefs";
 import type { WireTrackingEntry } from "@/lib/api/wire";
 import type { LibraryEntry, Scored } from "@/lib/types";
@@ -17,7 +18,7 @@ vi.mock("@/lib/api/reco", () => ({
   getFeed: (...a: unknown[]) => getFeed(...a),
 }));
 vi.mock("@/lib/api/tracking", () => ({
-  listTracking: (...a: unknown[]) => listTracking(...a),
+  listTrackingPaged: (...a: unknown[]) => listTracking(...a),
 }));
 vi.mock("@/lib/api/interactions", () => ({
   listInteractions: (...a: unknown[]) => listInteractions(...a),
@@ -141,6 +142,42 @@ describe("HomeClient", () => {
     expect(await screen.findByText("3 / 10")).toBeInTheDocument();
     // A film has no episodes, so nothing reads as a count out of a total.
     expect(screen.queryAllByText(/^\d+ \/ \d+$/)).toHaveLength(1);
+  });
+
+  it("adds the library's next page when it lands", async () => {
+    let sink!: PageSink;
+    listTracking.mockImplementation(async (s: PageSink) => {
+      sink = s;
+      return [entry({ mediaId: 1, title: "Severance" })];
+    });
+    render(<HomeClient />);
+    expect(await screen.findAllByText(/Severance/)).not.toHaveLength(0);
+
+    act(() => sink.page([entry({ mediaId: 2, title: "Andor" })]));
+
+    expect(await screen.findAllByText(/Andor/)).not.toHaveLength(0);
+  });
+
+  it("shows the library error when a later page fails, not a short count", async () => {
+    let sink!: PageSink;
+    listTracking.mockImplementation(async (s: PageSink) => {
+      sink = s;
+      return [entry({})];
+    });
+    render(<HomeClient />);
+    await screen.findAllByText(/Severance/);
+
+    act(() => sink.failed());
+
+    expect(
+      await screen.findByText("Could not load your library right now.")
+    ).toBeInTheDocument();
+  });
+
+  it("asks only for ratings to count them", async () => {
+    render(<HomeClient />);
+    await screen.findByRole("heading", { name: "Your top picks" });
+    expect(listInteractions).toHaveBeenCalledWith({ kind: "rated" });
   });
 
   it("keeps the picks when the library fails", async () => {

@@ -26,6 +26,72 @@ export async function listTracking(filters?: {
   return (rows ?? []).map(mapTrackingEntry);
 }
 
+/** Rows per page of the paged list. The API cuts a page at 200. */
+export const TRACKING_PAGE = 200;
+
+/** Where the later pages of a paged list go. `live` turns false when the
+ *  screen that asked has gone, and paging stops. */
+export type PageSink = {
+  page: (entries: LibraryEntry[]) => void;
+  failed: () => void;
+  live: () => boolean;
+};
+
+/** One page, and the cursor for the next (null on the last page). The cursor
+ *  is the last row's updated_at and id, which the API pages by. */
+async function fetchTrackingPage(
+  cursor: string | null
+): Promise<{ entries: LibraryEntry[]; next: string | null }> {
+  const params = new URLSearchParams({ limit: String(TRACKING_PAGE) });
+  if (cursor) params.set("cursor", cursor);
+  const rows =
+    (await browserFetch<WireTrackingEntry[] | null>(`/v1/tracking?${params}`)) ?? [];
+  const tail = rows[rows.length - 1];
+  return {
+    entries: rows.map(mapTrackingEntry),
+    next: rows.length === TRACKING_PAGE ? `${tail.updated_at},${tail.id}` : null,
+  };
+}
+
+/** The rest of the list after `cursor`, a page at a time into `sink`. */
+async function pageRest(cursor: string, sink: PageSink): Promise<void> {
+  // Let the first page paint before the next request goes out.
+  await new Promise((r) => setTimeout(r, 0));
+  let next: string | null = cursor;
+  try {
+    while (next && sink.live()) {
+      const p = await fetchTrackingPage(next);
+      if (!sink.live()) return;
+      if (p.entries.length > 0) sink.page(p.entries);
+      next = p.next;
+    }
+  } catch {
+    if (sink.live()) sink.failed();
+  }
+}
+
+/**
+ * The whole tracking list, a page at a time. With a sink it resolves as soon
+ * as the first page lands and hands each later page to the sink, so a big
+ * library shows without waiting for all of it. Without one it resolves with
+ * every page.
+ */
+export async function listTrackingPaged(sink?: PageSink): Promise<LibraryEntry[]> {
+  const first = await fetchTrackingPage(null);
+  if (sink) {
+    if (first.next) void pageRest(first.next, sink);
+    return first.entries;
+  }
+  const all = [...first.entries];
+  let next = first.next;
+  while (next) {
+    const p = await fetchTrackingPage(next);
+    all.push(...p.entries);
+    next = p.next;
+  }
+  return all;
+}
+
 /** The user's entry for one title, or null when they do not track it. Detail
  *  pages use this instead of pulling the whole library to find one row. */
 export async function lookupTracking(input: {
