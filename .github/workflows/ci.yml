@@ -1,0 +1,47 @@
+name: ci
+
+# Lint, test and build every push. Vercel's "wait for checks" setting holds a
+# deploy until this passes, so a red run never reaches klyvi.net.
+# No pull_request trigger: on a public repo that is the path that runs fork code.
+on:
+  push:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Actions are pinned to commit SHAs, since a tag can be moved.
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # The build inlines these. Placeholders are enough to compile, and none
+      # of them is a secret (the anon key ships in every browser bundle anyway).
+      NEXT_PUBLIC_API_URL: https://api.example.invalid
+      NEXT_PUBLIC_SUPABASE_URL: https://example.invalid
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

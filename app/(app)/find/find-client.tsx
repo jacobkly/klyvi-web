@@ -310,7 +310,9 @@ export function FindClient({ simulate }: { simulate?: string }) {
           mediaType: "movie",
           status: "completed",
           score,
-        }).catch(() => {});
+          // The "Rated" toast has already gone up, so a failed write has to
+          // say so or the film silently never reaches the library.
+        }).catch(() => toast("Could not add that to your library. Try again"));
       }
     }
     removeCurrent();

@@ -5,7 +5,7 @@
 
 import type { ImportJob } from "@/lib/types";
 
-import { browserFetch } from "./http";
+import { browserFetch, UPLOAD_TIMEOUT_MS } from "./http";
 import { mapImportJob } from "./map";
 import type { WireImportJob } from "./wire";
 
@@ -21,6 +21,8 @@ export async function startImport(
   const w = await browserFetch<WireImportJob>("/v1/imports", {
     method: "POST",
     body: form,
+    // A big file on a slow phone needs longer than a normal request.
+    timeoutMs: UPLOAD_TIMEOUT_MS,
   });
   return mapImportJob(w);
 }

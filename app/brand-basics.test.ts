@@ -4,10 +4,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { AUTH_SCREENS, PROTECTED_PREFIXES } from "@/lib/gated-routes";
+import { robotsFor } from "@/lib/robots-rules";
 import { rootMetadata, SITE_URL } from "@/lib/site";
 
 import manifest from "./manifest";
-import robots from "./robots";
 import sitemap from "./sitemap";
 
 const root = process.cwd();
@@ -20,6 +20,10 @@ function pngSize(relativePath: string) {
 }
 
 /** robots() allows one rule or a list. Klyvi uses a single rule for everyone. */
+function robots() {
+  return robotsFor("www.klyvi.net");
+}
+
 function theRule() {
   const { rules } = robots();
   expect(Array.isArray(rules)).toBe(false);
@@ -52,7 +56,18 @@ describe("robots.txt", () => {
   );
 
   it("points at the sitemap on the real domain", () => {
-    expect(robots().sitemap).toBe("https://klyvi.net/sitemap.xml");
+    expect(robots().sitemap).toBe("https://www.klyvi.net/sitemap.xml");
+  });
+
+  it.each(["staging.klyvi.net", "klyvi-web-abc123.vercel.app", "localhost:3000", null])(
+    "keeps crawlers off everything on %s",
+    (host) => {
+      expect(robotsFor(host)).toEqual({ rules: { userAgent: "*", disallow: "/" } });
+    }
+  );
+
+  it("treats the main host case-insensitively", () => {
+    expect(robotsFor("WWW.KLYVI.NET").sitemap).toBe("https://www.klyvi.net/sitemap.xml");
   });
 });
 
@@ -115,7 +130,7 @@ describe("the web manifest", () => {
 
 describe("the metadata every page starts from", () => {
   it("resolves relative image addresses against the real domain", () => {
-    expect(String(rootMetadata.metadataBase)).toBe("https://klyvi.net/");
+    expect(String(rootMetadata.metadataBase)).toBe("https://www.klyvi.net/");
   });
 
   it("asks for a large card in link previews", () => {

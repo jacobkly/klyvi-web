@@ -229,6 +229,22 @@ describe("FindClient", () => {
     expect(push).toHaveBeenCalledWith("/tv/1399");
   });
 
+  it("says so when a rated film fails to reach the library", async () => {
+    addTracking.mockRejectedValue(new Error("network"));
+    render(<FindClient />);
+    fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+    await screen.findByRole("heading", { name: "Memories of Murder" });
+    fireEvent.click(screen.getByRole("button", { name: "Seen it" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Save rating" }));
+
+    expect(toast).toHaveBeenCalledWith("Rated");
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        "Could not add that to your library. Try again"
+      )
+    );
+  });
+
   it("asks for films and shows by default, and no longer says films only", async () => {
     render(<FindClient />);
     expect(screen.getByRole("button", { name: "All" })).toHaveAttribute(

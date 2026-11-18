@@ -1,20 +1,10 @@
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
 
-import { AUTH_SCREENS, PROTECTED_PREFIXES } from "@/lib/gated-routes";
-import { SITE_URL } from "@/lib/site";
+import { robotsFor } from "@/lib/robots-rules";
 
-export default function robots(): MetadataRoute.Robots {
-  return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: [
-        ...PROTECTED_PREFIXES,
-        ...AUTH_SCREENS,
-        "/reset-password",
-        "/auth",
-      ],
-    },
-    sitemap: `${SITE_URL}/sitemap.xml`,
-  };
+/** Reads the host, so staging and previews can say "no" (lib/robots-rules). */
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const requestHeaders = await headers();
+  return robotsFor(requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"));
 }

@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 import { getBrowserAccessToken } from "@/lib/supabase/browser";
 import type { UserProfile, UserStats } from "@/lib/types";
 
-import { apiFetch, browserFetch } from "./http";
+import { apiFetch, browserFetch, UPLOAD_TIMEOUT_MS } from "./http";
 import { mapStats, mapUser } from "./map";
 import type {
   WireStats,
@@ -73,6 +73,8 @@ export async function uploadAvatar(file: Blob): Promise<UserProfile> {
   const w = await browserFetch<WireUser>("/v1/users/me/avatar", {
     method: "POST",
     body: form,
+    // A big file on a slow phone needs longer than a normal request.
+    timeoutMs: UPLOAD_TIMEOUT_MS,
   });
   return mapUser(w);
 }

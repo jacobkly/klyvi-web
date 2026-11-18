@@ -47,6 +47,55 @@ export interface FetchOptions extends Omit<RequestInit, "body"> {
   /** When true, skips the envelope unwrap (raw passthrough payloads). */
   raw?: boolean;
   signal?: AbortSignal;
+  /** How long to wait before giving up. Uploads pass a longer one. */
+  timeoutMs?: number;
+}
+
+/**
+ * How long a request may take before the app stops waiting and shows its
+ * error state. Without a limit, a hung API leaves a page loading forever.
+ */
+export const DEFAULT_TIMEOUT_MS = 8_000;
+
+/** Uploads get the same minute the API gives them (middleware.LongRequest). */
+export const UPLOAD_TIMEOUT_MS = 60_000;
+
+const TIMEOUT_MESSAGE = "Klyvi took too long to answer. Try again.";
+
+/**
+ * A signal that aborts after ms, or when the caller's own signal does. A
+ * plain timer (not AbortSignal.timeout) so tests can drive it with fake
+ * timers.
+ */
+function timeoutSignal(ms: number, outer?: AbortSignal) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, ms);
+  const onOuterAbort = () => controller.abort(outer?.reason);
+  if (outer?.aborted) onOuterAbort();
+  else outer?.addEventListener("abort", onOuterAbort, { once: true });
+  return {
+    signal: controller.signal,
+    timedOut: () => timedOut,
+    done: () => {
+      clearTimeout(timer);
+      outer?.removeEventListener("abort", onOuterAbort);
+    },
+  };
+}
+
+function isAbort(e: unknown): boolean {
+  // Checked by name: the abort reason can come from a different realm's
+  // DOMException (the test DOM, a worker), where instanceof fails.
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    "name" in e &&
+    (e as { name: unknown }).name === "AbortError"
+  );
 }
 
 function joinUrl(base: string, path: string): string {
@@ -94,7 +143,7 @@ async function doFetch(
   try {
     return await fetch(joinUrl(env.apiUrl, path), init);
   } catch (e) {
-    if (e instanceof DOMException && e.name === "AbortError") throw e;
+    if (isAbort(e)) throw e;
     const msg = e instanceof Error ? e.message : "Network error";
     throw new ApiError(`Network error: ${msg}`, 0, null);
   }
@@ -108,6 +157,21 @@ export async function apiFetch<T>(
     throw new ApiError("Klyvi API URL is not configured", 0, null);
   }
 
+  const timeout = timeoutSignal(
+    opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    opts.signal
+  );
+  try {
+    return await fetchAndParse<T>(path, { ...opts, signal: timeout.signal });
+  } catch (e) {
+    if (timeout.timedOut()) throw new ApiError(TIMEOUT_MESSAGE, 0, null);
+    throw e;
+  } finally {
+    timeout.done();
+  }
+}
+
+async function fetchAndParse<T>(path: string, opts: FetchOptions): Promise<T> {
   let res = await doFetch(path, opts, opts.token);
 
   // One refresh-and-retry on 401: the session likely expired mid-flight.

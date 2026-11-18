@@ -64,13 +64,23 @@ export function SettingsClient() {
   const { user, setProfile } = useSession();
   const [active, setActive] = React.useState<SectionId>("profile");
   const [me, setMe] = React.useState<UserProfile | null>(null);
+  const [loadFailed, setLoadFailed] = React.useState(false);
   const avatarSrc = me?.avatarUrl ?? null;
 
-  React.useEffect(() => {
+  const fetchMe = React.useCallback(() => {
     getMe()
       .then(setMe)
-      .catch(() => {});
+      .catch(() => setLoadFailed(true));
   }, []);
+
+  React.useEffect(() => {
+    fetchMe();
+  }, [fetchMe]);
+
+  const retry = () => {
+    setLoadFailed(false);
+    fetchMe();
+  };
 
   const onProfileSaved = React.useCallback(
     (u: UserProfile) => {
@@ -81,12 +91,32 @@ export function SettingsClient() {
     [setProfile]
   );
 
+  // The profile and notification forms start from the loaded profile. Shown
+  // blank after a failed load, a save would overwrite the real one.
+  const loadError = (
+    <div className="flex flex-col items-start gap-3 py-8">
+      <p role="alert" className="text-[15px] font-semibold text-foreground">
+        Could not load your settings.
+      </p>
+      <p className="text-sm text-muted-foreground">
+        Klyvi did not answer in time. Nothing you saved before is lost.
+      </p>
+      <Button variant="secondary" onClick={retry}>
+        Try again
+      </Button>
+    </div>
+  );
+  const needsProfile = (section: React.ReactNode) =>
+    loadFailed ? loadError : section;
+
   const sections: Record<SectionId, React.ReactNode> = {
-    profile: <ProfileSection me={me} onSaved={onProfileSaved} />,
+    profile: needsProfile(<ProfileSection me={me} onSaved={onProfileSaved} />),
     account: <AccountSection />,
     appearance: <AppearanceSection />,
     lists: <ListsSection />,
-    notifications: <NotificationsSection me={me} onSaved={onProfileSaved} />,
+    notifications: needsProfile(
+      <NotificationsSection me={me} onSaved={onProfileSaved} />
+    ),
     data: <DataSection />,
     delete: <DeleteSection />,
   };

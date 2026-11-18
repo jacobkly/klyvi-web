@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-export const SITE_URL = "https://klyvi.net";
+/** The main address. klyvi.net redirects here (Vercel domain settings). */
+export const SITE_URL = "https://www.klyvi.net";
 
 /**
  * What every page starts from. The share image comes from

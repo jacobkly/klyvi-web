@@ -137,4 +137,69 @@ describe("apiFetch", () => {
     expect(err.status).toBe(401);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  describe("timeouts", () => {
+    // A fetch that never answers, and fails only when its signal aborts.
+    function hangingFetch() {
+      fetchMock.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () =>
+              reject(init.signal?.reason)
+            );
+          })
+      );
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("gives up on a slow API after 8 seconds with an ApiError", async () => {
+      hangingFetch();
+      const pending = apiFetch("/v1/reco/feed", { token: "t" }).catch(
+        (e) => e
+      );
+      await vi.advanceTimersByTimeAsync(7_999);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      const err = (await pending) as ApiError;
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err.status).toBe(0);
+      expect(err.message).toMatch(/took too long/);
+    });
+
+    it("lets a caller give an upload longer", async () => {
+      hangingFetch();
+      let settled = false;
+      const pending = apiFetch("/v1/imports", {
+        token: "t",
+        method: "POST",
+        timeoutMs: 60_000,
+      })
+        .catch((e) => e)
+        .finally(() => {
+          settled = true;
+        });
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(await pending).toBeInstanceOf(ApiError);
+    });
+
+    it("still reports the caller's own abort as an AbortError", async () => {
+      hangingFetch();
+      const controller = new AbortController();
+      const pending = apiFetch("/v1/search", {
+        signal: controller.signal,
+      }).catch((e) => e);
+      controller.abort();
+      const err = (await pending) as DOMException;
+      expect(err.name).toBe("AbortError");
+    });
+  });
 });
