@@ -5,24 +5,104 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountSection } from "./account-section";
 
 const updateUser = vi.fn();
+const signInWithPassword = vi.fn();
 vi.mock("@/lib/supabase/browser", () => ({
-  getBrowserSupabase: () => ({ auth: { updateUser } }),
-}));
-vi.mock("@/components/auth/auth-provider", () => ({
-  useSession: () => ({
-    user: { email: "jacob@example.com" },
-    signOut: vi.fn(),
-  }),
+  getBrowserSupabase: () => ({ auth: { updateUser, signInWithPassword } }),
 }));
 
+const passwordUser = {
+  email: "jacob@example.com",
+  app_metadata: { provider: "email", providers: ["email"] },
+};
+let sessionUser: object = passwordUser;
+vi.mock("@/components/auth/auth-provider", () => ({
+  useSession: () => ({ user: sessionUser, signOut: vi.fn() }),
+}));
+
+/** Fills the three password fields, current first. */
+async function fillPasswords(
+  user: ReturnType<typeof userEvent.setup>,
+  current = "oldpassword1",
+  next = "longenough1",
+  confirm = next
+) {
+  if (current) await user.type(screen.getByLabelText("Current password"), current);
+  await user.type(screen.getByLabelText("New password"), next);
+  await user.type(screen.getByLabelText("Retype new password"), confirm);
+}
+
 describe("AccountSection password change", () => {
-  beforeEach(() => updateUser.mockReset());
+  beforeEach(() => {
+    updateUser.mockReset();
+    signInWithPassword.mockReset();
+    signInWithPassword.mockResolvedValue({ error: null });
+    sessionUser = passwordUser;
+  });
+
+  it("checks the current password before changing it", async () => {
+    updateUser.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<AccountSection />);
+
+    await fillPasswords(user);
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+
+    await waitFor(() => expect(updateUser).toHaveBeenCalled());
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: "jacob@example.com",
+      password: "oldpassword1",
+    });
+    expect(screen.getByLabelText("Current password")).toHaveValue("");
+  });
+
+  it("stops at a wrong current password", async () => {
+    signInWithPassword.mockResolvedValue({
+      error: { code: "invalid_credentials", message: "Invalid login credentials" },
+    });
+    const user = userEvent.setup();
+    render(<AccountSection />);
+
+    await fillPasswords(user, "notmypassword");
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+
+    expect(
+      await screen.findByText("That's not your current password")
+    ).toBeInTheDocument();
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it("asks for the current password when it's blank", async () => {
+    const user = userEvent.setup();
+    render(<AccountSection />);
+
+    await fillPasswords(user, "");
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+
+    expect(
+      await screen.findByText("Enter your current password")
+    ).toBeInTheDocument();
+    expect(signInWithPassword).not.toHaveBeenCalled();
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it("hides the form for an account that signs in with Google only", () => {
+    sessionUser = {
+      email: "jacob@example.com",
+      app_metadata: { provider: "google", providers: ["google"] },
+    };
+    render(<AccountSection />);
+    expect(screen.queryByLabelText("Current password")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Change password" })
+    ).not.toBeInTheDocument();
+  });
 
   it("changes the password and clears the fields", async () => {
     updateUser.mockResolvedValue({ error: null });
     const user = userEvent.setup();
     render(<AccountSection />);
 
+    await user.type(screen.getByLabelText("Current password"), "oldpassword1");
     await user.type(screen.getByLabelText("New password"), "longenough1");
     await user.type(
       screen.getByLabelText("Retype new password"),
@@ -42,6 +122,7 @@ describe("AccountSection password change", () => {
     const user = userEvent.setup();
     render(<AccountSection />);
 
+    await user.type(screen.getByLabelText("Current password"), "oldpassword1");
     await user.type(screen.getByLabelText("New password"), "longenough1");
     await user.type(screen.getByLabelText("Retype new password"), "different1");
     await user.click(
@@ -64,6 +145,7 @@ describe("AccountSection password change", () => {
     const user = userEvent.setup();
     render(<AccountSection />);
 
+    await user.type(screen.getByLabelText("Current password"), "oldpassword1");
     await user.type(screen.getByLabelText("New password"), "longenough1");
     await user.type(
       screen.getByLabelText("Retype new password"),
@@ -88,6 +170,7 @@ describe("AccountSection password change", () => {
     const user = userEvent.setup();
     render(<AccountSection />);
 
+    await user.type(screen.getByLabelText("Current password"), "oldpassword1");
     await user.type(screen.getByLabelText("New password"), "longenough1");
     await user.type(
       screen.getByLabelText("Retype new password"),
