@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LibraryEntry, TrackableSummary } from "@/lib/types";
@@ -7,16 +8,19 @@ import { DetailLayout } from "./detail-layout";
 
 const listTracking = vi.fn();
 const lookupTracking = vi.fn();
+const updateTracking = vi.fn();
+const toast = vi.fn();
 let sessionUser: { id: string } | null = { id: "u1" };
 
 vi.mock("@/lib/api/tracking", () => ({
   listTracking: (...a: unknown[]) => listTracking(...a),
   lookupTracking: (...a: unknown[]) => lookupTracking(...a),
   addTracking: vi.fn(),
-  updateTracking: vi.fn(),
+  updateTracking: (...a: unknown[]) => updateTracking(...a),
   deleteTracking: vi.fn(),
 }));
 vi.mock("@/lib/api/interactions", () => ({ recordInteraction: vi.fn() }));
+vi.mock("sonner", () => ({ toast: (...a: unknown[]) => toast(...a) }));
 vi.mock("@/components/auth/auth-provider", () => ({
   useSession: () => ({ user: sessionUser }),
 }));
@@ -104,5 +108,45 @@ describe("DetailLayout tracking state", () => {
 
     expect(lookupTracking).not.toHaveBeenCalled();
     expect(listTracking).not.toHaveBeenCalled();
+  });
+});
+
+describe("DetailLayout saves", () => {
+  beforeEach(() => {
+    sessionUser = { id: "u1" };
+    lookupTracking.mockReset().mockResolvedValue(tracked({}));
+    updateTracking.mockReset();
+    toast.mockReset();
+  });
+
+  /** Picks Paused from the status menu and saves the dialog it opens. */
+  async function pause() {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Completed/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Paused" }));
+    await user.click(await screen.findByRole("button", { name: "Save" }));
+  }
+
+  it("shows the new status before the request resolves", async () => {
+    updateTracking.mockReturnValue(new Promise(() => {}));
+    renderDetail();
+
+    await pause();
+
+    expect(updateTracking).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: /Paused/ })).toBeInTheDocument();
+    expect(toast).toHaveBeenCalledWith("Paused");
+  });
+
+  it("rolls a failed save back and says so", async () => {
+    updateTracking.mockRejectedValue(new Error("503"));
+    renderDetail();
+
+    await pause();
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith("Could not update that. Try again")
+    );
+    expect(screen.getByRole("button", { name: /Completed/ })).toBeInTheDocument();
   });
 });

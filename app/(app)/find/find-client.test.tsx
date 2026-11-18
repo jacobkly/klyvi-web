@@ -351,4 +351,26 @@ describe("FindClient", () => {
     expect(screen.queryByRole("heading", { name: "Die Hard" })).toBeNull();
     expect(getMovie).not.toHaveBeenCalled();
   });
+
+  it("answers a show's save at once, before the season is known", async () => {
+    listTracking.mockReturnValue(new Promise(() => {}));
+    await showPick();
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
+
+    expect(toast).toHaveBeenCalledWith("Adding to your watchlist");
+    expect(screen.queryByRole("heading", { name: "Game of Thrones" })).toBeNull();
+  });
+
+  it("turns a show's save toast into an error when the save fails", async () => {
+    toast.mockReturnValue("t1");
+    listTracking.mockRejectedValue(new Error("503"));
+    await showPick();
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith("Could not update that. Try again", {
+        id: "t1",
+      })
+    );
+  });
 });

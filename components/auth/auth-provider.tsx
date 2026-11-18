@@ -18,6 +18,10 @@ type SessionState = {
   profile: UserProfile | null;
   /** True until the first getSession resolves; gates flicker, not routing. */
   loading: boolean;
+  /** True when the profile failed to load. Settings shows a retry for it. */
+  profileFailed: boolean;
+  /** Load the profile again after a failure. */
+  reloadProfile: () => void;
   /** Push a fresh profile in after Settings saves, so greetings update. */
   setProfile: (p: UserProfile) => void;
   signOut: () => Promise<void>;
@@ -27,13 +31,17 @@ const SessionContext = React.createContext<SessionState>({
   user: null,
   profile: null,
   loading: true,
+  profileFailed: false,
+  reloadProfile: () => {},
   setProfile: () => {},
   signOut: async () => {},
 });
 
 /**
  * Owns the browser auth state and the Klyvi profile that hangs off it, so
- * any screen can greet by name without refetching. Routing decisions live
+ * any screen can greet by name without refetching. The profile is fetched
+ * once per signed-in user, and saves hand back the new row, so nothing else
+ * needs to read /users/me. Routing decisions live
  * in proxy.ts; this context only answers who is signed in.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -46,6 +54,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile: UserProfile;
   } | null>(null);
   const profile = user && owned?.userId === user.id ? owned.profile : null;
+  const userId = user?.id ?? null;
+  const [failedFor, setFailedFor] = React.useState<string | null>(null);
+  const profileFailed = userId != null && failedFor === userId && !profile;
+  const [attempt, setAttempt] = React.useState(0);
+  // The latest user object, for the sign-up username claim below. The effect
+  // that reads it is keyed on the id alone.
+  const userRef = React.useRef(user);
+  React.useEffect(() => {
+    userRef.current = user;
+  }, [user]);
   // Without Supabase there is no session to wait for.
   const [loading, setLoading] = React.useState(supabaseConfigured);
 
@@ -82,8 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // desired name is applied here, once, and only while the row still carries
   // that placeholder. A collision leaves the placeholder in place; Settings
   // is where it gets resolved.
+  //
+  // Keyed on the id, not the user object. Supabase hands over a new object
+  // at every token refresh and tab focus, which once meant 18 reads of
+  // /users/me in a few minutes of browsing.
   React.useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     let cancelled = false;
 
     (async () => {
@@ -91,10 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         me = await getMe();
       } catch {
+        if (!cancelled) setFailedFor(userId);
         return;
       }
 
-      const desired = user.user_metadata?.username;
+      const desired = userRef.current?.user_metadata?.username;
       if (
         typeof desired === "string" &&
         desired.length > 0 &&
@@ -113,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (cancelled) return;
-      setOwned({ userId: user.id, profile: me });
+      setOwned({ userId, profile: me });
       // Adopt the server's settings blob, then let later changes push back
       // (debounced). Order matters: seed first so the pusher does not fire
       // on the values we just received.
@@ -126,7 +149,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [userId, attempt]);
+
+  const reloadProfile = React.useCallback(() => {
+    setFailedFor(null);
+    setAttempt((n) => n + 1);
+  }, []);
 
   // Stop pushing prefs once signed out.
   React.useEffect(() => {
@@ -151,8 +179,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = React.useMemo(
-    () => ({ user, profile, loading, setProfile, signOut }),
-    [user, profile, loading, setProfile, signOut]
+    () => ({
+      user,
+      profile,
+      loading,
+      profileFailed,
+      reloadProfile,
+      setProfile,
+      signOut,
+    }),
+    [user, profile, loading, profileFailed, reloadProfile, setProfile, signOut]
   );
 
   return (

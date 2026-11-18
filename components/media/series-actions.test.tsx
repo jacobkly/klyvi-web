@@ -31,7 +31,7 @@ describe("SeriesActions", () => {
     sessionUser = { id: "u1" };
     trackFirstUntrackedSeason.mockReset().mockResolvedValue(1);
     recordInteraction.mockReset().mockResolvedValue(undefined);
-    toast.mockReset();
+    toast.mockReset().mockReturnValue("t1");
     push.mockReset();
   });
 
@@ -47,7 +47,10 @@ describe("SeriesActions", () => {
       source: "detail",
     });
     await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith("Season 1 added to your watchlist")
+      expect(toast).toHaveBeenCalledWith(
+        "Season 1 added to your watchlist",
+        { id: "t1" }
+      )
     );
   });
 
@@ -57,7 +60,10 @@ describe("SeriesActions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
 
     await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith("Every season is already in your library")
+      expect(toast).toHaveBeenCalledWith(
+        "Every season is already in your library",
+        { id: "t1" }
+      )
     );
   });
 
@@ -82,5 +88,27 @@ describe("SeriesActions", () => {
     expect(push).toHaveBeenCalledWith("/signin?next=%2Ftv%2F1399");
     expect(trackFirstUntrackedSeason).not.toHaveBeenCalled();
     expect(recordInteraction).not.toHaveBeenCalled();
+  });
+
+  it("answers the tap at once, before the season is known", () => {
+    trackFirstUntrackedSeason.mockReturnValue(new Promise(() => {}));
+    render(<SeriesActions tmdbId={1399} seasonNumbers={[1, 2]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
+
+    expect(toast).toHaveBeenCalledWith("Adding to your watchlist");
+    expect(screen.getByRole("button", { name: "Add to watchlist" })).toBeDisabled();
+  });
+
+  it("turns the same toast into an error when the save fails", async () => {
+    trackFirstUntrackedSeason.mockRejectedValue(new Error("503"));
+    render(<SeriesActions tmdbId={1399} seasonNumbers={[1]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith("Could not update that. Try again", {
+        id: "t1",
+      })
+    );
+    expect(screen.getByRole("button", { name: "Add to watchlist" })).toBeEnabled();
   });
 });

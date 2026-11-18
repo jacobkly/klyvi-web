@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { useSession } from "@/components/auth/auth-provider";
@@ -23,6 +24,9 @@ export function useUnreadNotices(): UnreadValue {
  * The unread notice count behind the dot on the account menu. Fetched once per
  * page load and never polled: notices are written by a nightly job, so nothing
  * new can turn up while the page is open.
+ *
+ * Opened on the notices page itself, it fetches nothing: that page reads the
+ * whole list anyway and reports the count from it.
  */
 export function UnreadProvider({ children }: { children: React.ReactNode }) {
   const { user } = useSession();
@@ -35,11 +39,17 @@ export function UnreadProvider({ children }: { children: React.ReactNode }) {
   // Set once the page has reported a count, which is newer than any first
   // fetch still in the air. A slow answer must not bring a cleared dot back.
   const reported = React.useRef(false);
+  const pathname = usePathname();
+  const onNoticesPage = pathname?.startsWith("/notifications") ?? false;
+  const onNoticesPageRef = React.useRef(onNoticesPage);
+  React.useEffect(() => {
+    onNoticesPageRef.current = onNoticesPage;
+  }, [onNoticesPage]);
 
   // Keyed on the id, not the user object, which is replaced at every token
   // refresh.
   React.useEffect(() => {
-    if (!userId) return;
+    if (!userId || onNoticesPageRef.current) return;
     reported.current = false;
     let stale = false;
     getNotifications({ limit: 1 })

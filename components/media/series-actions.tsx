@@ -41,15 +41,19 @@ export function SeriesActions({
   function save() {
     if (!signedIn()) return;
     setSaving(true);
+    // Finding the season takes two requests. Answer the tap now and let the
+    // same toast name the season once it is known.
+    const id = toast("Adding to your watchlist");
     trackFirstUntrackedSeason(tmdbId, seasonNumbers)
       .then((season) =>
         toast(
           season != null
             ? `Season ${season} added to your watchlist`
-            : "Every season is already in your library"
+            : "Every season is already in your library",
+          { id }
         )
       )
-      .catch(() => toast("Could not update that. Try again"))
+      .catch(() => toast("Could not update that. Try again", { id }))
       .finally(() => setSaving(false));
     recordInteraction({
       tmdbId,

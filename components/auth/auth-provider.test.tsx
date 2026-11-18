@@ -55,4 +55,50 @@ describe("AuthProvider", () => {
     act(() => fireAuth("SIGNED_OUT", null));
     expect(await screen.findByText("signed out")).toBeInTheDocument();
   });
+
+  it("fetches the profile once while the session refreshes its token", async () => {
+    render(
+      <AuthProvider>
+        <Greeting />
+      </AuthProvider>
+    );
+    await screen.findByText("signed out");
+
+    act(() => fireAuth("SIGNED_IN", { user: { id: "u1", user_metadata: {} } }));
+    await screen.findByText("filmfan");
+    // Supabase hands over a new user object on every refresh and tab focus.
+    act(() => fireAuth("TOKEN_REFRESHED", { user: { id: "u1", user_metadata: {} } }));
+    act(() => fireAuth("SIGNED_IN", { user: { id: "u1", user_metadata: {} } }));
+    await screen.findByText("filmfan");
+
+    expect(getMe).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a failed profile load and loads it again on reload", async () => {
+    getMe.mockRejectedValueOnce(new Error("offline"));
+    function Status() {
+      const { profile, profileFailed, reloadProfile } = useSession();
+      return (
+        <>
+          <p>{profile ? profile.username : profileFailed ? "failed" : "waiting"}</p>
+          <button type="button" onClick={reloadProfile}>
+            reload
+          </button>
+        </>
+      );
+    }
+    render(
+      <AuthProvider>
+        <Status />
+      </AuthProvider>
+    );
+    // Let the first getSession (no session) land before signing in.
+    await act(async () => {});
+    act(() => fireAuth("SIGNED_IN", { user: { id: "u1", user_metadata: {} } }));
+    expect(await screen.findByText("failed")).toBeInTheDocument();
+
+    act(() => screen.getByRole("button", { name: "reload" }).click());
+    expect(await screen.findByText("filmfan")).toBeInTheDocument();
+    expect(getMe).toHaveBeenCalledTimes(2);
+  });
 });

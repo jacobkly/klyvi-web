@@ -234,16 +234,19 @@ export function FindClient({ simulate }: { simulate?: string }) {
       if (!mock && cur.mediaType === "tv") {
         // Never tracked as a film (the ids overlap, so that would list an
         // unrelated film). Its first untracked season goes in instead.
+        // Finding it takes two requests, so the tap is answered now and the
+        // same toast names the season once it is known.
+        const id = toast("Adding to your watchlist");
         trackFirstUntrackedSeason(cur.tmdbId)
           .then((season) =>
             toast(
               season != null
                 ? `Season ${season} added to your watchlist`
                 : "Every season is already in your library",
-              { action: trackSeasons(cur) }
+              { id, action: trackSeasons(cur) }
             )
           )
-          .catch(() => toast("Could not update that. Try again"));
+          .catch(() => toast("Could not update that. Try again", { id }));
       } else {
         toast("Added to your watchlist");
         if (!mock) {

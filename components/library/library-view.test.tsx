@@ -1,12 +1,15 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mapTrackingEntry } from "@/lib/api/map";
 import { writePref } from "@/lib/local-prefs";
 import type { WireTrackingEntry } from "@/lib/api/wire";
 
 import { LibraryView } from "./library-view";
+
+const toast = vi.fn();
+vi.mock("sonner", () => ({ toast: (...a: unknown[]) => toast(...a) }));
 
 /** A tracking row as GET /v1/tracking returns it. */
 function wire(over: Partial<WireTrackingEntry>): WireTrackingEntry {
@@ -116,5 +119,60 @@ describe("LibraryView list settings", () => {
 
     await userEvent.click(screen.getByRole("tab", { name: "TV" }));
     expect(await completedTitles()).toEqual(["Severance"]);
+  });
+});
+
+describe("LibraryView saves", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    toast.mockReset();
+  });
+
+  const rows = [
+    film(10, "Whiplash", { score: 88 }),
+    film(11, "Arrival", { score: 70 }),
+  ];
+  const load = async () => rows.map(mapTrackingEntry);
+
+  async function order() {
+    const heading = await screen.findByRole("heading", { name: /Completed/ });
+    return within(heading.closest("section")!)
+      .getAllByRole("button", { name: /^Edit / })
+      .map((b) => b.getAttribute("aria-label")!.replace(/^Edit /, ""));
+  }
+
+  async function rescoreArrival() {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit Arrival" }));
+    const score = screen.getByRole("textbox", { name: "Score" });
+    await user.clear(score);
+    await user.type(score, "99");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+  }
+
+  it("shows a save before the request resolves", async () => {
+    // A request that never answers: anything on screen came from the edit.
+    const onSave = vi.fn(() => new Promise<void>(() => {}));
+    render(<LibraryView load={load} onSave={onSave} />);
+    expect(await order()).toEqual(["Whiplash", "Arrival"]);
+
+    await rescoreArrival();
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(await order()).toEqual(["Arrival", "Whiplash"]);
+    expect(toast).not.toHaveBeenCalledWith("Could not update that. Try again");
+  });
+
+  it("rolls a failed save back and says so", async () => {
+    const onSave = vi.fn(() => Promise.reject(new Error("503")));
+    render(<LibraryView load={load} onSave={onSave} />);
+    await order();
+
+    await rescoreArrival();
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith("Could not update that. Try again")
+    );
+    expect(await order()).toEqual(["Whiplash", "Arrival"]);
   });
 });

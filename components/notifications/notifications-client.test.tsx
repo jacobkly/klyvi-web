@@ -10,6 +10,8 @@ import { NotificationsClient } from "./notifications-client";
 import { UnreadProvider } from "./unread-provider";
 
 const session = vi.hoisted(() => ({
+  userId: "u1" as string | null,
+  pathname: "/notifications",
   profile: null as null | {
     notifyPremieres: boolean;
     notifyReleases: boolean;
@@ -17,9 +19,10 @@ const session = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api/http", () => ({ browserFetch: vi.fn(), apiFetch: vi.fn() }));
+vi.mock("next/navigation", () => ({ usePathname: () => session.pathname }));
 vi.mock("@/components/auth/auth-provider", () => ({
   useSession: () => ({
-    user: { id: "u1", email: "a@b.com" },
+    user: session.userId ? { id: session.userId, email: "a@b.com" } : null,
     profile: session.profile,
     loading: false,
     signOut: vi.fn(),
@@ -79,12 +82,41 @@ function serve(...pages: (WireNotificationPage | Error)[]) {
 const markCalls = () =>
   fetchMock.mock.calls.filter(([path]) => path === "/v1/notifications/read");
 
+const listCalls = () =>
+  fetchMock.mock.calls.filter(([path]) =>
+    String(path).startsWith("/v1/notifications?") || path === "/v1/notifications"
+  );
+
 beforeEach(() => {
   fetchMock.mockReset();
   session.profile = null;
+  session.userId = "u1";
+  session.pathname = "/notifications";
 });
 
 describe("NotificationsClient", () => {
+  it("makes one list request, which the menu's dot reads from too", async () => {
+    serve(page());
+    session.userId = null;
+    const { rerender } = render(
+      <UnreadProvider>
+        <NotificationsClient />
+      </UnreadProvider>
+    );
+    // The session resolves after the page mounts.
+    session.userId = "u1";
+    rerender(
+      <UnreadProvider>
+        <NotificationsClient />
+      </UnreadProvider>
+    );
+
+    await screen.findByRole("link", { name: /Tulsa King/ });
+    await waitFor(() => expect(markCalls()).toHaveLength(1));
+    expect(listCalls()).toHaveLength(1);
+    expect(listCalls()[0][0]).toBe("/v1/notifications");
+  });
+
   it("links each row to its season or film", async () => {
     serve(page());
     render(<NotificationsClient />);

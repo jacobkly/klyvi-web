@@ -13,8 +13,6 @@ import { ProfileSection } from "@/components/settings/profile-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { getMe } from "@/lib/api/users";
-import type { UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type SectionId =
@@ -61,35 +59,18 @@ const SECTIONS: {
  * horizontal scrolling tabs.
  */
 export function SettingsClient() {
-  const { user, setProfile } = useSession();
+  // The session already holds the profile, so Settings reads it from there
+  // rather than fetching its own. Saves return the new row, which goes back
+  // into the session, so greetings update without a reload.
+  const {
+    user,
+    profile: me,
+    profileFailed: loadFailed,
+    reloadProfile: retry,
+    setProfile: onProfileSaved,
+  } = useSession();
   const [active, setActive] = React.useState<SectionId>("profile");
-  const [me, setMe] = React.useState<UserProfile | null>(null);
-  const [loadFailed, setLoadFailed] = React.useState(false);
   const avatarSrc = me?.avatarUrl ?? null;
-
-  const fetchMe = React.useCallback(() => {
-    getMe()
-      .then(setMe)
-      .catch(() => setLoadFailed(true));
-  }, []);
-
-  React.useEffect(() => {
-    fetchMe();
-  }, [fetchMe]);
-
-  const retry = () => {
-    setLoadFailed(false);
-    fetchMe();
-  };
-
-  const onProfileSaved = React.useCallback(
-    (u: UserProfile) => {
-      setMe(u);
-      // Push it into the session so greetings update without a reload.
-      setProfile(u);
-    },
-    [setProfile]
-  );
 
   // The profile and notification forms start from the loaded profile. Shown
   // blank after a failed load, a save would overwrite the real one.

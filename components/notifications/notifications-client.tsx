@@ -49,6 +49,12 @@ export function NotificationsClient() {
   const [attempt, setAttempt] = React.useState(0);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [moreFailed, setMoreFailed] = React.useState(false);
+  // Read through a ref: setUnread changes when the session settles, and that
+  // must not fetch the list a second time.
+  const setUnreadRef = React.useRef(setUnread);
+  React.useEffect(() => {
+    setUnreadRef.current = setUnread;
+  }, [setUnread]);
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -61,9 +67,11 @@ export function NotificationsClient() {
           newCount: page.unreadCount,
           hasMore: page.hasMore,
         });
+        // The menu's dot reads its count from this list on this page.
+        setUnreadRef.current(page.unreadCount);
         if (page.unreadCount > 0) {
           markAllNotificationsRead()
-            .then(setUnread)
+            .then((n) => setUnreadRef.current(n))
             .catch(() => {});
         }
       })
@@ -72,7 +80,7 @@ export function NotificationsClient() {
         if (!controller.signal.aborted) setState({ kind: "error" });
       });
     return () => controller.abort();
-  }, [attempt, setUnread]);
+  }, [attempt]);
 
   const retry = () => {
     setState({ kind: "loading" });
