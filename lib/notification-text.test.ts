@@ -47,6 +47,17 @@ describe("noticeText", () => {
   });
 });
 
+describe("noticeText for a policy notice", () => {
+  it.each([
+    ["2026-10-20", "Policy update, today"],
+    ["2026-10-02", "Policy update, Oct 2"],
+  ])("says when one dated %s was posted", (eventDate, text) => {
+    expect(
+      noticeText({ kind: "policy", seasonNumber: null, eventDate }, TODAY)
+    ).toBe(text);
+  });
+});
+
 describe("noticeHref", () => {
   it("opens the season for a premiere", () => {
     expect(
@@ -59,4 +70,19 @@ describe("noticeHref", () => {
       noticeHref({ kind: "film_release", tmdbId: 791523, seasonNumber: null })
     ).toBe("/movie/791523");
   });
+
+  it("opens the policy page a policy notice names", () => {
+    expect(
+      noticeHref({ kind: "policy", tmdbId: null, seasonNumber: null, link: "/privacy" })
+    ).toBe("/privacy");
+  });
+
+  it.each([null, "https://example.com", "//example.com", "terms"])(
+    "falls back to the terms for a link that isn't a site path: %s",
+    (link) => {
+      expect(
+        noticeHref({ kind: "policy", tmdbId: null, seasonNumber: null, link })
+      ).toBe("/terms");
+    }
+  );
 });

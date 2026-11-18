@@ -38,6 +38,7 @@ function notice(over: Partial<WireNotification> = {}): WireNotification {
     title: "Tulsa King",
     poster_path: null,
     event_date: "2026-10-16",
+    link: null,
     created_at: "2026-10-09T03:00:00Z",
     read_at: null,
     ...over,
@@ -96,6 +97,33 @@ describe("NotificationsClient", () => {
       "href",
       "/movie/791523"
     );
+  });
+
+  it("links a policy notice to its page and shows its whole text", async () => {
+    const text =
+      "Our terms change on 1 March. We now say how long server logs are kept.";
+    serve(
+      page({
+        notifications: [
+          notice({
+            id: 9,
+            kind: "policy",
+            media_type: null,
+            tmdb_id: null,
+            season_number: null,
+            title: text,
+            event_date: "2026-10-01",
+            link: "/terms",
+          }),
+        ],
+      })
+    );
+    render(<NotificationsClient />);
+
+    const link = await screen.findByRole("link", { name: /Our terms change/ });
+    expect(link).toHaveAttribute("href", "/terms");
+    expect(within(link).getByText(text)).not.toHaveClass("truncate");
+    expect(link).toHaveTextContent(/Policy update/);
   });
 
   it("keeps the server's order, newest first", async () => {

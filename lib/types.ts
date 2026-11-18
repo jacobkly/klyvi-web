@@ -134,14 +134,18 @@ export type UserProfile = {
  */
 export type AppNotification = {
   id: number;
-  kind: "season_premiere" | "film_release";
-  tmdbId: number;
-  /** Null for a film. */
+  kind: "season_premiere" | "film_release" | "policy";
+  /** Null for a policy notice. */
+  tmdbId: number | null;
+  /** Null for a film or a policy notice. */
   seasonNumber: number | null;
+  /** The title's name, or a policy notice's whole text. */
   title: string;
   posterPath: string | null;
-  /** Plain "YYYY-MM-DD". */
+  /** Plain "YYYY-MM-DD". A policy notice's is the day it was posted. */
   eventDate: string;
+  /** The site path a policy notice opens. Null for the other kinds. */
+  link: string | null;
   readAt: string | null;
 };
 

@@ -23,7 +23,10 @@ const COLUMNS: { heading: string; links: [string, string][] }[] = [
   },
   {
     heading: "Support",
-    links: [["Settings", "/settings"]],
+    links: [
+      ["Settings", "/settings"],
+      ["Contact", "mailto:hello@klyvi.net"],
+    ],
   },
 ];
 

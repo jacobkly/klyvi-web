@@ -20,6 +20,7 @@ const PAGE: WireNotificationPage = {
       title: "Grey's Anatomy",
       poster_path: "/grey.jpg",
       event_date: "2026-10-15",
+      link: null,
       created_at: "2026-10-09T03:00:00Z",
       read_at: null,
     },
@@ -32,8 +33,22 @@ const PAGE: WireNotificationPage = {
       title: "Wildwood",
       poster_path: null,
       event_date: "2026-10-19",
+      link: null,
       created_at: "2026-10-19T03:00:00Z",
       read_at: "2026-10-19T12:00:00Z",
+    },
+    {
+      id: 1,
+      kind: "policy",
+      media_type: null,
+      tmdb_id: null,
+      season_number: null,
+      title: "Our terms change on 1 March.",
+      poster_path: null,
+      event_date: "2026-10-01",
+      link: "/terms",
+      created_at: "2026-10-01T03:00:00Z",
+      read_at: null,
     },
   ],
   unread_count: 1,
@@ -58,10 +73,17 @@ describe("getNotifications", () => {
       title: "Grey's Anatomy",
       posterPath: "/grey.jpg",
       eventDate: "2026-10-15",
+      link: null,
       readAt: null,
     });
     expect(page.notifications[1].seasonNumber).toBeNull();
     expect(page.notifications[1].readAt).toBe("2026-10-19T12:00:00Z");
+    expect(page.notifications[2]).toMatchObject({
+      kind: "policy",
+      tmdbId: null,
+      title: "Our terms change on 1 March.",
+      link: "/terms",
+    });
   });
 
   it("asks for the page it was given", async () => {

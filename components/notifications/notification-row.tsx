@@ -1,4 +1,4 @@
-import { Film, Tv } from "lucide-react";
+import { FileText, Film, Tv } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -7,10 +7,18 @@ import { tmdbImage } from "@/lib/tmdb-image";
 import type { AppNotification } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/** A notice: poster, title, what happened and when, opening the title's page. */
+/**
+ * A notice: poster, title, what happened and when, opening the title's page. A
+ * policy notice has no poster, shows its whole text and opens the policy page.
+ */
 export function NotificationRow({ notice }: { notice: AppNotification }) {
   const unread = notice.readAt === null;
-  const Fallback = notice.kind === "film_release" ? Film : Tv;
+  const policy = notice.kind === "policy";
+  const Fallback = policy
+    ? FileText
+    : notice.kind === "film_release"
+      ? Film
+      : Tv;
 
   return (
     <li>
@@ -43,7 +51,8 @@ export function NotificationRow({ notice }: { notice: AppNotification }) {
         <div className="min-w-0 flex-1">
           <p
             className={cn(
-              "truncate text-sm",
+              "text-sm",
+              policy ? "text-pretty" : "truncate",
               unread
                 ? "font-medium text-foreground"
                 : "font-normal text-muted-foreground"

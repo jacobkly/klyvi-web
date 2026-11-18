@@ -309,6 +309,7 @@ export function mapNotification(w: WireNotification): AppNotification {
     title: w.title,
     posterPath: orNull(w.poster_path),
     eventDate: w.event_date,
+    link: w.link ?? null,
     readAt: w.read_at,
   };
 }

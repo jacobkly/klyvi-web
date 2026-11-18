@@ -1,6 +1,8 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+
+import { SiteFooter } from "@/components/klyvi/site-footer";
 
 import AttributionPage from "./attribution/page";
 import CopyrightPage from "./copyright/page";
@@ -47,8 +49,54 @@ describe.each<[string, ComponentType]>([
     expect(links[0].getAttribute("href")).toBe("mailto:hello@klyvi.net");
   });
 
-  it("carries the new updated date", () => {
-    expect(textOf(Page)).toContain("Updated 4 November 2026");
+  it("says when it was last updated", () => {
+    expect(textOf(Page)).toMatch(/Last updated \d{1,2} [A-Z][a-z]+ 2026/);
+  });
+});
+
+describe.each<[string, ComponentType]>([
+  ["privacy", PrivacyPage],
+  ["terms", TermsPage],
+])("the %s page's layout", (_name, Page) => {
+  it("carries this round's date", () => {
+    expect(textOf(Page)).toContain("Last updated 18 November 2026");
+  });
+
+  it("numbers its sections and lists them in a contents list", () => {
+    const { container } = render(<Page />);
+    const headings = screen.getAllByRole("heading", { level: 2 });
+    const contents = screen.getByRole("navigation", { name: "Contents" });
+    const links = within(contents).getAllByRole("link");
+
+    expect(links).toHaveLength(headings.length);
+    headings.forEach((heading, i) => {
+      expect(heading.textContent).toMatch(new RegExp(`^${i + 1}\\. `));
+      const href = links[i].getAttribute("href") ?? "";
+      expect(href).toBe(`#${heading.id}`);
+      expect(container.querySelector(href)).toBe(heading);
+    });
+  });
+
+  it("promises notice in the app before a material change", () => {
+    const text = textOf(Page);
+    expect(text).toMatch(
+      /date at the top changes with every edit/i
+    );
+    expect(text).toMatch(
+      /material change.{0,80}notice in the app before it takes effect/i
+    );
+    expect(text).toMatch(/keep using Klyvi after that.{0,40}accept/i);
+  });
+});
+
+describe("the footer", () => {
+  it("has a Contact link under Support", () => {
+    render(<SiteFooter />);
+    const support = screen.getByRole("navigation", { name: "Support" });
+    expect(within(support).getByRole("link", { name: "Contact" })).toHaveAttribute(
+      "href",
+      "mailto:hello@klyvi.net"
+    );
   });
 });
 
@@ -92,10 +140,14 @@ describe("the privacy page", () => {
     expect(text).not.toMatch(/logs? (?:are|is) kept for \d+ days/i);
   });
 
-  it("does not promise that deleting removes every copy at once", () => {
+  it("makes no backup claim, since Klyvi keeps none", () => {
+    expect(privacy()).not.toMatch(/backup/i);
+  });
+
+  it("says deleting removes your data at once, logs aside", () => {
     const text = privacy();
-    expect(text).not.toContain("Deleting your account deletes your data.");
-    expect(text).toMatch(/backups?.{0,120}14 days/i);
+    expect(text).toMatch(/deleting your account removes.{0,200}at once/i);
+    expect(text).toMatch(/only thing left.{0,80}log lines.{0,80}30 MB/i);
   });
 
   it("describes sign-in cookies rather than one session cookie", () => {

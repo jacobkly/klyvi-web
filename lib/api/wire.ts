@@ -196,16 +196,20 @@ export type WireUser = {
 
 export type WireNotification = {
   id: number;
-  kind: "season_premiere" | "film_release";
-  /** "tv" for a premiere, "movie" for a film. */
-  media_type: "tv" | "movie";
-  tmdb_id: number;
+  kind: "season_premiere" | "film_release" | "policy";
+  /** "tv" for a premiere, "movie" for a film, null for a policy notice. */
+  media_type: "tv" | "movie" | null;
+  /** Null for a policy notice. */
+  tmdb_id: number | null;
   season_number: number | null;
+  /** The title's name, or a policy notice's whole text. */
   title: string;
   /** Null when the title has since left the catalog cache. */
   poster_path: string | null;
   /** Plain "YYYY-MM-DD", no time zone. */
   event_date: string;
+  /** The site path a policy notice opens, such as "/terms". Null otherwise. */
+  link: string | null;
   created_at: string;
   read_at: string | null;
 };

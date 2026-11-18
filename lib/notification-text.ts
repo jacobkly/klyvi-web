@@ -28,6 +28,10 @@ export function noticeText(
   const diff = startOfDay(day) - startOfDay(today);
   const date = shortDate(day, today);
 
+  if (notice.kind === "policy") {
+    return diff === 0 ? "Policy update, today" : `Policy update, ${date}`;
+  }
+
   if (notice.kind === "film_release") {
     if (diff === 0) return "Film, out today";
     return diff > 0 ? `Film, comes out ${date}` : `Film, came out ${date}`;
@@ -38,13 +42,22 @@ export function noticeText(
   return diff > 0 ? `${season} premieres ${date}` : `${season} premiered ${date}`;
 }
 
-/** Where a notice opens: the season that premieres, or the film. */
+/**
+ * Where a notice opens: the season that premieres, the film, or the page a
+ * policy notice names. A policy link that isn't a path on this site falls back
+ * to the terms.
+ */
 export function noticeHref(
-  notice: Pick<AppNotification, "kind" | "tmdbId" | "seasonNumber">
+  notice: Pick<AppNotification, "kind" | "tmdbId" | "seasonNumber"> &
+    Partial<Pick<AppNotification, "link">>
 ): string {
+  if (notice.kind === "policy") {
+    const link = notice.link ?? "";
+    return link.startsWith("/") && !link.startsWith("//") ? link : "/terms";
+  }
   return mediaHref({
     mediaType: notice.kind === "film_release" ? "movie" : "season",
-    tmdbId: notice.tmdbId,
+    tmdbId: notice.tmdbId ?? 0,
     seasonNumber: notice.seasonNumber ?? undefined,
   });
 }
