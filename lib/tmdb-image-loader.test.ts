@@ -65,4 +65,13 @@ describe("tmdbImageLoader", () => {
       );
     }
   });
+
+  it("keeps the small sizes in a poster card's srcset", () => {
+    // For a `vw` sizes value, next/image drops every width below the
+    // smallest device size times the smallest vw. The poster card's
+    // smallest is 24vw, and a 144px rail card needs w154 or w185 to stay
+    // within twice its slot.
+    const { deviceSizes = [] } = nextConfig.images ?? {};
+    expect(Math.min(...deviceSizes) * 0.24).toBeLessThanOrEqual(154);
+  });
 });

@@ -22,9 +22,11 @@ const nextConfig: NextConfig = {
     loader: "custom",
     loaderFile: "./lib/tmdb-image-loader.ts",
     // Both lists are TMDB widths, so every srcset entry maps to exactly the
-    // size it names.
-    imageSizes: [92, 154, 185, 300, 342, 500],
-    deviceSizes: [780, 1280],
+    // size it names. For a `vw` sizes value Next drops every width below
+    // deviceSizes[0] times the smallest vw, so deviceSizes starts at 500:
+    // starting at 780 dropped w154 and w185, and a 144px card got w300.
+    imageSizes: [92, 154, 185, 300, 342],
+    deviceSizes: [500, 780, 1280],
   },
 };
 

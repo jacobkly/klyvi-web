@@ -77,6 +77,8 @@ function PosterCard({
   progress,
   score,
   actions,
+  eager = false,
+  sizes = "(max-width: 640px) 38vw, (max-width: 1024px) 24vw, 180px",
   className,
 }: {
   media: MediaSummary;
@@ -87,6 +89,11 @@ function PosterCard({
   score?: number | null;
   /** Quick actions for the corner menu. None, no menu. */
   actions?: PosterAction[];
+  /** In the first screen: load now, ahead of the lazy ones below. */
+  eager?: boolean;
+  /** The slot's width for the srcset. The default fits rails and grids:
+   *  2.4 to 3 across on a phone, 4 to 5 on a tablet, 180px above that. */
+  sizes?: string;
   className?: string;
 }) {
   const href = mediaHref(media);
@@ -126,7 +133,9 @@ function PosterCard({
               src={src}
               alt=""
               fill
-              sizes="(max-width: 640px) 45vw, (max-width: 1024px) 25vw, 180px"
+              sizes={sizes}
+              loading={eager ? "eager" : "lazy"}
+              fetchPriority={eager ? "high" : undefined}
               className="object-cover"
             />
           ) : (

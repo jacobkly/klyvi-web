@@ -25,6 +25,22 @@ describe("OnboardingBackdrop", () => {
   });
 });
 
+describe("OnboardingBackdrop weight", () => {
+  // The wall sits at 35% opacity behind a blur and the overlay, so it is
+  // almost invisible. It must not cost 40 poster requests.
+  it("asks for at most a dozen posters, however wide the wall", async () => {
+    const { container } = render(<OnboardingBackdrop />);
+    await waitFor(() =>
+      expect(container.querySelectorAll("img").length).toBeGreaterThan(0)
+    );
+    const srcs = new Set(
+      [...container.querySelectorAll("img")].map((i) => i.getAttribute("src"))
+    );
+    expect(srcs.size).toBeLessThanOrEqual(12);
+    expect(container.querySelectorAll("img").length).toBeGreaterThan(12);
+  });
+});
+
 describe("OnboardingLayout", () => {
   it("renders the step inside the elevated container over the backdrop", () => {
     render(

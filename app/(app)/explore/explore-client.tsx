@@ -352,8 +352,8 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
           Hidden, not unmounted, during a search: clearing the query brings
           the rails back as they were, with no refetch. */}
       <div hidden={active} className="mt-10 flex flex-col gap-10">
-        {RAILS.map((rail) => (
-          <CatalogRail key={rail.slug} rail={rail} />
+        {RAILS.map((rail, i) => (
+          <CatalogRail key={rail.slug} rail={rail} first={i === 0} />
         ))}
 
         {/* Top 100 preview, live from the rankings endpoint. */}
@@ -465,7 +465,10 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
  * hold back the others and a failed one says so in place while the rest
  * stay up.
  */
-function CatalogRail({ rail }: { rail: Rail }) {
+/** Cards the first rail shows on a wide screen before it scrolls. */
+const FIRST_SCREEN = 7;
+
+function CatalogRail({ rail, first }: { rail: Rail; first: boolean }) {
   const [state, setState] = React.useState<RailState>({ kind: "loading" });
   /** Bumped by Try again to refetch just this rail. */
   const [attempt, setAttempt] = React.useState(0);
@@ -514,11 +517,12 @@ function CatalogRail({ rail }: { rail: Rail }) {
         ? Array.from({ length: 7 }).map((_, i) => (
             <PosterCardSkeleton key={i} variant="below" />
           ))
-        : state.items.map((m) => (
+        : state.items.map((m, i) => (
             <PosterCard
               key={`${m.mediaType}-${m.tmdbId}`}
               media={m}
               variant="below"
+              eager={first && i < FIRST_SCREEN}
             />
           ))}
     </MediaRail>

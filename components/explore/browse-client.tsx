@@ -126,7 +126,9 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
       const rect = el.getBoundingClientRect();
       // rect.top > 0 skips the synthetic zero-rect environments (jsdom);
       // loadMore is guarded (done / loadingMore) so an eager call is safe.
-      if (rect.top > 0 && rect.top <= window.innerHeight + 600) {
+      // Two screens ahead, so the next page is usually in before the
+      // reader reaches the end.
+      if (rect.top > 0 && rect.top <= window.innerHeight * 3) {
         loadMore();
       }
     };
@@ -185,6 +187,11 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
         {items.map((m) => (
           <PosterCard key={keyOf(m)} media={m} variant="compact" />
         ))}
+        {loadingMore
+          ? Array.from({ length: 8 }).map((_, i) => (
+              <PosterCardSkeleton key={`more-${i}`} variant="compact" />
+            ))
+          : null}
       </div>
 
       <div ref={sentinelRef} aria-hidden="true" />
@@ -200,7 +207,7 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
             onClick={loadMore}
             disabled={loadingMore}
           >
-            {loadingMore ? "Loading" : "Load more"}
+            Load more
           </Button>
         )}
       </div>

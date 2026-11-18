@@ -15,6 +15,16 @@ import { tmdbImage } from "@/lib/tmdb-image";
  * any fetch failure the local pool stands in, so the backdrop can never
  * block or break onboarding.
  */
+/** Unique posters per row, and how many slots each row fills. The wall is
+ *  dim and blurred, so a few posters repeated read the same as many. */
+const PER_ROW = 4;
+const SLOTS = 14;
+
+function repeatRow(posters: string[]): string[] {
+  if (posters.length === 0) return [];
+  return Array.from({ length: SLOTS }, (_, i) => posters[i % posters.length]);
+}
+
 export function OnboardingBackdrop() {
   const [rows, setRows] = React.useState<string[][]>([]);
 
@@ -31,7 +41,7 @@ export function OnboardingBackdrop() {
             list
               .map((m) => m.posterPath)
               .filter((p): p is string => p != null)
-              .slice(0, 14)
+              .slice(0, PER_ROW)
           )
         )
       )
@@ -39,7 +49,7 @@ export function OnboardingBackdrop() {
         const pool = MOCK_POOL.filter((p) => p.posterPath).map(
           (p) => p.posterPath as string
         );
-        setRows([pool.slice(0, 14), pool.slice(14, 28), pool.slice(0, 14)]);
+        setRows([0, 1, 2].map((r) => pool.slice(r * PER_ROW, (r + 1) * PER_ROW)));
       });
     return () => ac.abort();
   }, []);
@@ -60,7 +70,7 @@ export function OnboardingBackdrop() {
               "flex shrink-0 gap-4 " + (i % 2 === 1 ? "-ml-24" : "-ml-8")
             }
           >
-            {row.map((poster, j) => (
+            {repeatRow(row).map((poster, j) => (
               <div
                 key={`${poster}-${j}`}
                 className="relative aspect-[2/3] w-32 shrink-0 overflow-hidden rounded-art xl:w-36"
@@ -69,7 +79,7 @@ export function OnboardingBackdrop() {
                   src={tmdbImage(poster)}
                   alt=""
                   fill
-                  sizes="144px"
+                  sizes="92px"
                   className="object-cover"
                 />
               </div>

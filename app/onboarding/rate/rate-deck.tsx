@@ -264,7 +264,7 @@ export function RateDeck() {
               alt=""
               fill
               priority
-              sizes="288px"
+              sizes="(min-width: 640px) 288px, 256px"
               className="object-cover"
             />
           ) : (
@@ -297,7 +297,7 @@ export function RateDeck() {
                 alt=""
                 width={288}
                 height={432}
-                sizes="288px"
+                sizes="(min-width: 640px) 288px, 256px"
                 loading="eager"
               />
             ) : null

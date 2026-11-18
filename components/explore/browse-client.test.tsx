@@ -91,4 +91,22 @@ describe("BrowseClient", () => {
     );
     expect(await screen.findByText("Film 9")).toBeInTheDocument();
   });
+
+  it("holds the next page's place with skeleton cards, not a Loading line", async () => {
+    getMovieList
+      .mockResolvedValueOnce([media(1), media(2)])
+      .mockReturnValueOnce(new Promise(() => {}));
+
+    const user = userEvent.setup();
+    const { container } = render(<BrowseClient category={CATEGORY} />);
+    await screen.findByText("Film 1");
+    const before = container.querySelectorAll('[class*="aspect-[2/3]"]').length;
+
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+
+    expect(screen.queryByText("Loading")).toBeNull();
+    expect(
+      container.querySelectorAll('[class*="aspect-[2/3]"]').length
+    ).toBeGreaterThan(before);
+  });
 });

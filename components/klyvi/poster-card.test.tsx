@@ -171,4 +171,22 @@ describe("PosterCard", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Completed" }));
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
+
+  it("loads lazily at a rail-sized width by default", () => {
+    const { container } = render(<PosterCard media={media} variant="below" />);
+    const img = container.querySelector("img")!;
+    expect(img).toHaveAttribute("loading", "lazy");
+    expect(img.getAttribute("sizes")).toBe(
+      "(max-width: 640px) 38vw, (max-width: 1024px) 24vw, 180px"
+    );
+  });
+
+  it("jumps the queue when it is in the first screen", () => {
+    const { container } = render(
+      <PosterCard media={media} variant="below" eager />
+    );
+    const img = container.querySelector("img")!;
+    expect(img).toHaveAttribute("loading", "eager");
+    expect(img).toHaveAttribute("fetchpriority", "high");
+  });
 });
