@@ -10,10 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteAvatar, updateMe, uploadAvatar } from "@/lib/api/users";
 import { AvatarDecodeError, compressAvatar } from "@/lib/image/compress";
-import {
-  validateAvatarFile,
-  validateBirthday,
-} from "@/lib/local-profile";
+import { validateAvatarFile } from "@/lib/local-profile";
 import type { UserProfile } from "@/lib/types";
 import {
   USERNAME_COOLDOWN_DAYS,
@@ -47,10 +44,6 @@ export function ProfileSection({
   const [bio, setBio] = React.useState(me?.bio ?? "");
   const [saving, setSaving] = React.useState(false);
   const [fieldError, setFieldError] = React.useState<string | null>(null);
-  const [birthday, setBirthday] = React.useState(me?.birthday ?? "");
-  const [birthdayError, setBirthdayError] = React.useState<string | null>(
-    null
-  );
   const [avatarBusy, setAvatarBusy] = React.useState(false);
   const avatar = me?.avatarUrl ?? null;
   const fileRef = React.useRef<HTMLInputElement>(null);
@@ -98,7 +91,6 @@ export function ProfileSection({
       seeded.current = true;
       setUsername(me.username);
       setBio(me.bio ?? "");
-      setBirthday(me.birthday ?? "");
     }
   }, [me]);
 
@@ -116,17 +108,9 @@ export function ProfileSection({
       setFieldError(formatError);
       return;
     }
-    if (birthday) {
-      const problem = validateBirthday(birthday);
-      if (problem) {
-        setBirthdayError(problem);
-        return;
-      }
-    }
-    setBirthdayError(null);
     setFieldError(null);
     setSaving(true);
-    updateMe({ username: name, bio, birthday: birthday || null })
+    updateMe({ username: name, bio })
       .then((u) => {
         onSaved(u);
         toast("Saved");
@@ -235,32 +219,6 @@ export function ProfileSection({
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={3}
-            />
-          )}
-        </FormField>
-        <FormField
-          id="st-birthday"
-          label="Birthday"
-          error={birthdayError ?? undefined}
-          hint="Optional. Shown on your profile."
-        >
-          {(field) => (
-            <Input
-              {...field}
-              type="date"
-              value={birthday}
-              onChange={(e) => {
-                setBirthday(e.target.value);
-                if (birthdayError)
-                  setBirthdayError(
-                    e.target.value ? validateBirthday(e.target.value) : null
-                  );
-              }}
-              onBlur={(e) =>
-                setBirthdayError(
-                  e.target.value ? validateBirthday(e.target.value) : null
-                )
-              }
             />
           )}
         </FormField>

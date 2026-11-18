@@ -31,7 +31,9 @@ export const DEFAULT_PREFS: Prefs = {
   textSize: "default",
   reduceMotion: false,
   scoringSystem: "hundred",
-  listOrder: "updated",
+  // Score first: the best of what you have watched at the top, the order a
+  // taste library wants and the one the library used before this setting.
+  listOrder: "score",
   combineLists: true,
   libraryView: "grid",
   findMedia: "all",

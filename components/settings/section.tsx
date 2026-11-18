@@ -51,14 +51,7 @@ export function SettingRow({
   );
 }
 
-/**
- * The one honest line for anything that holds local state but does not
- * persist to the backend yet. One per surface, not one per control.
- */
+/** A quiet line about where a surface's settings are kept. One per surface. */
 export function SettingsNote({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs text-muted-foreground">
-      {children ?? "Saved on this device. Syncing arrives with a coming update."}
-    </p>
-  );
+  return <p className="text-xs text-muted-foreground">{children}</p>;
 }

@@ -53,6 +53,7 @@ function FilterPanel({
   onSortChange,
   counts,
   onSurprise,
+  showType = true,
 }: {
   filters: LibraryFilters;
   onFiltersChange: (f: LibraryFilters) => void;
@@ -61,6 +62,8 @@ function FilterPanel({
   onSortChange: (key: LibrarySortKey, order: SortOrder) => void;
   counts: Record<TrackingStatus | "all", number>;
   onSurprise: () => void;
+  /** Off when the library is already split into Films and TV tabs. */
+  showType?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -99,28 +102,30 @@ function FilterPanel({
         })}
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="lf-type">Type</Label>
-        <Select
-          value={filters.type}
-          onValueChange={(v) =>
-            onFiltersChange({
-              ...filters,
-              type: v as LibraryFilters["type"],
-            })
-          }
-          items={{ all: "All", movie: "Films", season: "TV" }}
-        >
-          <SelectTrigger id="lf-type" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="movie">Films</SelectItem>
-            <SelectItem value="season">TV</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {showType ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="lf-type">Type</Label>
+          <Select
+            value={filters.type}
+            onValueChange={(v) =>
+              onFiltersChange({
+                ...filters,
+                type: v as LibraryFilters["type"],
+              })
+            }
+            items={{ all: "All", movie: "Films", season: "TV" }}
+          >
+            <SelectTrigger id="lf-type" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="movie">Films</SelectItem>
+              <SelectItem value="season">TV</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="lf-sort">Sort by</Label>

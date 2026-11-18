@@ -57,3 +57,29 @@ export function sortLibrary(
     }
   });
 }
+
+/**
+ * The library's sort before you pick one, from Settings' default list order.
+ * Titles read A to Z, everything else best or newest first.
+ */
+export function startingSort(
+  listOrder: "updated" | "title" | "score" | "added"
+): { key: LibrarySortKey; order: SortOrder } {
+  return { key: listOrder, order: listOrder === "title" ? "asc" : "desc" };
+}
+
+/**
+ * Recent activity on home and the profile: the newest updates first, minus
+ * the statuses switched off under Settings, List activity creation. A status
+ * with no setting yet counts as on.
+ */
+export function recentActivity(
+  entries: LibraryEntry[],
+  feed: Partial<Record<TrackingStatus, boolean>>,
+  limit: number
+): LibraryEntry[] {
+  return entries
+    .filter((e) => feed[e.status] !== false)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, limit);
+}

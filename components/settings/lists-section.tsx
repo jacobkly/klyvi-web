@@ -128,7 +128,7 @@ export function ListsSection() {
       <FieldStack>
         <SettingRow
           title="Combine films and TV"
-          description="One library list instead of separate tabs."
+          description="One library list. Turned off, the library splits into Films and TV tabs."
         >
           <Switch
             checked={combine}
@@ -205,7 +205,8 @@ export function ListsSection() {
             List activity creation
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Which list updates create an entry on your activity feed.
+            Which statuses show up in recent activity on home and your
+            profile.
           </p>
           <div className="mt-3 flex flex-col gap-2.5">
             {ACTIVITY.map((a) => {
@@ -231,8 +232,7 @@ export function ListsSection() {
         </div>
 
         <SettingsNote>
-          Saved on this device. List preferences sync when the settings
-          endpoints ship.
+          Saved to your account, so every browser you sign in on matches.
         </SettingsNote>
 
         <div className="rounded-lg border border-destructive/40 p-5">

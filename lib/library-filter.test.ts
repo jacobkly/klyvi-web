@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { filterLibrary, sortLibrary, type LibraryFilters } from "./library-filter";
+import {
+  filterLibrary,
+  recentActivity,
+  sortLibrary,
+  startingSort,
+  type LibraryFilters,
+} from "./library-filter";
 import type { LibraryEntry } from "./types";
 
 function entry(over: Partial<LibraryEntry>): LibraryEntry {
@@ -97,5 +103,32 @@ describe("sortLibrary", () => {
     const before = entries.map((e) => e.mediaId);
     sortLibrary(entries, "title", "asc");
     expect(entries.map((e) => e.mediaId)).toEqual(before);
+  });
+});
+
+describe("startingSort", () => {
+  it("reads the default list order, titles A to Z and the rest newest or best first", () => {
+    expect(startingSort("title")).toEqual({ key: "title", order: "asc" });
+    expect(startingSort("score")).toEqual({ key: "score", order: "desc" });
+    expect(startingSort("updated")).toEqual({ key: "updated", order: "desc" });
+    expect(startingSort("added")).toEqual({ key: "added", order: "desc" });
+  });
+});
+
+describe("recentActivity", () => {
+  it("lists the newest updates first, up to the limit", () => {
+    const got = recentActivity(entries, {}, 2);
+    expect(got.map((e) => e.title)).toEqual(["Severance", "Parasite"]);
+  });
+
+  it("leaves out the statuses switched off in settings", () => {
+    const got = recentActivity(entries, { watching: false, planning: false }, 10);
+    expect(got.map((e) => e.status)).not.toContain("watching");
+    expect(got.map((e) => e.status)).not.toContain("planning");
+    expect(got).toHaveLength(3);
+  });
+
+  it("keeps a status that has no setting yet", () => {
+    expect(recentActivity(entries, { completed: true }, 10)).toHaveLength(entries.length);
   });
 });

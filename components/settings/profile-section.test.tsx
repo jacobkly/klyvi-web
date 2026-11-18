@@ -46,7 +46,7 @@ function me(avatarUrl: string | null = null): UserProfile {
   };
 }
 
-describe("ProfileSection avatar and birthday", () => {
+describe("ProfileSection avatar and profile fields", () => {
   beforeEach(() => {
     updateMe.mockClear();
     uploadAvatar.mockClear();
@@ -115,18 +115,18 @@ describe("ProfileSection avatar and birthday", () => {
     expect(uploadAvatar).not.toHaveBeenCalled();
   });
 
-  it("sends the birthday to the API on save", async () => {
+  // Klyvi has no use for a birthday, so the form neither asks for one nor
+  // sends one. Leaving the key out keeps whatever the account already has.
+  it("has no birthday field and leaves it out of the save", async () => {
     const user = userEvent.setup();
     updateMe.mockClear();
     render(<ProfileSection me={me()} onSaved={() => {}} />);
 
-    await user.type(screen.getByLabelText(/birthday/i), "1999-04-12");
+    expect(screen.queryByLabelText(/birthday/i)).toBeNull();
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    await waitFor(() =>
-      expect(updateMe).toHaveBeenCalledWith(
-        expect.objectContaining({ birthday: "1999-04-12" })
-      )
-    );
+    await waitFor(() => expect(updateMe).toHaveBeenCalledTimes(1));
+    const [patch] = updateMe.mock.lastCall as unknown as [object];
+    expect(patch).not.toHaveProperty("birthday");
   });
 });

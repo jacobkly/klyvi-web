@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   AVATAR_MAX_SOURCE_BYTES,
   validateAvatarFile,
-  validateBirthday,
 } from "./local-profile";
 
 describe("validateAvatarFile", () => {
@@ -27,13 +26,5 @@ describe("validateAvatarFile", () => {
 
   it("accepts a small png", () => {
     expect(validateAvatarFile({ type: "image/png", size: 1024 })).toBeNull();
-  });
-});
-
-describe("validateBirthday", () => {
-  it("rejects future dates and accepts past ones", () => {
-    expect(validateBirthday("2900-01-01")).toMatch(/future/i);
-    expect(validateBirthday("1999-04-12")).toBeNull();
-    expect(validateBirthday("not-a-date")).toMatch(/date/i);
   });
 });

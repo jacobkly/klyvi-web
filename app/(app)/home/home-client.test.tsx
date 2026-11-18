@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mapTrackingEntry } from "@/lib/api/map";
+import { writePref } from "@/lib/local-prefs";
 import type { WireTrackingEntry } from "@/lib/api/wire";
 import type { LibraryEntry, Scored } from "@/lib/types";
 
@@ -90,6 +91,20 @@ describe("HomeClient", () => {
     // has been written yet.
     expect(screen.queryByText(/Nothing to pick from yet/)).toBeNull();
     expect(screen.queryByText(/Could not load your picks/)).toBeNull();
+  });
+
+  it("leaves the statuses switched off in settings out of recent activity", async () => {
+    writePref("activityFeed", { planning: false });
+    listTracking.mockResolvedValue([
+      entry({ mediaId: 1, mediaType: "movie", title: "Dune", status: "planning" }),
+      entry({ mediaId: 2, mediaType: "movie", title: "Arrival", status: "completed" }),
+    ]);
+    render(<HomeClient />);
+
+    const heading = await screen.findByRole("heading", { name: "Recent activity" });
+    const section = heading.closest("section")!;
+    expect(await within(section).findByText(/Arrival/)).toBeInTheDocument();
+    expect(within(section).queryByText(/Dune/)).toBeNull();
   });
 
   it("shows a season's progress against its episode total", async () => {

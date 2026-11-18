@@ -8,6 +8,8 @@ import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { recentActivity } from "@/lib/library-filter";
+import { usePref } from "@/lib/local-prefs";
 import {
   STATUS_LABELS,
   type LibraryEntry,
@@ -33,6 +35,7 @@ function relativeTime(iso: string): string {
 
 export function ProfileOverview() {
   const data = useProfile();
+  const [activityFeed] = usePref("activityFeed");
   if (!data) return null;
   const { entries, taste, stats } = data;
 
@@ -72,9 +75,7 @@ export function ProfileOverview() {
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
     .slice(0, 8);
 
-  const activity = [...entries]
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
-    .slice(0, 8);
+  const activity = recentActivity(entries, activityFeed, 8);
 
   const topGenres = stats?.genres.slice(0, 5) ?? [];
   const maxGenre = Math.max(1, ...topGenres.map((g) => g.count));

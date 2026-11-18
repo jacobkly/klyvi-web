@@ -15,9 +15,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   filterLibrary,
   sortLibrary,
+  startingSort,
   type LibraryFilters,
   type LibrarySortKey,
   type SortOrder,
@@ -27,6 +29,7 @@ import {
   STATUS_LABELS,
   STATUS_VERBS,
   type LibraryEntry,
+  type MediaType,
   type TrackingStatus,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -78,10 +81,19 @@ function LibraryView({
     type: "all",
     query: "",
   });
-  // Score, highest first, is the default a taste library wants: the best of
-  // what you have watched at the top rather than the most recently touched.
-  const [sortKey, setSortKey] = React.useState<LibrarySortKey>("score");
-  const [sortOrder, setSortOrder] = React.useState<SortOrder>("desc");
+  // Settings' default list order is the starting sort, used until a pick
+  // here. Derived rather than copied into state, so the stored pref still
+  // lands after hydration (the server snapshot is the default).
+  const [listOrder] = usePref("listOrder");
+  const [picked, setPicked] = React.useState<{
+    key: LibrarySortKey;
+    order: SortOrder;
+  } | null>(null);
+  const { key: sortKey, order: sortOrder } = picked ?? startingSort(listOrder);
+  // Combine films and TV off: Films and TV tabs, and each tab is its own
+  // library (counts, statuses, filters), so the Type filter steps aside.
+  const [combine] = usePref("combineLists");
+  const [tab, setTab] = React.useState<MediaType>("movie");
   // Remembered across visits: the density choice is a preference, not a
   // per-session toggle, so it persists (and syncs) like the theme settings.
   const [view, setView] = usePref("libraryView");
@@ -110,12 +122,17 @@ function LibraryView({
     setAttempt((n) => n + 1);
   }
 
-  const entries = state.phase === "ready" ? state.entries : NO_ENTRIES;
+  const all = state.phase === "ready" ? state.entries : NO_ENTRIES;
+  const entries = React.useMemo(
+    () => (combine ? all : all.filter((e) => e.mediaType === tab)),
+    [all, combine, tab]
+  );
   const filtered = sortLibrary(
-    filterLibrary(entries, filters),
+    filterLibrary(entries, combine ? filters : { ...filters, type: "all" }),
     sortKey,
     sortOrder
   );
+  const split = combine ? null : { tab, onTabChange: setTab };
 
   const counts = React.useMemo(() => {
     const c = {
@@ -133,7 +150,7 @@ function LibraryView({
 
   const activeFilterCount =
     (filters.status !== "all" ? 1 : 0) +
-    (filters.type !== "all" ? 1 : 0) +
+    (combine && filters.type !== "all" ? 1 : 0) +
     (filters.query.trim() ? 1 : 0);
 
   /** Optimistic status change with rollback toast (06-copy.md §3). */
@@ -206,10 +223,10 @@ function LibraryView({
     return (
       <LibraryFrame counts={counts} filters={filters} onFiltersChange={setFilters}
         sortKey={sortKey} sortOrder={sortOrder}
-        onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }}
+        onSortChange={(key, order) => setPicked({ key, order })}
         view={view} onViewChange={setView} onSurprise={surprise}
         activeFilterCount={activeFilterCount} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen}
-        total={null}
+        total={null} split={split}
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {Array.from({ length: 12 }).map((_, i) => (
@@ -240,14 +257,14 @@ function LibraryView({
   // instead of it: dropping the sidebar left a new user staring at a lone
   // paragraph on an empty page, with no sign of what the library will look
   // like once it has something in it.
-  if (entries.length === 0) {
+  if (all.length === 0) {
     return (
       <LibraryFrame counts={counts} filters={filters} onFiltersChange={setFilters}
         sortKey={sortKey} sortOrder={sortOrder}
-        onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }}
+        onSortChange={(key, order) => setPicked({ key, order })}
         view={view} onViewChange={setView} onSurprise={surprise}
         activeFilterCount={activeFilterCount} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen}
-        total={0}
+        total={0} split={split}
       >
         <div className="flex flex-1 items-center justify-center">
           <EmptyState
@@ -267,10 +284,10 @@ function LibraryView({
     <>
       <LibraryFrame counts={counts} filters={filters} onFiltersChange={setFilters}
         sortKey={sortKey} sortOrder={sortOrder}
-        onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }}
+        onSortChange={(key, order) => setPicked({ key, order })}
         view={view} onViewChange={setView} onSurprise={surprise}
         activeFilterCount={activeFilterCount} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen}
-        total={entries.length}
+        total={all.length} split={split}
       >
         {hasMissingArt ? (
           <p className="mb-4 text-xs text-muted-foreground">
@@ -278,7 +295,14 @@ function LibraryView({
           </p>
         ) : null}
 
-        {filtered.length === 0 ? (
+        {entries.length === 0 ? (
+          <EmptyState
+            icon={LibraryIcon}
+            title={tab === "movie" ? "No films tracked yet" : "No TV tracked yet"}
+            body="Anything you track in this half of your library shows up here."
+            action={{ label: "Find something to watch", href: "/find" }}
+          />
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon={SlidersHorizontal}
             title="No matches"
@@ -346,6 +370,7 @@ function LibraryView({
 function LibraryFrame({
   children, counts, filters, onFiltersChange, sortKey, sortOrder, onSortChange,
   view, onViewChange, onSurprise, activeFilterCount, sheetOpen, onSheetOpenChange, total,
+  split,
 }: {
   children: React.ReactNode;
   counts: Record<TrackingStatus | "all", number>;
@@ -361,6 +386,8 @@ function LibraryFrame({
   sheetOpen: boolean;
   onSheetOpenChange: (open: boolean) => void;
   total: number | null;
+  /** Films and TV tabs, when Settings keeps them apart. */
+  split: { tab: MediaType; onTabChange: (tab: MediaType) => void } | null;
 }) {
   const panel = (
     <FilterPanel
@@ -371,6 +398,7 @@ function LibraryFrame({
       onSortChange={onSortChange}
       counts={counts}
       onSurprise={onSurprise}
+      showType={split == null}
     />
   );
 
@@ -419,6 +447,19 @@ function LibraryFrame({
           <ViewSwitcher value={view} onChange={onViewChange} />
         </div>
       </div>
+
+      {split ? (
+        <Tabs
+          value={split.tab}
+          onValueChange={(v) => split.onTabChange(v as MediaType)}
+          className="mb-6"
+        >
+          <TabsList variant="line" aria-label="Films or TV">
+            <TabsTrigger value="movie">Films</TabsTrigger>
+            <TabsTrigger value="season">TV</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
 
       <div className="flex flex-1 gap-8">
         {/* Desktop: persistent sidebar, the long-dwell pattern. */}

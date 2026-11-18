@@ -17,6 +17,8 @@ import { mediaHref } from "@/lib/media-href";
 import { listTracking } from "@/lib/api/tracking";
 import { mockFeed } from "@/lib/mock-reco";
 import { MOCK_LIBRARY } from "@/lib/mock-library";
+import { recentActivity } from "@/lib/library-filter";
+import { usePref } from "@/lib/local-prefs";
 import {
   STATUS_VERBS,
   type LibraryEntry,
@@ -77,6 +79,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
   const mock = simulate != null;
   const { profile } = useSession();
   const hydrated = useHydrated();
+  const [activityFeed] = usePref("activityFeed");
   // Dismissed on an earlier visit (read after hydration; the server render
   // assumes dismissed so the nudge never flashes), or just now.
   const dismissedBefore = React.useSyncExternalStore(
@@ -179,9 +182,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
   const inProgress = (entries ?? []).filter(
     (e) => e.status === "watching" || e.status === "rewatching"
   );
-  const recent = [...(entries ?? [])]
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 5);
+  const recent = recentActivity(entries ?? [], activityFeed, 5);
   const showNudge =
     !nudgeDismissed && ratedCount != null && ratedCount < TIER_THRESHOLD;
 
