@@ -16,6 +16,10 @@ import { EmptyState } from "@/components/klyvi/empty-state";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { useProfile } from "@/components/profile/profile-shell";
 import {
+  statsProgress,
+  statsRemainingText,
+} from "@/components/profile/stats-threshold";
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -121,6 +125,7 @@ export function ProfileStats() {
 
   const stats = data.stats;
   const rated = data.entries.filter((e) => e.score != null).length;
+  const progress = statsProgress(data.entries);
 
   if (stats === undefined) {
     return (
@@ -135,15 +140,16 @@ export function ProfileStats() {
     );
   }
 
-  // No stats payload (fetch failed), or too little rated history to say
-  // anything honest: one empty state, an invitation to rate more.
-  if (!stats || rated < 10) {
+  // No stats payload (fetch failed), or too little history to say anything
+  // honest: one empty state, an invitation to rate or finish more. Overview
+  // holds its genre overview back on the same threshold.
+  if (!stats || !progress.unlocked) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
         <EmptyState
           icon={BarChart3}
           title="Your stats need more data"
-          body="Rate about 10 titles and this page fills in. The more you track, the more it can tell you."
+          body={`${statsRemainingText(progress.remaining)} and this page fills in. The more you track, the more it can tell you.`}
           action={{ label: "Find something to watch", href: "/find" }}
         />
       </div>
@@ -161,8 +167,16 @@ export function ProfileStats() {
     { label: "Episodes watched", value: String(stats.kpis.episodesWatched) },
     { label: "Days watched", value: stats.kpis.daysWatched.toFixed(1) },
     { label: "Days planned", value: stats.kpis.daysPlanned.toFixed(1) },
-    { label: "Mean score", value: stats.kpis.meanScore.toFixed(1) },
-    { label: "Standard deviation", value: stats.kpis.scoreStddev.toFixed(1) },
+    // Finished titles with no score count toward the threshold, but nothing
+    // gets a score you didn't give, so with no scores there is no mean.
+    {
+      label: "Mean score",
+      value: rated > 0 ? stats.kpis.meanScore.toFixed(1) : "–",
+    },
+    {
+      label: "Standard deviation",
+      value: rated > 0 ? stats.kpis.scoreStddev.toFixed(1) : "–",
+    },
   ];
 
   const statuses: TrackingStatus[] = [
@@ -190,30 +204,32 @@ export function ProfileStats() {
         ))}
       </div>
 
-      <StatsSection title="Score distribution">
-        <MeasureToggle value={scoreMeasure} onChange={setScoreMeasure} />
-        <ChartContainer
-          config={chartConfig}
-          className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
-        >
-          <BarChart data={scoreDist} margin={{ top: 20 }}>
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} />
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-            <Bar
-              dataKey={scoreMeasure}
-              fill={`var(--color-${scoreMeasure})`}
-              radius={[3, 3, 0, 0]}
-            >
-              <LabelList
-                position="top"
-                offset={6}
-                className="fill-muted-foreground"
-                fontSize={10}
-              />
-            </Bar>
-          </BarChart>
-        </ChartContainer>
-      </StatsSection>
+      {rated > 0 ? (
+        <StatsSection title="Score distribution">
+          <MeasureToggle value={scoreMeasure} onChange={setScoreMeasure} />
+          <ChartContainer
+            config={chartConfig}
+            className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
+          >
+            <BarChart data={scoreDist} margin={{ top: 20 }}>
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} />
+              <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+              <Bar
+                dataKey={scoreMeasure}
+                fill={`var(--color-${scoreMeasure})`}
+                radius={[3, 3, 0, 0]}
+              >
+                <LabelList
+                  position="top"
+                  offset={6}
+                  className="fill-muted-foreground"
+                  fontSize={10}
+                />
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+        </StatsSection>
+      ) : null}
 
       {stats.releaseYears.length > 0 ? (
         <StatsSection title="Release year">
@@ -288,7 +304,10 @@ export function ProfileStats() {
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   <Metric value={String(g.count)} label="Count" />
-                  <Metric value={g.meanScore.toFixed(1)} label="Mean score" />
+                  <Metric
+                    value={rated > 0 ? g.meanScore.toFixed(1) : "–"}
+                    label="Mean score"
+                  />
                   <Metric value={`${g.hours}h`} label="Watched" />
                 </div>
               </div>

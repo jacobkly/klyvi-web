@@ -4,6 +4,10 @@ import * as React from "react";
 
 import { ActivityHeatmap } from "@/components/profile/activity-heatmap";
 import { useProfile } from "@/components/profile/profile-shell";
+import {
+  statsProgress,
+  statsRemainingText,
+} from "@/components/profile/stats-threshold";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { SectionHeader } from "@/components/klyvi/section-header";
@@ -83,6 +87,9 @@ export function ProfileOverview() {
 
   const activity = recentActivity(entries, activityFeed, 8);
 
+  // The genre overview is a preview of Stats, so it waits for the same
+  // threshold the Stats tab does.
+  const progress = statsProgress(entries);
   const topGenres = stats?.genres.slice(0, 5) ?? [];
   const maxGenre = Math.max(1, ...topGenres.map((g) => g.count));
 
@@ -115,7 +122,14 @@ export function ProfileOverview() {
           </section>
         ) : null}
 
-        {topGenres.length > 0 ? (
+        {!progress.unlocked ? (
+          <section className="mt-10">
+            <SectionHeader title="Stats" className="mb-4" />
+            <p className="text-sm text-muted-foreground">
+              {statsRemainingText(progress.remaining)} and your stats fill in.
+            </p>
+          </section>
+        ) : topGenres.length > 0 ? (
           <section className="mt-10">
             <SectionHeader
               title="Genre overview"
