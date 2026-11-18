@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { browserFetch } from "./http";
-import { listTrackingPaged, lookupTracking, TRACKING_PAGE } from "./tracking";
+import {
+  listTracking,
+  listTrackingPaged,
+  lookupTracking,
+  TRACKING_PAGE,
+} from "./tracking";
 import type { WireTrackingEntry } from "./wire";
 
 vi.mock("./http", () => ({ browserFetch: vi.fn() }));
@@ -158,5 +163,21 @@ describe("listTrackingPaged", () => {
       .mockResolvedValueOnce(rows(100, 2));
     const all = await listTrackingPaged();
     expect(all).toHaveLength(TRACKING_PAGE + 2);
+  });
+});
+
+describe("listTracking", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it("asks for the rows of a set of titles in one request", async () => {
+    fetchMock.mockResolvedValueOnce([MOVIE_ROW]);
+    const rows = await listTracking({ mediaType: "movie", tmdbIds: [272, 155] });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/v1/tracking?media_type=movie&tmdb_ids=272%2C155"
+    );
+    expect(rows[0]).toMatchObject({ status: "completed", score: 90 });
   });
 });

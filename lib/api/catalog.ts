@@ -13,10 +13,12 @@ import {
   mapSimilar,
   mapTvSeason,
   mapTvSeries,
+  yearOf,
   type SeasonDetail,
 } from "./map";
 import type {
   WireCollectionMovie,
+  WireFamilyTitle,
   WireMovie,
   WireRanking,
   WireSearchResponse,
@@ -48,16 +50,47 @@ export async function getMovieCollection(
     { allow404: true, signal }
   );
   if (!w || !Array.isArray(w)) return [];
+  // The API sends release order. Sorting here as well keeps a stale cache
+  // honest: undated films last, then TMDB's own position.
+  const time = (d: string | null | undefined) => {
+    const t = d ? Date.parse(d) : NaN;
+    return Number.isNaN(t) ? Infinity : t;
+  };
   return [...w]
-    .sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
+    .sort(
+      (a, b) =>
+        time(a.release_date) - time(b.release_date) ||
+        (a.position ?? 99) - (b.position ?? 99)
+    )
     .map((m) => ({
       mediaId: 0,
       mediaType: "movie" as const,
       tmdbId: m.movie_id,
       title: m.name,
       posterPath: m.poster_path,
-      year: null,
+      year: yearOf(m.release_date),
     }));
+}
+
+/** The films and series that share a franchise with a title, oldest first.
+ *  Empty when it has none or the open data has not reached it yet. */
+export async function getFamily(
+  kind: "movies" | "tv",
+  tmdbId: number,
+  signal?: AbortSignal
+): Promise<MediaSummary[]> {
+  const w = await apiFetch<WireFamilyTitle[] | null>(
+    `/v1/${kind}/${tmdbId}/family`,
+    { allow404: true, signal }
+  );
+  return (w ?? []).map((f) => ({
+    mediaId: 0,
+    mediaType: f.media_type === "tv" ? ("tv" as const) : ("movie" as const),
+    tmdbId: f.tmdb_id,
+    title: f.title,
+    posterPath: f.poster_path,
+    year: yearOf(f.release_date),
+  }));
 }
 
 /**

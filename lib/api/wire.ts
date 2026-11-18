@@ -67,6 +67,8 @@ export type WireMovie = {
   revenue?: number;
   imdb_id?: string | null;
   homepage?: string | null;
+  /** TMDB's collection object, kept raw by the API. */
+  belongs_to_collection?: { id: number; name: string } | null;
   status: string | null;
   tagline: string | null;
   title: string | null;
@@ -135,6 +137,17 @@ export type WireCollectionMovie = {
   poster_path: string | null;
   vote_average: number | null;
   position: number | null;
+  /** Null when unknown, or for rows cached before the API kept it. */
+  release_date?: string | null;
+};
+
+/** GET /v1/{movies,tv}/{id}/family: films and series in one franchise. */
+export type WireFamilyTitle = {
+  media_type: "movie" | "tv";
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string | null;
 };
 
 // ---------- tracking ----------

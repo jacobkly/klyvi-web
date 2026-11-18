@@ -72,7 +72,7 @@ function reasonKind(kind: string): Reason["kind"] {
   return kind === "because" || kind === "genre" ? kind : "keyword";
 }
 
-function yearOf(date: string | null | undefined): number | null {
+export function yearOf(date: string | null | undefined): number | null {
   if (!date) return null;
   const y = Number(date.slice(0, 4));
   return Number.isFinite(y) && y > 0 ? y : null;
@@ -263,6 +263,7 @@ export function mapMovie(w: WireMovie): MovieDetail {
     revenue: money(w.revenue),
     imdbId: orNull(w.imdb_id),
     homepage: orNull(w.homepage),
+    collectionName: orNull(w.belongs_to_collection?.name),
   };
 }
 

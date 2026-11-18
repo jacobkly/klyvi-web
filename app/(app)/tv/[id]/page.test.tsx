@@ -9,10 +9,12 @@ import { TvShelves } from "./tv-shelves";
 
 const getTvSeries = vi.fn();
 const getSimilar = vi.fn();
+const getFamily = vi.fn();
 
 vi.mock("@/lib/api/catalog", () => ({
   getTvSeries: (...a: unknown[]) => getTvSeries(...a),
   getSimilar: (...a: unknown[]) => getSimilar(...a),
+  getFamily: (...a: unknown[]) => getFamily(...a),
 }));
 // The layout is the movie page's too and is covered there. Stubbing it keeps
 // this test on what the series page hands it.
@@ -74,6 +76,7 @@ describe("TvPage", () => {
   beforeEach(() => {
     getTvSeries.mockReset();
     getSimilar.mockReset().mockResolvedValue([]);
+    getFamily.mockReset().mockResolvedValue([]);
   });
 
   it("answers 404 when the API has no such series", async () => {
@@ -90,6 +93,7 @@ describe("TvPage", () => {
 
     expect(getTvSeries).toHaveBeenCalledWith(1396);
     expect(getSimilar).toHaveBeenCalledWith("tv", 1396);
+    expect(getFamily).toHaveBeenCalledWith("tv", 1396);
   });
 
   it("passes the series crew and a similar shelf to the layout", async () => {
@@ -116,6 +120,7 @@ describe("TvPage", () => {
   it("hides the shelf, not the page, when the similar request fails", async () => {
     getTvSeries.mockResolvedValue(SERIES);
     getSimilar.mockRejectedValue(new Error("503"));
+    getFamily.mockRejectedValue(new Error("503"));
     const page = await TvPage({ params: Promise.resolve({ id: "1396" }) });
 
     expect(page.props.title).toBe("Breaking Bad");
@@ -127,9 +132,32 @@ describe("TvPage", () => {
 });
 
 describe("TvShelves", () => {
+  it("shows the franchise's films and series, each labelled", async () => {
+    render(
+      await TvShelves({
+        family: Promise.resolve([
+          { mediaId: 0, mediaType: "tv", tmdbId: 60059, title: "Better Call Saul", posterPath: "/b.jpg", year: 2015 },
+          { mediaId: 0, mediaType: "movie", tmdbId: 559969, title: "El Camino", posterPath: "/e.jpg", year: 2019 },
+        ]),
+        similar: Promise.resolve([]),
+      })
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "From the same franchise" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /El Camino/ })).toHaveAttribute(
+      "href",
+      "/movie/559969"
+    );
+    expect(screen.getByText("· Series")).toBeInTheDocument();
+    expect(screen.getByText("· Film")).toBeInTheDocument();
+  });
+
   it("renders similar series with their reasons", async () => {
     render(
       await TvShelves({
+        family: Promise.resolve([]),
         similar: Promise.resolve([
           show(60059, "Better Call Saul", "drug cartel"),
         ]),
@@ -148,7 +176,7 @@ describe("TvShelves", () => {
 
   it("renders nothing when there is nothing similar", async () => {
     const { container } = render(
-      await TvShelves({ similar: Promise.resolve([]) })
+      await TvShelves({ family: Promise.resolve([]), similar: Promise.resolve([]) })
     );
     expect(container).toBeEmptyDOMElement();
   });

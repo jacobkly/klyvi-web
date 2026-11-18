@@ -7,7 +7,7 @@ import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
 import { SeriesActions } from "@/components/media/series-actions";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
-import { getSimilar, getTvSeries } from "@/lib/api/catalog";
+import { getFamily, getSimilar, getTvSeries } from "@/lib/api/catalog";
 import { byLine, tvFacts, tvStrip } from "@/lib/media-facts";
 import type { MediaSummary } from "@/lib/types";
 
@@ -45,8 +45,9 @@ export default async function TvPage({
   const tmdbId = Number(id);
   if (!Number.isFinite(tmdbId) || tmdbId <= 0) notFound();
 
-  // Similar titles need only the TMDB id, so the request starts with the
-  // series. A failure hides the shelf and never the page.
+  // The shelves need only the TMDB id, so their requests start with the
+  // series. A failure hides a shelf and never the page.
+  const family = getFamily("tv", tmdbId).catch(() => []);
   const similar = getSimilar("tv", tmdbId).catch(() => []);
 
   const { tv: t, failed } = await load(tmdbId);
@@ -96,7 +97,7 @@ export default async function TvPage({
       crew={t.crew}
       shelves={
         <Suspense fallback={<DetailShelvesSkeleton />}>
-          <TvShelves similar={similar} />
+          <TvShelves family={family} similar={similar} />
         </Suspense>
       }
       extra={

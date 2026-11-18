@@ -15,10 +15,15 @@ import type { WireAffected, WireTrackingEntry } from "./wire";
 export async function listTracking(filters?: {
   mediaType?: MediaType;
   status?: TrackingStatus;
+  /** Only these titles (up to 100). A season row matches its series id. */
+  tmdbIds?: number[];
 }): Promise<LibraryEntry[]> {
   const params = new URLSearchParams();
   if (filters?.mediaType) params.set("media_type", filters.mediaType);
   if (filters?.status) params.set("status", filters.status);
+  if (filters?.tmdbIds?.length) {
+    params.set("tmdb_ids", filters.tmdbIds.slice(0, 100).join(","));
+  }
   const qs = params.toString();
   const rows = await browserFetch<WireTrackingEntry[] | null>(
     `/v1/tracking${qs ? `?${qs}` : ""}`

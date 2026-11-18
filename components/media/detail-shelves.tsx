@@ -9,9 +9,10 @@ const GRID =
   "grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6";
 
 /**
- * The poster shelves at the foot of a detail page: the rest of its
- * collection, then similar titles. Either one hides when it has nothing to
- * show, so a standalone film simply ends after the crew.
+ * The poster shelves at the foot of a detail page: its franchise, then
+ * similar titles. Either one hides when it has nothing to show, so a
+ * standalone film simply ends after the crew. A franchise mixes films and
+ * series, so `kinds` labels each card with which it is.
  *
  * Each similar title carries the keyword it shares under its card, one chip
  * and a +N like the onboarding preview's grid. Titles from TMDB's fill have
@@ -21,7 +22,7 @@ export function DetailShelves({
   related,
   moreLikeThis,
 }: {
-  related?: { heading: string; items: MediaSummary[] };
+  related?: { heading: string; items: MediaSummary[]; kinds?: boolean };
   moreLikeThis?: SimilarTitle[];
 }) {
   const hasRelated = related != null && related.items.length > 0;
@@ -39,6 +40,13 @@ export function DetailShelves({
                 key={`${m.mediaType}-${m.tmdbId}-${m.seasonNumber ?? 0}`}
                 media={m}
                 variant="below"
+                kind={
+                  related.kinds
+                    ? m.mediaType === "movie"
+                      ? "Film"
+                      : "Series"
+                    : undefined
+                }
               />
             ))}
           </div>

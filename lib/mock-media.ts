@@ -43,6 +43,8 @@ export type MovieDetail = {
   revenue: number | null;
   imdbId: string | null;
   homepage: string | null;
+  /** The TMDB collection it belongs to ("The Dark Knight Collection"). */
+  collectionName: string | null;
 };
 
 /** An episode named by number, for "S3 E4 on 12 Dec 2026". */
@@ -61,7 +63,14 @@ export type SeasonInfo = {
 
 export type TvDetail = Omit<
   MovieDetail,
-  "runtime" | "director" | "directors" | "writers" | "budget" | "revenue" | "imdbId"
+  | "runtime"
+  | "director"
+  | "directors"
+  | "writers"
+  | "budget"
+  | "revenue"
+  | "imdbId"
+  | "collectionName"
 > & {
   seasons: SeasonInfo[];
   networks: string[];
@@ -121,6 +130,7 @@ export const MOCK_MOVIE: MovieDetail = {
   revenue: 262133000,
   imdbId: "tt6751668",
   homepage: null,
+  collectionName: null,
   crew: [
     { role: "Director", names: ["Bong Joon Ho"] },
     { role: "Writers", names: ["Bong Joon Ho", "Han Jin-won"] },

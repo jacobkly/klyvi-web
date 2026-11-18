@@ -1,16 +1,29 @@
 import { DetailShelves } from "@/components/media/detail-shelves";
-import type { SimilarTitle } from "@/lib/types";
+import type { MediaSummary, SimilarTitle } from "@/lib/types";
 
 /**
- * The series page's "more like this" shelf. Series have no collections, so
- * this is the movie page's shelves without the first one. The page starts
- * the request alongside the series and hands the promise here, so the shelf
- * streams in behind the hero.
+ * The series and season pages' franchise and "more like this" shelves. The
+ * franchise mixes films and series (Better Call Saul and El Camino for
+ * Breaking Bad). The page starts the requests alongside the series and hands
+ * the promises here, so the shelves stream in behind the hero.
  */
 export async function TvShelves({
+  family,
   similar,
 }: {
-  similar: Promise<SimilarTitle[]>;
+  family: Promise<MediaSummary[]>;
+  /** The season page has no "more like this" of its own. */
+  similar?: Promise<SimilarTitle[]>;
 }) {
-  return <DetailShelves moreLikeThis={await similar} />;
+  const [kin, like] = await Promise.all([family, similar ?? []]);
+  return (
+    <DetailShelves
+      related={
+        kin.length > 0
+          ? { heading: "From the same franchise", items: kin, kinds: true }
+          : undefined
+      }
+      moreLikeThis={like}
+    />
+  );
 }

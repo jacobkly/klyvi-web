@@ -4,18 +4,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MOCK_MOVIE } from "@/lib/mock-media";
 import type { MediaSummary, SimilarTitle } from "@/lib/types";
 
-import { MovieShelves } from "./movie-shelves";
+import { MovieBand, MovieShelves } from "./movie-shelves";
 import MoviePage from "./page";
 
 const getMovie = vi.fn();
 const getMovieCollection = vi.fn();
 const getSimilar = vi.fn();
+const getFamily = vi.fn();
 
 vi.mock("@/lib/api/catalog", () => ({
   getMovie: (...a: unknown[]) => getMovie(...a),
   getMovieCollection: (...a: unknown[]) => getMovieCollection(...a),
   getSimilar: (...a: unknown[]) => getSimilar(...a),
+  getFamily: (...a: unknown[]) => getFamily(...a),
 }));
+vi.mock("@/lib/api/tracking", () => ({ listTracking: vi.fn() }));
 vi.mock("@/components/auth/auth-provider", () => ({
   useSession: () => ({ user: null }),
 }));
@@ -53,6 +56,7 @@ describe("MoviePage", () => {
     getMovie.mockReset();
     getMovieCollection.mockReset().mockResolvedValue([]);
     getSimilar.mockReset().mockResolvedValue([]);
+    getFamily.mockReset().mockResolvedValue([]);
   });
 
   it("answers 404 when the API has no such film", async () => {
@@ -78,12 +82,30 @@ describe("MoviePage", () => {
     expect(getMovie).toHaveBeenCalledWith(120);
     expect(getMovieCollection).toHaveBeenCalledWith(120);
     expect(getSimilar).toHaveBeenCalledWith("movies", 120);
+    expect(getFamily).toHaveBeenCalledWith("movies", 120);
+  });
+
+  it("puts the collection band under the hero, named after the collection", async () => {
+    getMovie.mockResolvedValue({ ...MOCK_MOVIE, tmdbId: 120, collectionName: "The Lord of the Rings Collection" });
+    getMovieCollection.mockResolvedValue([
+      film(120, "The Fellowship of the Ring"),
+      film(121, "The Two Towers"),
+    ]);
+    const page = await MoviePage({ params: Promise.resolve({ id: "120" }) });
+    const band = page.props.extra.props.children;
+    render(await MovieBand(band.props));
+
+    expect(
+      screen.getByRole("region", { name: "Part of The Lord of the Rings Collection" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("The Two Towers")).toBeInTheDocument();
   });
 
   it("hides the shelves, not the page, when their requests fail", async () => {
     getMovie.mockResolvedValue(MOCK_MOVIE);
     getMovieCollection.mockRejectedValue(new Error("503"));
     getSimilar.mockRejectedValue(new Error("503"));
+    getFamily.mockRejectedValue(new Error("503"));
     const page = await MoviePage({ params: Promise.resolve({ id: "120" }) });
 
     expect(page.props.title).toBe(MOCK_MOVIE.title);
@@ -94,14 +116,30 @@ describe("MoviePage", () => {
   });
 });
 
+describe("MovieBand", () => {
+  it("shows nothing for a film that stands alone", async () => {
+    const out = await MovieBand({
+      name: "Solo Collection",
+      tmdbId: 120,
+      collection: Promise.resolve([film(120, "The Fellowship of the Ring")]),
+    });
+    expect(out).toBeNull();
+  });
+});
+
 describe("MovieShelves", () => {
-  it("drops the film itself and renders both shelves", async () => {
+  it("shows the franchise without the collection's films, then more like this", async () => {
     render(
       await MovieShelves({
         tmdbId: 120,
         collection: Promise.resolve([
           film(120, "The Fellowship of the Ring"),
           film(121, "The Two Towers"),
+        ]),
+        family: Promise.resolve([
+          film(121, "The Two Towers"),
+          { ...film(49051, "The Hobbit: An Unexpected Journey"), year: 2012 },
+          { ...film(84773, "The Rings of Power"), mediaType: "tv", year: 2022 },
         ]),
         similar: Promise.resolve([
           like(1891, "The Empire Strikes Back", "chosen one"),
@@ -110,9 +148,13 @@ describe("MovieShelves", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "In the same collection" })
+      screen.getByRole("heading", { name: "From the same franchise" })
     ).toBeInTheDocument();
-    expect(screen.getByText("The Two Towers")).toBeInTheDocument();
+    // The band already shows the collection.
+    expect(screen.queryByText("The Two Towers")).toBeNull();
+    expect(screen.getByText("The Hobbit: An Unexpected Journey")).toBeInTheDocument();
+    expect(screen.getByText("· Film")).toBeInTheDocument();
+    expect(screen.getByText("· Series")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "More like this" })
     ).toBeInTheDocument();
@@ -126,6 +168,7 @@ describe("MovieShelves", () => {
       await MovieShelves({
         tmdbId: 120,
         collection: Promise.resolve([]),
+        family: Promise.resolve([]),
         similar: Promise.resolve([]),
       })
     );

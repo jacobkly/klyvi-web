@@ -4,10 +4,15 @@ import { notFound } from "next/navigation";
 import { DetailError } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
-import { getMovie, getMovieCollection, getSimilar } from "@/lib/api/catalog";
+import {
+  getFamily,
+  getMovie,
+  getMovieCollection,
+  getSimilar,
+} from "@/lib/api/catalog";
 import { byLine, movieFacts, movieStrip } from "@/lib/media-facts";
 
-import { MovieShelves } from "./movie-shelves";
+import { MovieBand, MovieShelves } from "./movie-shelves";
 
 /** Deduped across generateMetadata and the page render. */
 const load = cache(async (id: number) => {
@@ -37,11 +42,12 @@ export default async function MoviePage({
   const tmdbId = Number(id);
   if (!Number.isFinite(tmdbId) || tmdbId <= 0) notFound();
 
-  // All three requests need only the TMDB id, so they start together.
-  // Collection and similar titles are enrichment, not the page: a failure
-  // of either still renders the film, and they stream in behind the hero
-  // rather than holding it back.
+  // Every request needs only the TMDB id, so they start together.
+  // Collection, franchise and similar titles are enrichment, not the page:
+  // a failure of any still renders the film, and they stream in behind the
+  // hero rather than holding it back.
   const collection = getMovieCollection(tmdbId).catch(() => []);
+  const family = getFamily("movies", tmdbId).catch(() => []);
   const similar = getSimilar("movies", tmdbId).catch(() => []);
 
   const { movie: m, failed } = await load(tmdbId);
@@ -72,11 +78,21 @@ export default async function MoviePage({
       keywords={m.keywords}
       cast={m.cast}
       crew={m.crew}
+      extra={
+        <Suspense fallback={null}>
+          <MovieBand
+            name={m.collectionName}
+            tmdbId={tmdbId}
+            collection={collection}
+          />
+        </Suspense>
+      }
       shelves={
         <Suspense fallback={<DetailShelvesSkeleton />}>
           <MovieShelves
             tmdbId={tmdbId}
             collection={collection}
+            family={family}
             similar={similar}
           />
         </Suspense>

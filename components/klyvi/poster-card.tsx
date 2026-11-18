@@ -77,6 +77,8 @@ function PosterCard({
   progress,
   score,
   actions,
+  current = false,
+  kind,
   eager = false,
   sizes = "(max-width: 640px) 38vw, (max-width: 1024px) 24vw, 180px",
   className,
@@ -89,6 +91,12 @@ function PosterCard({
   score?: number | null;
   /** Quick actions for the corner menu. None, no menu. */
   actions?: PosterAction[];
+  /** The title whose page this is, in a row of its siblings: ringed, and
+   *  labelled "This film" under the year (below only). */
+  current?: boolean;
+  /** "Film" or "Series" beside the year where a shelf mixes both (below
+   *  only). */
+  kind?: string;
   /** In the first screen: load now, ahead of the lazy ones below. */
   eager?: boolean;
   /** The slot's width for the srcset. The default fits rails and grids:
@@ -125,9 +133,15 @@ function PosterCard({
       <Link
         href={href}
         aria-label={variant === "below" ? undefined : accessibleName}
+        aria-current={current ? "page" : undefined}
         className="block rounded-art outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <div className="relative aspect-[2/3] overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
+        <div
+          className={cn(
+            "relative aspect-[2/3] overflow-hidden rounded-art bg-muted",
+            current ? "ring-2 ring-primary" : "ring-1 ring-foreground/10"
+          )}
+        >
           {src ? (
             <FadeImage
               src={src}
@@ -210,11 +224,23 @@ function PosterCard({
               {media.title}
               {seasonSuffix}
             </p>
-            {media.year != null || progressText ? (
+            {media.year != null || progressText || kind || current ? (
               <div className="mt-0.5 flex items-center gap-2">
-                {media.year != null ? (
-                  <p data-numeric className="font-mono text-[11px] text-muted-foreground">
-                    {media.year}
+                {media.year != null || kind || current ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    {media.year != null ? (
+                      <span data-numeric className="font-mono">
+                        {media.year}
+                      </span>
+                    ) : null}
+                    {[kind, current ? "This film" : null]
+                      .filter(Boolean)
+                      .map((label, i) => (
+                        <span key={i}>
+                          {media.year != null || i > 0 ? " · " : ""}
+                          {label}
+                        </span>
+                      ))}
                   </p>
                 ) : null}
                 {/* Episode progress (TV only), violet like the overlay's. */}

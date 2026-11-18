@@ -1,10 +1,13 @@
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import { DetailError, SeasonNotFound } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
-import { getTvSeason, getTvSeries } from "@/lib/api/catalog";
+import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
+import { getFamily, getTvSeason, getTvSeries } from "@/lib/api/catalog";
 import { formatDate } from "@/lib/mock-media";
+
+import { TvShelves } from "../../tv-shelves";
 
 const load = cache(async (id: number, n: number) => {
   try {
@@ -43,6 +46,10 @@ export default async function SeasonPage({
   if (!Number.isFinite(seasonNumber) || seasonNumber < 1) {
     return <SeasonNotFound tmdbId={tmdbId} />;
   }
+
+  // The series' franchise, started alongside the season. A failure hides
+  // the shelf and never the page.
+  const family = getFamily("tv", tmdbId).catch(() => []);
 
   const { series, season, failed } = await load(tmdbId, seasonNumber);
   if (failed) return <DetailError />;
@@ -93,6 +100,11 @@ export default async function SeasonPage({
       ]}
       keywords={series.keywords}
       cast={series.cast}
+      shelves={
+        <Suspense fallback={<DetailShelvesSkeleton />}>
+          <TvShelves family={family} />
+        </Suspense>
+      }
     />
   );
 }
