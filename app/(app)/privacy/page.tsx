@@ -258,10 +258,9 @@ const SECTIONS: ProseSection[] = [
         <ul>
           <li>
             <strong>Get a copy:</strong> Download your data, in Settings, gives
-            you one file with your account, library, ratings, interactions, and
-            notices. Your library is also available as CSV or JSON. For what the
-            file leaves out, such as import results and your taste profile,
-            send an email.
+            you one file with your account, library, ratings, interactions,
+            notices, import results (titles that didn&apos;t match included),
+            and taste profile. Your library is also available as CSV or JSON.
           </li>
           <li>
             <strong>Correct:</strong> edit your profile in Settings and your

@@ -193,9 +193,12 @@ describe("the privacy page", () => {
     expect(text).toMatch(/complain.{0,80}(regulator|data protection)/i);
   });
 
-  it("only claims the export holds what it holds", () => {
+  it("says the export holds the import results and the taste profile", () => {
     const text = privacy();
-    expect(text).toMatch(/import results and your taste profile/i);
+    expect(text).toMatch(
+      /one file with your account, library, ratings, interactions, notices, import results \(titles that didn't match included\), and taste profile/i
+    );
+    expect(text).not.toMatch(/leaves out/i);
   });
 
   it("sets the minimum age at 16", () => {

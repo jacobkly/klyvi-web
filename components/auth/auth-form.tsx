@@ -539,7 +539,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       </p>
 
       <p className="mt-10 text-xs text-muted-foreground">
-        By continuing you agree to the{" "}
+        By continuing, I confirm I&apos;m 16 or older and agree to the{" "}
         <Link href="/terms" className="underline underline-offset-2">
           Terms of use
         </Link>{" "}

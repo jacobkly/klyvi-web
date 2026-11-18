@@ -351,4 +351,17 @@ describe("AuthForm", () => {
       expect(screen.queryByRole("alert")).toBeNull();
     });
   });
+
+  // Google or Microsoft on the sign-in page can create an account too, so the
+  // age line shows in both modes.
+  it.each(["signup", "signin"] as const)(
+    "has the %s consent line confirm the user is 16 or older",
+    (mode) => {
+      render(<AuthForm mode={mode} />);
+      const line = screen.getByText(/16 or older/);
+      expect(line.textContent).toMatch(
+        /I'm 16 or older and agree to the Terms of use and Privacy policy/
+      );
+    }
+  );
 });
