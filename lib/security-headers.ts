@@ -9,6 +9,7 @@
  */
 
 const TMDB_IMAGES = "https://image.tmdb.org";
+const YOUTUBE_PLAYER = "https://www.youtube-nocookie.com";
 
 /** A CSP source with a path only matches that path, so keep just the origin. */
 function origin(url: string): string | null {
@@ -41,6 +42,8 @@ export function securityHeaders({
     `img-src ${sources("'self'", TMDB_IMAGES, supabase)}`,
     "font-src 'self'",
     `connect-src ${sources("'self'", api, supabase, dev && "ws:")}`,
+    // Only the trailer dialog frames anything.
+    `frame-src ${YOUTUBE_PLAYER}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

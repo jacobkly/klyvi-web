@@ -155,7 +155,7 @@ export function tvFacts(t: TvDetail): Fact[] {
     { label: "Original language", value: t.language },
     list("Spoken language", "Spoken languages", t.spokenLanguages),
     { label: "Average score", value: average(t.voteAverage) },
-    links(null, t.homepage),
+    links(t.imdbId, t.homepage),
   ]);
 }
 

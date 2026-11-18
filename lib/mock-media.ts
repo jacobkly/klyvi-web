@@ -45,6 +45,10 @@ export type MovieDetail = {
   homepage: string | null;
   /** The TMDB collection it belongs to ("The Dark Knight Collection"). */
   collectionName: string | null;
+  /** The US age rating: PG-13, TV-MA. */
+  certification: string | null;
+  /** TMDB's official YouTube trailer id, already checked. */
+  trailerKey: string | null;
 };
 
 /** An episode named by number, for "S3 E4 on 12 Dec 2026". */
@@ -69,7 +73,6 @@ export type TvDetail = Omit<
   | "writers"
   | "budget"
   | "revenue"
-  | "imdbId"
   | "collectionName"
 > & {
   seasons: SeasonInfo[];
@@ -131,6 +134,8 @@ export const MOCK_MOVIE: MovieDetail = {
   imdbId: "tt6751668",
   homepage: null,
   collectionName: null,
+  certification: "R",
+  trailerKey: null,
   crew: [
     { role: "Director", names: ["Bong Joon Ho"] },
     { role: "Writers", names: ["Bong Joon Ho", "Han Jin-won"] },
@@ -174,6 +179,9 @@ export const MOCK_TV: TvDetail = {
   countries: ["United States of America"],
   spokenLanguages: ["English"],
   homepage: null,
+  imdbId: "tt11280740",
+  certification: "TV-MA",
+  trailerKey: null,
   networks: ["Apple TV+"],
   showType: "Scripted",
   inProduction: true,

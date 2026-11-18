@@ -67,6 +67,10 @@ export type WireMovie = {
   revenue?: number;
   imdb_id?: string | null;
   homepage?: string | null;
+  /** The US age rating ("PG-13"). */
+  certification?: string | null;
+  /** TMDB's official YouTube trailer, as a video id. */
+  trailer_key?: string | null;
   /** TMDB's collection object, kept raw by the API. */
   belongs_to_collection?: { id: number; name: string } | null;
   status: string | null;
@@ -90,6 +94,10 @@ export type WireTvSeries = {
   type?: string | null;
   in_production?: boolean;
   homepage?: string | null;
+  /** The US TV rating ("TV-MA"). */
+  certification?: string | null;
+  trailer_key?: string | null;
+  imdb_id?: string | null;
   next_episode_to_air?: WireEpisodeRef | null;
   last_episode_to_air?: WireEpisodeRef | null;
   first_air_date: string | null;

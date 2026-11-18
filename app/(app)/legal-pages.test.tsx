@@ -111,11 +111,16 @@ describe("the privacy page", () => {
     "Google",
     "Microsoft",
     "TMDB",
+    "YouTube",
   ])("names %s as a service that receives data", (service) => {
     render(<PrivacyPage />);
     const heading = screen.getByRole("heading", { name: /who receives/i });
     const list = heading.nextElementSibling as HTMLElement;
     expect(list.textContent).toContain(service);
+  });
+
+  it("says YouTube only loads when you press play on a trailer", () => {
+    expect(privacy()).toMatch(/YouTube.{0,200}only when you press play/i);
   });
 
   it("names the server the operator runs", () => {

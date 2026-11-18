@@ -86,6 +86,8 @@ export default async function TvPage({
       posterPath={t.posterPath}
       title={t.title}
       year={t.year}
+      certification={t.certification}
+      trailerKey={t.trailerKey}
       directorLine={t.creator ? byLine("Created by", [t.creator]) : null}
       tagline={t.tagline}
       overview={t.overview}

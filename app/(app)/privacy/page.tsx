@@ -207,6 +207,12 @@ const SECTIONS: ProseSection[] = [
             requests to TMDB carry nothing that identifies you.
           </li>
           <li>
+            <strong>YouTube</strong>: plays trailers. Its player loads only when
+            you press play on a trailer, and then YouTube sees your IP address
+            and which trailer you watch. Klyvi uses YouTube&apos;s no-cookie
+            player.
+          </li>
+          <li>
             <strong>The API server</strong>: a server run by the person behind
             Klyvi. It runs the app and writes the logs.
           </li>

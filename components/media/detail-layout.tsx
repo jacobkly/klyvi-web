@@ -24,6 +24,7 @@ import { BackdropHero } from "@/components/media/backdrop-hero";
 import { CastChips } from "@/components/media/cast-chips";
 import { KeywordCard } from "@/components/media/keyword-card";
 import { MetadataList } from "@/components/media/metadata-list";
+import { TrailerButton } from "@/components/media/trailer-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Fact } from "@/lib/media-facts";
@@ -57,6 +58,8 @@ function DetailLayout({
   posterPath,
   title,
   year,
+  certification = null,
+  trailerKey = null,
   directorLine,
   tagline,
   overview,
@@ -85,6 +88,10 @@ function DetailLayout({
   posterPath: string | null;
   title: string;
   year: number | null;
+  /** The US age rating, shown beside the year. */
+  certification?: string | null;
+  /** TMDB's official YouTube trailer. Null hides the Trailer button. */
+  trailerKey?: string | null;
   directorLine: string | null;
   tagline: string | null;
   overview: string | null;
@@ -297,6 +304,15 @@ function DetailLayout({
                     {year}
                   </span>
                 ) : null}
+                {certification ? (
+                  <>
+                    {" "}
+                    <span className="ml-1 inline-block rounded-full border border-border px-2 align-middle font-mono text-[11px] font-medium text-muted-foreground">
+                      <span className="sr-only">Rated </span>
+                      {certification}
+                    </span>
+                  </>
+                ) : null}
               </h1>
 
               {directorLine ? (
@@ -352,6 +368,8 @@ function DetailLayout({
                   No synopsis available for this one yet.
                 </p>
               )}
+
+              <TrailerButton title={title} trailerKey={trailerKey} />
             </div>
           </div>
 

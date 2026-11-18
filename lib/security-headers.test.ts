@@ -69,6 +69,11 @@ describe("securityHeaders", () => {
     );
   });
 
+  // The trailer dialog embeds YouTube's no-cookie player, and nothing else frames.
+  it("only frames YouTube's no-cookie player", () => {
+    expect(directive("frame-src")).toBe("frame-src https://www.youtube-nocookie.com");
+  });
+
   it("keeps inline script for Next and never allows eval in production", () => {
     expect(directive("script-src")).toBe("script-src 'self' 'unsafe-inline'");
   });

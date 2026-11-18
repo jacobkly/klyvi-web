@@ -12,6 +12,7 @@ import type {
   TvDetail,
 } from "@/lib/mock-media";
 import type { PoolEntry } from "@/lib/mock-onboarding";
+import { trailerKey } from "@/lib/trailer";
 import type {
   AppNotification,
   ImportJob,
@@ -264,6 +265,8 @@ export function mapMovie(w: WireMovie): MovieDetail {
     imdbId: orNull(w.imdb_id),
     homepage: orNull(w.homepage),
     collectionName: orNull(w.belongs_to_collection?.name),
+    certification: orNull(w.certification),
+    trailerKey: trailerKey(w.trailer_key),
   };
 }
 
@@ -307,6 +310,9 @@ export function mapTvSeries(w: WireTvSeries): TvDetail {
     countries: names(w.production_countries),
     spokenLanguages: spokenNames(w.spoken_languages),
     homepage: orNull(w.homepage),
+    imdbId: orNull(w.imdb_id),
+    certification: orNull(w.certification),
+    trailerKey: trailerKey(w.trailer_key),
     networks: names(w.networks),
     showType: orNull(w.type),
     inProduction: w.in_production === true,

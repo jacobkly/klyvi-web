@@ -280,6 +280,22 @@ describe("mapMovie", () => {
     expect(m.releaseDate).toBe("2019-05-30T00:00:00Z");
   });
 
+  it("maps the age rating and the trailer", () => {
+    const m = mapMovie({ ...WIRE, certification: "R", trailer_key: "5xH0HfJHsaY" });
+    expect(m.certification).toBe("R");
+    expect(m.trailerKey).toBe("5xH0HfJHsaY");
+    const bare = mapMovie(WIRE);
+    expect(bare.certification).toBeNull();
+    expect(bare.trailerKey).toBeNull();
+  });
+
+  // The key goes into a player URL, so anything but a YouTube id is dropped.
+  it("drops a trailer key that isn't a YouTube id", () => {
+    for (const key of ["", "short", "5xH0HfJHsaY/../x", "5xH0HfJHsaY?a=1", "https://x.y/z"]) {
+      expect(mapMovie({ ...WIRE, trailer_key: key }).trailerKey).toBeNull();
+    }
+  });
+
   it("maps the extra facts: studios, countries, languages, money and links", () => {
     const m = mapMovie({
       ...WIRE,
@@ -450,8 +466,25 @@ describe("mapTvSeries", () => {
     });
   });
 
+  it("maps the age rating, trailer and IMDb id", () => {
+    const t = mapTvSeries({
+      ...WIRE,
+      certification: "TV-MA",
+      trailer_key: "HhesaQXLuRY",
+      imdb_id: "tt0903747",
+    });
+    expect(t).toMatchObject({
+      certification: "TV-MA",
+      trailerKey: "HhesaQXLuRY",
+      imdbId: "tt0903747",
+    });
+  });
+
   it("leaves the episode facts null on a row that lacks them", () => {
     const t = mapTvSeries(WIRE);
+    expect(t.certification).toBeNull();
+    expect(t.trailerKey).toBeNull();
+    expect(t.imdbId).toBeNull();
     expect(t.nextEpisode).toBeNull();
     expect(t.lastEpisode).toBeNull();
     expect(t.networks).toEqual([]);

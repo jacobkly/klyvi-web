@@ -125,6 +125,18 @@ describe("tvFacts", () => {
     );
   });
 
+  it("links a series to IMDb and its official site", () => {
+    const facts = tvFacts({
+      ...MOCK_TV,
+      imdbId: "tt11280740",
+      homepage: "https://tv.apple.com/show/severance",
+    });
+    expect(facts.find((f) => f.label === "Links")?.links).toEqual([
+      { label: "IMDb", href: "https://www.imdb.com/title/tt11280740/" },
+      { label: "Official site", href: "https://tv.apple.com/show/severance" },
+    ]);
+  });
+
   it("shows the original name only when it differs", () => {
     expect(
       value(tvFacts({ ...MOCK_TV, originalTitle: "La casa de papel" }), "Original name")

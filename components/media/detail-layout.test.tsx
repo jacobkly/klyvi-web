@@ -218,3 +218,28 @@ describe("DetailLayout facts", () => {
     expect(screen.queryByTestId("fact-strip")).toBeNull();
   });
 });
+
+describe("DetailLayout rating and trailer", () => {
+  beforeEach(() => {
+    sessionUser = null;
+    lookupTracking.mockReset().mockResolvedValue(null);
+  });
+
+  it("shows the age rating beside the year", () => {
+    renderDetail({ certification: "TV-MA" });
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("Severance 2025 Rated TV-MA");
+  });
+
+  it("leaves the rating and trailer out when there are none", () => {
+    renderDetail();
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveTextContent(/Rated/);
+    expect(screen.queryByRole("button", { name: "Trailer" })).toBeNull();
+  });
+
+  it("offers the trailer when there is one", () => {
+    renderDetail({ trailerKey: "xEQP4VVuyrY" });
+    expect(screen.getByRole("button", { name: "Trailer" })).toBeInTheDocument();
+    expect(document.querySelector("iframe")).toBeNull();
+  });
+});
