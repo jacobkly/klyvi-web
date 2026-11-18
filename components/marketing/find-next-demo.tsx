@@ -89,7 +89,7 @@ export function FindNextDemo() {
         <LandingHeader
           eyebrow="See it live"
           title="This is the actual Find Next screen"
-          lead="Five sample picks from a formed taste profile. Step through them; nothing here needs an account."
+          lead="Five sample picks from a formed taste profile. Step through them. Nothing here needs an account."
         />
       </Reveal>
 

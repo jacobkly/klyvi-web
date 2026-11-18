@@ -404,6 +404,20 @@ html[data-text-size="large"] {
    no flashing or zoom), and it pauses on hover. The entrance rise below
    still honors reduced motion. If the marquee should honor reduced motion
    too, delete the override block and it falls back to a static strip. */
+/* The landing hero's entrance. CSS rather than framer so the hero is in the
+   server HTML at rest and the rise plays without waiting for JavaScript. The
+   reduced-motion floor and .reduce-motion both cut it short, and `both` fill
+   leaves it visible when they do. */
+@keyframes klyvi-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+.hero-rise {
+  animation: klyvi-rise var(--dur-max) var(--ease-enter) both;
+}
+
 @keyframes klyvi-marquee {
   from {
     transform: translateX(0);

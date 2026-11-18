@@ -3,7 +3,6 @@
 import Link from "next/link";
 import * as React from "react";
 
-import { Reveal } from "@/components/marketing/reveal";
 import { buttonVariants } from "@/components/ui/button";
 import { getMovieList } from "@/lib/api/catalog";
 import { TAGLINE_CLAIM } from "@/lib/marketing-claims";
@@ -15,7 +14,20 @@ import { MOCK_POOL } from "@/lib/mock-onboarding";
  * no vendor colors, real Button). Motion is pure CSS now, no framer: the
  * marquee is a disclosed reduced-motion exception (see globals.css), the
  * entrance rise honors it.
+ *
+ * The rise is a CSS animation, not `Reveal`, so the server HTML is visible
+ * as sent and the hero paints before the page's JavaScript loads. `Reveal`
+ * stays for the sections below the fold.
  */
+
+/** One step of the hero's staggered rise. */
+function Rise({ delay, children }: { delay: number; children: React.ReactNode }) {
+  return (
+    <div className="hero-rise" style={{ animationDelay: `${delay}ms` }}>
+      {children}
+    </div>
+  );
+}
 
 const TITLE = "Stop scrolling. Start watching.";
 
@@ -65,26 +77,26 @@ export function MarqueeHero() {
   return (
     <section className="relative flex flex-col items-center overflow-hidden px-4 pt-24 pb-12 text-center sm:pt-28">
       <div className="z-10 flex flex-col items-center">
-        <Reveal>
+        <Rise delay={0}>
           <span className="mb-5 inline-block rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm">
             {TAGLINE_CLAIM}
           </span>
-        </Reveal>
+        </Rise>
 
-        <Reveal delay={0.08}>
+        <Rise delay={80}>
           <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance text-foreground sm:text-6xl">
             {TITLE}
           </h1>
-        </Reveal>
+        </Rise>
 
-        <Reveal delay={0.16}>
+        <Rise delay={160}>
           <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
             Klyvi learns what you actually like and tells you what to watch
             right now, with the reason it picked it.
           </p>
-        </Reveal>
+        </Rise>
 
-        <Reveal delay={0.24}>
+        <Rise delay={240}>
           <div className="mt-8 flex items-center justify-center gap-4">
             <Link href="/signup" className={buttonVariants({ size: "touch" })}>
               Get started
@@ -96,7 +108,7 @@ export function MarqueeHero() {
               Sign in
             </Link>
           </div>
-        </Reveal>
+        </Rise>
       </div>
 
       {/* The poster strip, faded at both edges. The mask is functional, not
