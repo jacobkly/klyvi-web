@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, X } from "lucide-react";
 import { useSession } from "@/components/auth/auth-provider";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
+import { ScoreValue } from "@/components/klyvi/score-value";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -395,7 +396,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
                         data-numeric
                         className="shrink-0 font-mono text-xs text-muted-foreground"
                       >
-                        {e.score}
+                        <ScoreValue score={e.score} />
                       </span>
                     ) : null}
                   </li>

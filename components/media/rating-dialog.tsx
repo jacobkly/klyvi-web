@@ -3,6 +3,7 @@
 import Image from "next/image";
 import * as React from "react";
 
+import { ScoreInput } from "@/components/klyvi/score-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,14 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Slider } from "@/components/ui/slider";
+import { usePref } from "@/lib/local-prefs";
+import { parseScoreInput, scoreInputText } from "@/lib/score";
 import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
  * The quick rating step behind "Seen it": a watched-but-unrated title is the
  * weakest signal the recommender can get, and this is the one moment the
- * user is already thinking about the film. One slider, one save, and an
- * explicit no-rating exit so the fact still gets logged.
+ * user is already thinking about the film. The one score control (in the
+ * scoring system from Settings), one save, and an explicit no-rating exit so
+ * the fact still gets logged.
  */
 export function RatingDialog({
   title,
@@ -37,7 +40,11 @@ export function RatingDialog({
   /** Score 0..100, or null for "seen but not rating it". */
   onSubmit: (score: number | null) => void;
 }) {
-  const [score, setScore] = React.useState(75);
+  const [scoringSystem] = usePref("scoringSystem");
+  const [score, setScore] = React.useState(() =>
+    scoreInputText(75, scoringSystem)
+  );
+  const parsed = parseScoreInput(score, scoringSystem);
   const poster = tmdbImage(posterPath);
 
   return (
@@ -59,28 +66,22 @@ export function RatingDialog({
             </div>
           ) : null}
           <div className="min-w-0 flex-1">
-            <p
-              data-numeric
-              className="font-mono text-3xl font-semibold text-foreground"
-            >
-              {score}
-            </p>
-            <Slider
+            <ScoreInput
+              id="rating-score"
               value={score}
-              onValueChange={(v) =>
-                setScore(Array.isArray(v) ? (v[0] ?? 75) : (v as number))
-              }
-              min={0}
-              max={100}
-              step={1}
-              aria-label="Your score"
-              className="mt-3"
+              onChange={setScore}
+              invalid={parsed.error != null}
             />
           </div>
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-col">
-          <Button size="touch" className="w-full" onClick={() => onSubmit(score)}>
+          <Button
+            size="touch"
+            className="w-full"
+            disabled={parsed.score == null}
+            onClick={() => onSubmit(parsed.score)}
+          >
             Save rating
           </Button>
           <Button

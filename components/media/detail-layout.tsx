@@ -33,6 +33,8 @@ import {
   type TrackableSummary,
   type TrackingStatus,
 } from "@/lib/types";
+import { usePref } from "@/lib/local-prefs";
+import { formatScore } from "@/lib/score";
 import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
@@ -113,6 +115,7 @@ function DetailLayout({
    *  PATCH and DELETE address this, so writes queue behind knowing it. */
   const [mediaId, setMediaId] = React.useState<number | null>(null);
   const [editing, setEditing] = React.useState(false);
+  const [scoringSystem] = usePref("scoringSystem");
   const [overviewOpen, setOverviewOpen] = React.useState(false);
 
   // Hydrate any existing entry so the control reflects reality on load. One
@@ -264,7 +267,9 @@ function DetailLayout({
                       className="w-full"
                       onClick={() => setEditing(true)}
                     >
-                      {score != null ? `Your score: ${score}` : "Add a score"}
+                      {score != null
+                        ? `Your score: ${formatScore(score, scoringSystem)}`
+                        : "Add a score"}
                     </Button>
                   ) : null}
                 </div>

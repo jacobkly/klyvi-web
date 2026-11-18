@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { PosterCard } from "@/components/klyvi/poster-card";
+import { ScoreValue } from "@/components/klyvi/score-value";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -517,7 +518,7 @@ function EntryCollection({
                 e.score != null ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              {e.score ?? "–"}
+              {e.score != null ? <ScoreValue score={e.score} /> : "–"}
             </span>
             <Button
               variant="ghost"

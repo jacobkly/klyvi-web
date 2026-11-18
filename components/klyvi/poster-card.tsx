@@ -1,12 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
 
 import {
   STATUS_LABELS,
   type MediaSummary,
   type TrackingStatus,
 } from "@/lib/types";
+import { ScoreValue } from "@/components/klyvi/score-value";
 import { mediaHref } from "@/lib/media-href";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb-image";
@@ -54,7 +54,6 @@ function PosterCard({
       ? `${progress.watched} / ${progress.total}`
       : `${progress.watched}`
     : null;
-  const scoreText = score != null ? String(score) : null;
 
   return (
     <Link
@@ -113,7 +112,7 @@ function PosterCard({
               {media.title}
               {seasonSuffix}
             </p>
-            {progressText || scoreText ? (
+            {progressText || score != null ? (
               <div className="mt-1 flex items-center justify-between gap-2">
                 {/* Episode progress (TV only): violet, the app speaking. */}
                 <span data-numeric className="font-mono text-[11px] text-violet-text">
@@ -122,15 +121,12 @@ function PosterCard({
                 {/* Your score: neutral (user data, not the app), on the right
                     where a rating is read. The star names it, so it can never
                     be mistaken for a count again. */}
-                {scoreText ? (
-                  <span
-                    data-numeric
-                    aria-label={`Your score ${scoreText} out of 100`}
-                    className="flex items-center gap-0.5 font-mono text-[11px] font-medium text-white"
-                  >
-                    <Star aria-hidden="true" className="size-2.5 fill-current" strokeWidth={2} />
-                    {scoreText}
-                  </span>
+                {score != null ? (
+                  <ScoreValue
+                    score={score}
+                    mine
+                    className="font-mono text-[11px] font-medium text-white"
+                  />
                 ) : null}
               </div>
             ) : null}
@@ -149,15 +145,12 @@ function PosterCard({
                 {progressText}
               </span>
             ) : null}
-            {scoreText ? (
-              <span
-                data-numeric
-                aria-label={`Your score ${scoreText} out of 100`}
-                className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] font-medium text-white backdrop-blur-sm"
-              >
-                <Star aria-hidden="true" className="size-2.5 fill-current" strokeWidth={2} />
-                {scoreText}
-              </span>
+            {score != null ? (
+              <ScoreValue
+                score={score}
+                mine
+                className="absolute bottom-1 right-1 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] font-medium text-white backdrop-blur-sm"
+              />
             ) : null}
           </>
         ) : null}

@@ -4,6 +4,8 @@ import Image from "next/image";
 import * as React from "react";
 import { Star } from "lucide-react";
 
+import { ScoreInput } from "@/components/klyvi/score-input";
+import { ScoreValue } from "@/components/klyvi/score-value";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +35,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getTvSeason } from "@/lib/api/catalog";
+import { usePref } from "@/lib/local-prefs";
+import { parseScoreInput, scoreHint, scoreInputText } from "@/lib/score";
 import {
   STATUS_LABELS,
   type LibraryEntry,
@@ -62,8 +66,6 @@ export type TrackingEdit = {
   favorite: boolean;
 };
 
-const SCORE_ERROR = "Score must be a whole number from 0 to 100";
-
 /** Blank is null. Anything that isn't a whole number is NaN. */
 function parseWhole(raw: string): number | null {
   const t = raw.trim();
@@ -71,13 +73,7 @@ function parseWhole(raw: string): number | null {
   return /^-?\d+$/.test(t) ? Number(t) : NaN;
 }
 
-/** The API refuses the same limits with a 400, so these only say it sooner. */
-function scoreError(raw: string): string | null {
-  const n = parseWhole(raw);
-  if (n == null) return null;
-  return Number.isNaN(n) || n < 0 || n > 100 ? SCORE_ERROR : null;
-}
-
+/** The API refuses the same limits with a 400, so this only says it sooner. */
 function progressError(raw: string, total: number | null): string | null {
   const n = parseWhole(raw);
   if (n == null) return null;
@@ -119,8 +115,13 @@ function TrackingDialog({
   onDelete: () => void;
 }) {
   const isSeason = entry.mediaType === "season";
+  const [scoringSystem] = usePref("scoringSystem");
   const [status, setStatus] = React.useState<TrackingStatus>(entry.status);
-  const [score, setScore] = React.useState(entry.score?.toString() ?? "");
+  // The score field holds text in the scoring system's units, not the
+  // stored 0 to 100.
+  const [score, setScore] = React.useState(
+    scoreInputText(entry.score, scoringSystem)
+  );
   const [progress, setProgress] = React.useState(
     entry.progress?.toString() ?? ""
   );
@@ -136,7 +137,7 @@ function TrackingDialog({
   if (shownKey !== formKey) {
     setShownKey(formKey);
     setStatus(entry.status);
-    setScore(entry.score?.toString() ?? "");
+    setScore(scoreInputText(entry.score, scoringSystem));
     setProgress(entry.progress?.toString() ?? "");
     setNotes(entry.notes ?? "");
     setFavorite(entry.favorite);
@@ -171,7 +172,11 @@ function TrackingDialog({
     ? `${entry.title} · Season ${entry.seasonNumber}`
     : entry.title;
 
-  const scoreProblem = scoreError(score);
+  // An untouched field keeps the stored score as it is, so opening an 88 in
+  // the 5-star system and saving doesn't round it to 80.
+  const scoreUntouched = score === scoreInputText(entry.score, scoringSystem);
+  const parsedScore = parseScoreInput(score, scoringSystem);
+  const scoreProblem = scoreUntouched ? null : parsedScore.error;
   const progressProblem = isSeason ? progressError(progress, total) : null;
 
   function changeStatus(next: TrackingStatus) {
@@ -187,7 +192,7 @@ function TrackingDialog({
     if (scoreProblem || progressProblem) return;
     onSave({
       status,
-      score: parseWhole(score),
+      score: scoreUntouched ? entry.score : parsedScore.score,
       progress: isSeason ? parseWhole(progress) : null,
       notes: notes.trim() === "" ? null : notes,
       favorite,
@@ -257,7 +262,7 @@ function TrackingDialog({
                       data-numeric
                       className="font-mono text-2xl text-violet-text"
                     >
-                      {entry.score}
+                      <ScoreValue score={entry.score} />
                     </span>
                     <span className="text-xs text-muted-foreground">
                       your score
@@ -321,15 +326,12 @@ function TrackingDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="td-score">Score</Label>
-            <Input
+            <ScoreInput
               id="td-score"
-              inputMode="numeric"
               value={score}
-              onChange={(e) => setScore(e.target.value)}
-              aria-invalid={scoreProblem ? true : undefined}
-              aria-describedby={scoreProblem ? "td-score-error" : undefined}
-              className="font-mono"
+              onChange={setScore}
+              invalid={scoreProblem != null}
+              describedBy={scoreProblem ? "td-score-error" : undefined}
             />
             {scoreProblem ? (
               <p id="td-score-error" className="text-xs text-destructive">
@@ -410,7 +412,8 @@ function TrackingDialog({
         </div>
 
             <p className="mt-4 text-xs text-muted-foreground">
-              Score is out of 100. Leave blank if you would rather not rate it.
+              {scoreHint(scoringSystem)} Leave blank if you would rather not
+              rate it.
             </p>
           </div>
         </div>

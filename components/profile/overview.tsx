@@ -10,15 +10,20 @@ import { SectionHeader } from "@/components/klyvi/section-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { recentActivity } from "@/lib/library-filter";
 import { usePref } from "@/lib/local-prefs";
+import { formatScore, type ScoringSystem } from "@/lib/score";
 import {
   STATUS_LABELS,
   type LibraryEntry,
   type TrackingStatus,
 } from "@/lib/types";
 
-/** "Completed Dune: Part Two", "Rated Parasite 94". */
-function activityLine(e: LibraryEntry): string {
-  if (e.score != null) return `Rated ${e.title} ${e.score}`;
+/** "Completed Dune: Part Two", "Rated Parasite 94", "Rated Up: liked it". */
+function activityLine(e: LibraryEntry, system: ScoringSystem): string {
+  if (e.score != null) {
+    return system === "smiley"
+      ? `Rated ${e.title}: ${formatScore(e.score, system).toLowerCase()}`
+      : `Rated ${e.title} ${formatScore(e.score, system)}`;
+  }
   return `${STATUS_LABELS[e.status]}: ${e.title}`;
 }
 
@@ -36,6 +41,7 @@ function relativeTime(iso: string): string {
 export function ProfileOverview() {
   const data = useProfile();
   const [activityFeed] = usePref("activityFeed");
+  const [scoringSystem] = usePref("scoringSystem");
   if (!data) return null;
   const { entries, taste, stats } = data;
 
@@ -237,7 +243,7 @@ export function ProfileOverview() {
                   className="flex items-baseline justify-between gap-3"
                 >
                   <span className="min-w-0 truncate text-sm text-foreground">
-                    {activityLine(e)}
+                    {activityLine(e, scoringSystem)}
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {relativeTime(e.updatedAt)}

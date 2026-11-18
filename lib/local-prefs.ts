@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import type { ScoringSystem } from "@/lib/score";
 import { PREFS_STORAGE_KEY, type ThemeSettings } from "@/lib/theme";
 import type { FeedMedia } from "@/lib/types";
 
@@ -14,7 +15,7 @@ import type { FeedMedia } from "@/lib/types";
  */
 
 export type Prefs = ThemeSettings & {
-  scoringSystem: "hundred" | "ten" | "stars" | "smiley";
+  scoringSystem: ScoringSystem;
   listOrder: "updated" | "title" | "score" | "added";
   combineLists: boolean;
   /** Library layout the user last chose; remembered so it does not reset. */
