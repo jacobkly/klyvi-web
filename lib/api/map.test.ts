@@ -280,6 +280,55 @@ describe("mapMovie", () => {
     expect(m.releaseDate).toBe("2019-05-30T00:00:00Z");
   });
 
+  it("maps the extra facts: studios, countries, languages, money and links", () => {
+    const m = mapMovie({
+      ...WIRE,
+      original_title: "기생충",
+      production_companies: [
+        { id: 1, name: "Barunson E&A" },
+        { id: 2, name: "CJ Entertainment" },
+      ],
+      production_countries: [{ iso_3166_1: "KR", name: "South Korea" }],
+      spoken_languages: [
+        { iso_639_1: "ko", english_name: "Korean", name: "한국어/조선말" },
+        { iso_639_1: "en", english_name: "English", name: "English" },
+      ],
+      budget: 11400000,
+      revenue: 262133000,
+      imdb_id: "tt6751668",
+      homepage: "https://www.parasite-movie.com/",
+      credits: {
+        crew: [
+          { id: 30, name: "Bong Joon-ho", job: "Director" },
+          { id: 30, name: "Bong Joon-ho", job: "Screenplay" },
+          { id: 32, name: "Han Jin-won", job: "Screenplay" },
+          { id: 30, name: "Bong Joon-ho", job: "Story" },
+        ],
+      },
+    });
+    expect(m).toMatchObject({
+      originalTitle: "기생충",
+      studios: ["Barunson E&A", "CJ Entertainment"],
+      countries: ["South Korea"],
+      spokenLanguages: ["Korean", "English"],
+      budget: 11400000,
+      revenue: 262133000,
+      imdbId: "tt6751668",
+      homepage: "https://www.parasite-movie.com/",
+      directors: ["Bong Joon-ho"],
+      writers: ["Bong Joon-ho", "Han Jin-won"],
+    });
+  });
+
+  it("reads a zero budget or revenue as unknown", () => {
+    const m = mapMovie({ ...WIRE, budget: 0, revenue: 0 });
+    expect(m.budget).toBeNull();
+    expect(m.revenue).toBeNull();
+    expect(m.studios).toEqual(["Barunson E&A"]);
+    expect(m.countries).toEqual([]);
+    expect(m.imdbId).toBeNull();
+  });
+
   it("accepts keywords as a bare array (what the live API stores)", () => {
     const m = mapMovie({
       ...WIRE,
@@ -361,6 +410,52 @@ describe("mapTvSeries", () => {
     });
     expect(t.keywords).toEqual([{ id: 15, name: "drug cartel" }]);
     expect(t.year).toBe(2008);
+  });
+
+  it("maps networks, type, production and the next and last episodes", () => {
+    const t = mapTvSeries({
+      ...WIRE,
+      original_name: "Breaking Bad",
+      networks: [{ id: 174, name: "AMC" }],
+      type: "Scripted",
+      in_production: true,
+      homepage: "https://www.amc.com/shows/breaking-bad",
+      production_countries: [{ iso_3166_1: "US", name: "United States of America" }],
+      spoken_languages: [{ iso_639_1: "en", english_name: "English", name: "English" }],
+      next_episode_to_air: {
+        id: 9,
+        name: "Felina",
+        air_date: "2013-09-29",
+        season_number: 5,
+        episode_number: 16,
+      },
+      last_episode_to_air: {
+        id: 8,
+        name: "Granite State",
+        air_date: "2013-09-22",
+        season_number: 5,
+        episode_number: 15,
+      },
+    });
+    expect(t).toMatchObject({
+      originalTitle: "Breaking Bad",
+      networks: ["AMC"],
+      showType: "Scripted",
+      inProduction: true,
+      homepage: "https://www.amc.com/shows/breaking-bad",
+      countries: ["United States of America"],
+      spokenLanguages: ["English"],
+      nextEpisode: { season: 5, episode: 16, airDate: "2013-09-29" },
+      lastEpisode: { season: 5, episode: 15, airDate: "2013-09-22" },
+    });
+  });
+
+  it("leaves the episode facts null on a row that lacks them", () => {
+    const t = mapTvSeries(WIRE);
+    expect(t.nextEpisode).toBeNull();
+    expect(t.lastEpisode).toBeNull();
+    expect(t.networks).toEqual([]);
+    expect(t.inProduction).toBe(false);
   });
 });
 

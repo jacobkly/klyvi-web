@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LibraryEntry, TrackableSummary } from "@/lib/types";
@@ -54,7 +55,9 @@ function tracked(over: Partial<LibraryEntry>): LibraryEntry {
   };
 }
 
-function renderDetail() {
+function renderDetail(
+  over: Partial<ComponentProps<typeof DetailLayout>> = {}
+) {
   return render(
     <DetailLayout
       media={SEASON}
@@ -69,6 +72,7 @@ function renderDetail() {
       metadata={[]}
       keywords={[]}
       cast={[]}
+      {...over}
     />
   );
 }
@@ -148,5 +152,69 @@ describe("DetailLayout saves", () => {
       expect(toast).toHaveBeenCalledWith("Could not update that. Try again")
     );
     expect(screen.getByRole("button", { name: /Completed/ })).toBeInTheDocument();
+  });
+});
+
+describe("DetailLayout facts", () => {
+  beforeEach(() => {
+    sessionUser = null;
+  });
+
+  it("links out to IMDb and the official site in a new tab", () => {
+    renderDetail({
+      metadata: [
+        { label: "Budget", value: "$160M" },
+        {
+          label: "Links",
+          value: null,
+          links: [
+            { label: "IMDb", href: "https://www.imdb.com/title/tt1375666/" },
+            { label: "Official site", href: "https://www.inceptionmovie.com/" },
+          ],
+        },
+      ],
+    });
+
+    expect(screen.getByText("$160M")).toBeInTheDocument();
+    const imdb = screen.getByRole("link", { name: /IMDb/ });
+    expect(imdb).toHaveAttribute("href", "https://www.imdb.com/title/tt1375666/");
+    expect(imdb).toHaveAttribute("target", "_blank");
+    expect(imdb).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getByRole("link", { name: /Official site/ })).toBeInTheDocument();
+  });
+
+  it("names the director and writers beside the title, not inside the heading", () => {
+    renderDetail({
+      directorLine: "Directed by Christopher Nolan. Written by Christopher Nolan",
+    });
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^Severance\s*2025$/);
+    expect(
+      screen.getByText("Directed by Christopher Nolan. Written by Christopher Nolan")
+    ).toBeInTheDocument();
+  });
+
+  it("shows the phone strip under the title, and nothing when it is empty", () => {
+    const { rerender } = renderDetail({ strip: ["2h 28m", "84 average"] });
+    expect(screen.getByText("2h 28m · 84 average")).toBeInTheDocument();
+
+    rerender(
+      <DetailLayout
+        media={SEASON}
+        backdropPath={null}
+        posterPath={null}
+        title="Severance"
+        year={2025}
+        directorLine={null}
+        tagline={null}
+        overview={null}
+        genres={[]}
+        metadata={[]}
+        keywords={[]}
+        cast={[]}
+        strip={[]}
+      />
+    );
+    expect(screen.queryByTestId("fact-strip")).toBeNull();
   });
 });

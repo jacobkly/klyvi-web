@@ -31,6 +31,25 @@ export type MovieDetail = {
   cast: CastMember[];
   director: string | null;
   crew: CrewGroup[];
+  /** TMDB's original_title. The facts show it only when it differs. */
+  originalTitle: string | null;
+  directors: string[];
+  writers: string[];
+  studios: string[];
+  countries: string[];
+  spokenLanguages: string[];
+  /** In US dollars. Null when TMDB has none (it stores 0). */
+  budget: number | null;
+  revenue: number | null;
+  imdbId: string | null;
+  homepage: string | null;
+};
+
+/** An episode named by number, for "S3 E4 on 12 Dec 2026". */
+export type EpisodeRef = {
+  season: number;
+  episode: number;
+  airDate: string | null;
 };
 
 export type SeasonInfo = {
@@ -40,8 +59,17 @@ export type SeasonInfo = {
   episodeCount: number;
 };
 
-export type TvDetail = Omit<MovieDetail, "runtime" | "director"> & {
+export type TvDetail = Omit<
+  MovieDetail,
+  "runtime" | "director" | "directors" | "writers" | "budget" | "revenue" | "imdbId"
+> & {
   seasons: SeasonInfo[];
+  networks: string[];
+  /** TMDB's type: Scripted, Miniseries, Documentary and so on. */
+  showType: string | null;
+  inProduction: boolean;
+  nextEpisode: EpisodeRef | null;
+  lastEpisode: EpisodeRef | null;
   episodeRuntime: number | null;
   firstAirDate: string | null;
   lastAirDate: string | null;
@@ -83,6 +111,16 @@ export const MOCK_MOVIE: MovieDetail = {
     { id: 8, name: "Park Myung-hoon" },
   ],
   director: "Bong Joon Ho",
+  originalTitle: "기생충",
+  directors: ["Bong Joon Ho"],
+  writers: ["Bong Joon Ho", "Han Jin-won"],
+  studios: ["Barunson E&A"],
+  countries: ["South Korea"],
+  spokenLanguages: ["Korean", "English"],
+  budget: 11400000,
+  revenue: 262133000,
+  imdbId: "tt6751668",
+  homepage: null,
   crew: [
     { role: "Director", names: ["Bong Joon Ho"] },
     { role: "Writers", names: ["Bong Joon Ho", "Han Jin-won"] },
@@ -121,6 +159,16 @@ export const MOCK_TV: TvDetail = {
     { id: 6, name: "Tramell Tillman" },
   ],
   creator: "Dan Erickson",
+  originalTitle: "Severance",
+  studios: ["Red Hour"],
+  countries: ["United States of America"],
+  spokenLanguages: ["English"],
+  homepage: null,
+  networks: ["Apple TV+"],
+  showType: "Scripted",
+  inProduction: true,
+  nextEpisode: null,
+  lastEpisode: null,
   crew: [
     { role: "Creator", names: ["Dan Erickson"] },
     { role: "Directors", names: ["Ben Stiller", "Aoife McArdle"] },
@@ -160,10 +208,11 @@ export function formatSeasons(count: number | null): string | null {
   return count === 1 ? "1 season" : `${count} seasons`;
 }
 
-/** "4 November 2023", no ordinal. */
+/** "4 November 2023", no ordinal. Takes a bare date or the API's full
+ *  timestamp ("2023-11-04T00:00:00Z"); only the date part is read. */
 export function formatDate(iso: string | null): string | null {
   if (!iso) return null;
-  const d = new Date(iso + "T00:00:00Z");
+  const d = new Date(iso.slice(0, 10) + "T00:00:00Z");
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString("en-GB", {
     day: "numeric",

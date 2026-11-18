@@ -6,6 +6,7 @@
 import type {
   CastMember,
   CrewGroup,
+  EpisodeRef,
   MovieDetail,
   SeasonInfo,
   TvDetail,
@@ -30,6 +31,7 @@ import type {
   UserStats,
 } from "@/lib/types";
 import type {
+  WireEpisodeRef,
   WireImportJob,
   WireInteraction,
   WireMovie,
@@ -118,6 +120,41 @@ const CREW_ROLES: { role: string; jobs: string[] }[] = [
   { role: "Music", jobs: ["Original Music Composer", "Music"] },
   { role: "Production Design", jobs: ["Production Design"] },
 ];
+
+/** Each name once, in credit order, for the given jobs. */
+function crewNames(credits: WireMovie["credits"], jobs: string[]): string[] {
+  const names: string[] = [];
+  for (const c of credits?.crew ?? []) {
+    if (c.job && c.name && jobs.includes(c.job) && !names.includes(c.name)) {
+      names.push(c.name);
+    }
+  }
+  return names;
+}
+
+function names(list: { name?: string | null }[] | null | undefined): string[] {
+  return (list ?? []).map((x) => x.name ?? "").filter((n) => n !== "");
+}
+
+function spokenNames(list: WireMovie["spoken_languages"]): string[] {
+  return (list ?? [])
+    .map((l) => l.english_name || l.name || "")
+    .filter((n) => n !== "");
+}
+
+function episodeRef(w: WireEpisodeRef | null | undefined): EpisodeRef | null {
+  if (!w || !w.season_number || !w.episode_number) return null;
+  return {
+    season: w.season_number,
+    episode: w.episode_number,
+    airDate: orNull(w.air_date),
+  };
+}
+
+/** TMDB stores an unknown budget or revenue as 0. */
+function money(n: number | undefined): number | null {
+  return n != null && n > 0 ? n : null;
+}
 
 function groupCrew(credits: WireMovie["credits"], perRole = 6): CrewGroup[] {
   const crew = credits?.crew ?? [];
@@ -216,6 +253,16 @@ export function mapMovie(w: WireMovie): MovieDetail {
     cast: topCast(w.credits),
     director,
     crew: groupCrew(w.credits),
+    originalTitle: orNull(w.original_title),
+    directors: crewNames(w.credits, ["Director"]),
+    writers: crewNames(w.credits, ["Screenplay", "Writer"]),
+    studios: names(w.production_companies),
+    countries: names(w.production_countries),
+    spokenLanguages: spokenNames(w.spoken_languages),
+    budget: money(w.budget),
+    revenue: money(w.revenue),
+    imdbId: orNull(w.imdb_id),
+    homepage: orNull(w.homepage),
   };
 }
 
@@ -240,7 +287,7 @@ export function mapTvSeries(w: WireTvSeries): TvDetail {
     releaseDate: w.first_air_date,
     status: w.status ?? "Unknown",
     language: languageLabel(w.original_language),
-    studio: null,
+    studio: w.production_companies?.[0]?.name ?? null,
     voteAverage: w.vote_average > 0 ? w.vote_average : null,
     genres: (w.genres ?? []).map((g) => g.name),
     keywords: keywordList(w.keywords),
@@ -254,6 +301,16 @@ export function mapTvSeries(w: WireTvSeries): TvDetail {
       ? w.created_by.map((c) => c.name).join(", ")
       : null,
     crew: groupCrew(w.credits),
+    originalTitle: orNull(w.original_name),
+    studios: names(w.production_companies),
+    countries: names(w.production_countries),
+    spokenLanguages: spokenNames(w.spoken_languages),
+    homepage: orNull(w.homepage),
+    networks: names(w.networks),
+    showType: orNull(w.type),
+    inProduction: w.in_production === true,
+    nextEpisode: episodeRef(w.next_episode_to_air),
+    lastEpisode: episodeRef(w.last_episode_to_air),
   };
 }
 

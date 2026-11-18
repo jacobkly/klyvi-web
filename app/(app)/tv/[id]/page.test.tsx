@@ -46,6 +46,16 @@ const SERIES: TvDetail = {
   firstAirDate: "2008-01-20",
   lastAirDate: "2013-09-29",
   creator: "Vince Gilligan",
+  originalTitle: "Breaking Bad",
+  studios: [],
+  countries: [],
+  spokenLanguages: [],
+  homepage: null,
+  networks: ["AMC"],
+  showType: "Scripted",
+  inProduction: false,
+  nextEpisode: null,
+  lastEpisode: { season: 5, episode: 16, airDate: "2013-09-29" },
 };
 
 function show(tmdbId: number, title: string, reason: string): SimilarTitle {
@@ -88,6 +98,19 @@ describe("TvPage", () => {
 
     expect(page.props.crew).toEqual(SERIES.crew);
     expect(page.props.shelves).toBeTruthy();
+  });
+
+  it("hands the layout the series facts and the phone strip", async () => {
+    getTvSeries.mockResolvedValue(SERIES);
+    const page = await TvPage({ params: Promise.resolve({ id: "1396" }) });
+
+    expect(page.props.metadata).toContainEqual({
+      label: "Last episode",
+      value: "S5 E16 on 29 Sep 2013",
+    });
+    expect(page.props.metadata).toContainEqual({ label: "Network", value: "AMC" });
+    expect(page.props.strip).toEqual(["89 average"]);
+    expect(page.props.directorLine).toBe("Created by Vince Gilligan");
   });
 
   it("hides the shelf, not the page, when the similar request fails", async () => {

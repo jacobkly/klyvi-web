@@ -8,7 +8,7 @@ import { SeriesActions } from "@/components/media/series-actions";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { getSimilar, getTvSeries } from "@/lib/api/catalog";
-import { formatDate } from "@/lib/mock-media";
+import { byLine, tvFacts, tvStrip } from "@/lib/media-facts";
 import type { MediaSummary } from "@/lib/types";
 
 import { TvShelves } from "./tv-shelves";
@@ -85,25 +85,12 @@ export default async function TvPage({
       posterPath={t.posterPath}
       title={t.title}
       year={t.year}
-      directorLine={t.creator ? `Created by ${t.creator}` : null}
+      directorLine={t.creator ? byLine("Created by", [t.creator]) : null}
       tagline={t.tagline}
       overview={t.overview}
       genres={t.genres}
-      metadata={[
-        { label: "Seasons", value: t.seasons.length },
-        {
-          label: "Episodes",
-          value: t.seasons.reduce((n, s) => n + s.episodeCount, 0) || null,
-        },
-        { label: "First aired", value: formatDate(t.firstAirDate) },
-        { label: "Last aired", value: formatDate(t.lastAirDate) },
-        { label: "Status", value: t.status },
-        { label: "Language", value: t.language },
-        {
-          label: "Average score",
-          value: t.voteAverage != null ? Math.round(t.voteAverage * 10) : null,
-        },
-      ]}
+      metadata={tvFacts(t)}
+      strip={tvStrip(t)}
       keywords={t.keywords}
       cast={t.cast}
       crew={t.crew}

@@ -5,7 +5,7 @@ import { DetailError } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
 import { getMovie, getMovieCollection, getSimilar } from "@/lib/api/catalog";
-import { formatDate, formatRuntime } from "@/lib/mock-media";
+import { byLine, movieFacts, movieStrip } from "@/lib/media-facts";
 
 import { MovieShelves } from "./movie-shelves";
 
@@ -63,21 +63,12 @@ export default async function MoviePage({
       posterPath={m.posterPath}
       title={m.title}
       year={m.year}
-      directorLine={m.director ? `Directed by ${m.director}` : null}
+      directorLine={byLine("Directed by", m.directors, m.writers)}
       tagline={m.tagline}
       overview={m.overview}
       genres={m.genres}
-      metadata={[
-        { label: "Runtime", value: formatRuntime(m.runtime) },
-        { label: "Released", value: formatDate(m.releaseDate) },
-        { label: "Status", value: m.status },
-        { label: "Language", value: m.language },
-        { label: "Studio", value: m.studio },
-        {
-          label: "Average score",
-          value: m.voteAverage != null ? Math.round(m.voteAverage * 10) : null,
-        },
-      ]}
+      metadata={movieFacts(m)}
+      strip={movieStrip(m)}
       keywords={m.keywords}
       cast={m.cast}
       crew={m.crew}

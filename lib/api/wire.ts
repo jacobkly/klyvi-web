@@ -31,6 +31,21 @@ export type WireKeywords =
   | WireKeyword[]
   | { keywords?: WireKeyword[]; results?: WireKeyword[] };
 
+export type WireCountry = { iso_3166_1: string; name: string };
+export type WireSpokenLanguage = {
+  iso_639_1: string;
+  english_name?: string;
+  name?: string;
+};
+/** TMDB's next_episode_to_air and last_episode_to_air, stored verbatim. */
+export type WireEpisodeRef = {
+  id?: number;
+  name?: string | null;
+  air_date: string | null;
+  season_number: number;
+  episode_number: number;
+};
+
 // ---------- catalog ----------
 
 export type WireMovie = {
@@ -43,6 +58,15 @@ export type WireMovie = {
   production_companies: { id: number; name: string }[] | null;
   release_date: string | null;
   runtime: number;
+  // The rest of the cached detail row. Optional so older fixtures and any
+  // row cached before a column existed still map.
+  original_title?: string | null;
+  production_countries?: WireCountry[] | null;
+  spoken_languages?: WireSpokenLanguage[] | null;
+  budget?: number;
+  revenue?: number;
+  imdb_id?: string | null;
+  homepage?: string | null;
   status: string | null;
   tagline: string | null;
   title: string | null;
@@ -56,6 +80,16 @@ export type WireTvSeries = {
   tv_id: number;
   backdrop_path: string | null;
   created_by: { id: number; name: string }[] | null;
+  original_name?: string | null;
+  networks?: { id: number; name: string }[] | null;
+  production_companies?: { id: number; name: string }[] | null;
+  production_countries?: WireCountry[] | null;
+  spoken_languages?: WireSpokenLanguage[] | null;
+  type?: string | null;
+  in_production?: boolean;
+  homepage?: string | null;
+  next_episode_to_air?: WireEpisodeRef | null;
+  last_episode_to_air?: WireEpisodeRef | null;
   first_air_date: string | null;
   last_air_date: string | null;
   genres: WireGenre[] | null;

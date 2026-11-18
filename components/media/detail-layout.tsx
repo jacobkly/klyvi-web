@@ -26,6 +26,7 @@ import { KeywordCard } from "@/components/media/keyword-card";
 import { MetadataList } from "@/components/media/metadata-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { Fact } from "@/lib/media-facts";
 import type { CastMember, CrewGroup, Keyword } from "@/lib/mock-media";
 import {
   STATUS_VERBS,
@@ -61,6 +62,7 @@ function DetailLayout({
   overview,
   genres,
   metadata,
+  strip = [],
   keywords,
   cast,
   crew,
@@ -87,7 +89,10 @@ function DetailLayout({
   tagline: string | null;
   overview: string | null;
   genres: string[];
-  metadata: { label: string; value: string | number | null }[];
+  metadata: Fact[];
+  /** The phone's one-line summary under the title (runtime or seasons, and
+   *  the average). Desktop has the facts column beside the content instead. */
+  strip?: string[];
   keywords: Keyword[];
   cast: CastMember[];
   /** Crew grouped by role (Director, Writers, ...). Empty hides the section. */
@@ -292,12 +297,21 @@ function DetailLayout({
                     {year}
                   </span>
                 ) : null}
-                {directorLine ? (
-                  <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
-                    {directorLine}
-                  </span>
-                ) : null}
               </h1>
+
+              {directorLine ? (
+                <p className="mt-1.5 text-sm text-muted-foreground">{directorLine}</p>
+              ) : null}
+
+              {strip.length > 0 ? (
+                <p
+                  data-testid="fact-strip"
+                  data-numeric
+                  className="mt-1.5 font-mono text-[13px] text-muted-foreground lg:hidden"
+                >
+                  {strip.join(" · ")}
+                </p>
+              ) : null}
 
               {genres.length > 0 ? (
                 <p className="mt-2 text-sm text-muted-foreground">
