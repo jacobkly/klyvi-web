@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { usePref } from "@/lib/local-prefs";
+
 /**
  * Ambient projector-beam backdrop, landing page only: slow violet light
  * streaks drifting through the dark, the Dark Room idea made literal.
@@ -15,7 +17,8 @@ import * as React from "react";
  * CSS on the canvas element, composited on the GPU.
  *
  * Like the hero marquee, this is a disclosed reduced-motion exception:
- * slow linear drift, no flashing, landing page only.
+ * slow linear drift, no flashing, landing page only. Reduce motion in
+ * Klyvi's own settings is an explicit ask, so it holds the beams still.
  */
 
 interface Beam {
@@ -53,6 +56,7 @@ function createBeam(width: number, height: number): Beam {
 
 export function BeamsBackground() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [reduceMotion] = usePref("reduceMotion");
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -98,6 +102,17 @@ export function BeamsBackground() {
     }
 
     let raf = 0;
+    const still = () => {
+      resize();
+      ctx.clearRect(0, 0, width, height);
+      for (const beam of beams) drawBeam(ctx, beam);
+    };
+    if (reduceMotion) {
+      still();
+      window.addEventListener("resize", still);
+      return () => window.removeEventListener("resize", still);
+    }
+
     const tick = () => {
       ctx.clearRect(0, 0, width, height);
       for (const beam of beams) {
@@ -121,7 +136,7 @@ export function BeamsBackground() {
       window.removeEventListener("resize", resize);
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [reduceMotion]);
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 bg-background">

@@ -69,7 +69,10 @@
   --color-status-dropped: var(--status-dropped);
 }
 
-:root {
+/* .light scopes the light tokens under a dark page too (the settings
+   preview chip). On html it matches :root and changes nothing. */
+:root,
+.light {
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
@@ -81,7 +84,9 @@
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
+  /* Darker than the preset's 0.552, which measured 4.39:1 on --muted (the
+     "+N" chips) once light mode shipped. 0.53 gives 4.81:1 there. */
+  --muted-foreground: oklch(0.53 0.016 285.938);
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
@@ -178,6 +183,80 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+}
+
+/* Accent themes (settings > appearance). Violet is the default and needs no
+   rule. Each accent repoints the three tokens the app speaks in: --primary
+   (a fill carrying light text), --ring and --violet-text (the accent as text
+   and glyphs on a surface, named for the default). Lightness is fixed per
+   role so every hue clears the same floors, measured with the OKLCH to sRGB
+   contrast formula:
+   - light primary and text at L 0.49: 5.4:1 or better on white and with
+     primary-foreground
+   - dark primary at L 0.45: 6.4:1 or better with primary-foreground
+   - dark text at L 0.72: 5.4:1 or better on background, card and secondary
+   - dark ring at L 0.64: 4.7:1 or better on background and card
+   Chroma is clipped to the sRGB gamut at each lightness. Status colors and
+   the chart ramp stay as they are: they carry meaning, not the accent. */
+[data-accent="blue"] {
+  --primary: oklch(0.49 0.2 260);
+  --ring: oklch(0.49 0.2 260);
+  --violet-text: oklch(0.49 0.2 260);
+  --sidebar-primary: oklch(0.49 0.2 260);
+}
+.dark[data-accent="blue"] {
+  --primary: oklch(0.45 0.18 260);
+  --ring: oklch(0.64 0.19 260);
+  --violet-text: oklch(0.72 0.145 260);
+  --sidebar-primary: oklch(0.45 0.18 260);
+}
+[data-accent="green"] {
+  --primary: oklch(0.49 0.105 162);
+  --ring: oklch(0.49 0.105 162);
+  --violet-text: oklch(0.49 0.105 162);
+  --sidebar-primary: oklch(0.49 0.105 162);
+}
+.dark[data-accent="green"] {
+  --primary: oklch(0.45 0.095 162);
+  --ring: oklch(0.64 0.14 162);
+  --violet-text: oklch(0.72 0.15 162);
+  --sidebar-primary: oklch(0.45 0.095 162);
+}
+[data-accent="orange"] {
+  --primary: oklch(0.49 0.115 60);
+  --ring: oklch(0.49 0.115 60);
+  --violet-text: oklch(0.49 0.115 60);
+  --sidebar-primary: oklch(0.49 0.115 60);
+}
+.dark[data-accent="orange"] {
+  --primary: oklch(0.45 0.105 60);
+  --ring: oklch(0.64 0.15 60);
+  --violet-text: oklch(0.72 0.16 60);
+  --sidebar-primary: oklch(0.45 0.105 60);
+}
+[data-accent="pink"] {
+  --primary: oklch(0.49 0.2 354);
+  --ring: oklch(0.49 0.2 354);
+  --violet-text: oklch(0.49 0.2 354);
+  --sidebar-primary: oklch(0.49 0.2 354);
+}
+.dark[data-accent="pink"] {
+  --primary: oklch(0.45 0.185 354);
+  --ring: oklch(0.64 0.21 354);
+  --violet-text: oklch(0.72 0.2 354);
+  --sidebar-primary: oklch(0.45 0.185 354);
+}
+[data-accent="red"] {
+  --primary: oklch(0.49 0.195 27);
+  --ring: oklch(0.49 0.195 27);
+  --violet-text: oklch(0.49 0.195 27);
+  --sidebar-primary: oklch(0.49 0.195 27);
+}
+.dark[data-accent="red"] {
+  --primary: oklch(0.45 0.18 27);
+  --ring: oklch(0.64 0.215 27);
+  --violet-text: oklch(0.72 0.17 27);
+  --sidebar-primary: oklch(0.45 0.18 27);
 }
 
 @layer base {
@@ -287,6 +366,27 @@
   }
 }
 
+/* Text size (settings > appearance). The root font size steps and every rem
+   follows. Percentages, so a browser's own font size still counts: at the
+   usual 16px base these are 15, 16 and 18px. */
+html[data-text-size="compact"] {
+  font-size: 93.75%;
+}
+html[data-text-size="large"] {
+  font-size: 112.5%;
+}
+
+/* Reduce motion (settings > appearance): the same floor as the system
+   setting above, switched on by the class the theme script sets. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* Landing hero motion.
 
    The marquee is a DELIBERATE, DISCLOSED exception to the reduced-motion
@@ -317,6 +417,11 @@
     animation: klyvi-marquee 42s linear infinite !important;
   }
 }
+/* Asking Klyvi itself for less motion is explicit, so it stops the marquee
+   too. Outranks the override above on specificity. */
+.reduce-motion .marquee-track {
+  animation: none !important;
+}
 
 /* Indeterminate progress. Base UI gives the indicator no width when value is
    null, so the "still reading the file" phase of an import is styled and
@@ -342,4 +447,10 @@
     width: 100% !important;
     opacity: 0.5;
   }
+}
+.reduce-motion [data-slot="progress-indicator"][data-indeterminate] {
+  animation: none !important;
+  transform: none !important;
+  width: 100% !important;
+  opacity: 0.5;
 }

@@ -23,15 +23,15 @@ const ACCENTS: { id: Accent; label: string; swatch: string }[] = [
 ];
 
 const TEXT_SIZES: { id: Prefs["textSize"]; label: string; hint: string }[] = [
-  { id: "compact", label: "Compact", hint: "More on screen" },
-  { id: "default", label: "Default", hint: "The intended density" },
-  { id: "large", label: "Large", hint: "Easier on the eyes" },
+  { id: "compact", label: "Compact", hint: "15 px" },
+  { id: "default", label: "Default", hint: "16 px" },
+  { id: "large", label: "Large", hint: "18 px" },
 ];
 
 /**
- * One swatch row: six accent circles on a mode-colored chip, selection
- * ring on the active one. Selection is stored but changes nothing yet;
- * the note under the block says so once.
+ * One swatch row: six accent circles on a chip in that mode's own tokens
+ * (the `dark` or `light` class scopes them), selection ring on the active
+ * one. Picking a swatch sets the mode and the accent together.
  */
 function SwatchRow({
   mode,
@@ -48,18 +48,11 @@ function SwatchRow({
   return (
     <div
       className={cn(
-        "flex items-center justify-between rounded-lg p-4 ring-1",
-        mode === "dark"
-          ? "bg-background ring-foreground/10"
-          : "bg-foreground/90 ring-foreground/20"
+        mode,
+        "flex items-center justify-between rounded-lg bg-background p-4 ring-1 ring-foreground/10"
       )}
     >
-      <p
-        className={cn(
-          "text-sm font-medium",
-          mode === "dark" ? "text-foreground" : "text-background"
-        )}
-      >
+      <p className="text-sm font-medium text-foreground">
         {mode === "dark" ? "Dark" : "Light"}
       </p>
       <div role="radiogroup" aria-label={`${mode} accent`} className="flex gap-2">
@@ -77,9 +70,7 @@ function SwatchRow({
                 "hit-44 relative size-6 rounded-full outline-none transition-shadow focus-visible:ring-3 focus-visible:ring-ring/30",
                 a.swatch,
                 isSelected &&
-                  (mode === "dark"
-                    ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
-                    : "ring-2 ring-background ring-offset-2 ring-offset-foreground")
+                  "ring-2 ring-foreground ring-offset-2 ring-offset-background"
               )}
             >
               {isSelected ? (
@@ -120,7 +111,7 @@ export function AppearanceSection() {
         <div>
           <p className="text-sm font-medium text-foreground">Theme</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Klyvi ships dark violet. The rest unlock when theming does.
+            Dark or light, in one of six accents.
           </p>
           <div className="mt-3 flex flex-col gap-2">
             <SwatchRow
@@ -163,7 +154,7 @@ export function AppearanceSection() {
 
         <SettingRow
           title="Reduce motion"
-          description="Calms transitions. Your system setting is already honored."
+          description="Turns off transitions and animations. Your system setting is already honored."
         >
           <Switch
             checked={reduceMotion}
@@ -173,8 +164,7 @@ export function AppearanceSection() {
         </SettingRow>
 
         <SettingsNote>
-          Saved on this device. Selections apply when theming and text
-          sizing ship.
+          Saved to your account, so every browser you sign in on matches.
         </SettingsNote>
       </FieldStack>
     </section>

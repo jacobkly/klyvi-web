@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { ThemeBootScript } from "@/components/theme/theme-boot-script";
+import { ThemeSync } from "@/components/theme/theme-sync";
 import { rootMetadata } from "@/lib/site";
 
 const geistSans = Geist({
@@ -24,13 +26,19 @@ export default function RootLayout({
 }>) {
   return (
     // "dark" is the default: Klyvi is a dark-first product ("Dark Room").
-    // Light is fully defined and supported, but secondary. A theme provider
-    // will toggle this class once theming ships.
+    // The boot script swaps in the stored appearance before first paint and
+    // ThemeSync keeps it current, so the html element's classes and data
+    // attributes differ from the server's by design.
     <html
       lang="en"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <ThemeBootScript />
+      </head>
       <body className="min-h-full flex flex-col">
+        <ThemeSync />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

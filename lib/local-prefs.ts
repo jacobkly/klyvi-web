@@ -2,20 +2,18 @@
 
 import * as React from "react";
 
+import { PREFS_STORAGE_KEY, type ThemeSettings } from "@/lib/theme";
 import type { FeedMedia } from "@/lib/types";
 
 /**
- * Device-local preferences behind the settings panes that have no backend
- * persistence yet. One JSON blob under one key, typed keys, defaults in
- * one place, and a change event so every subscribed control stays live.
- * When the settings endpoints ship, this becomes the optimistic cache.
+ * The settings panes' preferences. One JSON blob under one key, typed keys,
+ * defaults in one place, and a change event so every subscribed control
+ * stays live. It is the local copy of the account's settings: seeded from
+ * the server on sign-in, and each change is pushed back (debounced), so a
+ * second browser gets the same choices.
  */
 
-export type Prefs = {
-  themeMode: "dark" | "light";
-  themeAccent: "violet" | "blue" | "green" | "orange" | "pink" | "red";
-  textSize: "compact" | "default" | "large";
-  reduceMotion: boolean;
+export type Prefs = ThemeSettings & {
   scoringSystem: "hundred" | "ten" | "stars" | "smiley";
   listOrder: "updated" | "title" | "score" | "added";
   combineLists: boolean;
@@ -40,7 +38,7 @@ export const DEFAULT_PREFS: Prefs = {
   activityFeed: {},
 };
 
-const KEY = "klyvi:prefs";
+const KEY = PREFS_STORAGE_KEY;
 const EVENT = "klyvi:prefs-changed";
 
 // Snapshot cache keyed by the raw string, so useSyncExternalStore gets a

@@ -18,7 +18,9 @@ const badgeVariants = cva(
           "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
+        // Accent text, not the --primary fill: the fill is too dark to read
+        // as text on the dark canvas (2.4:1).
+        link: "text-violet-text underline-offset-4 hover:underline",
       },
     },
     defaultVariants: {

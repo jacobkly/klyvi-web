@@ -3,6 +3,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 
+import { usePref } from "@/lib/local-prefs";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,8 +16,8 @@ import { cn } from "@/lib/utils";
  * it plays regardless of the CSS reduced-motion override in globals.css.
  * That is on purpose for this marketing page, which is a disclosed
  * exception to the reduced-motion floor (like the beams and the marquee).
- * To honor reduced motion instead, wrap the page in
- * `<MotionConfig reducedMotion="user">`.
+ * Turning on Reduce motion in Klyvi's own settings is an explicit ask, so
+ * that does stop it: the content renders at rest.
  */
 export function Reveal({
   children,
@@ -29,6 +30,10 @@ export function Reveal({
   delay?: number;
   y?: number;
 }) {
+  const [reduceMotion] = usePref("reduceMotion");
+  if (reduceMotion) {
+    return <div className={cn(className)}>{children}</div>;
+  }
   return (
     <motion.div
       className={cn(className)}
