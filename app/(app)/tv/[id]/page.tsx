@@ -1,6 +1,7 @@
 import { cache, Suspense } from "react";
+import { notFound } from "next/navigation";
 
-import { DetailError, DetailNotFound } from "@/components/media/detail-states";
+import { DetailError } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
 import { SeriesActions } from "@/components/media/series-actions";
@@ -42,7 +43,7 @@ export default async function TvPage({
 }) {
   const { id } = await params;
   const tmdbId = Number(id);
-  if (!Number.isFinite(tmdbId) || tmdbId <= 0) return <DetailNotFound />;
+  if (!Number.isFinite(tmdbId) || tmdbId <= 0) notFound();
 
   // Similar titles need only the TMDB id, so the request starts with the
   // series. A failure hides the shelf and never the page.
@@ -50,7 +51,8 @@ export default async function TvPage({
 
   const { tv: t, failed } = await load(tmdbId);
   if (failed) return <DetailError />;
-  if (!t) return <DetailNotFound />;
+  // notFound() answers 404 and renders ./not-found.tsx.
+  if (!t) notFound();
 
   const seasons: MediaSummary[] = t.seasons.map((s) => ({
     mediaId: 0,

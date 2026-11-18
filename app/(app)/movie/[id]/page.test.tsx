@@ -19,10 +19,15 @@ vi.mock("@/lib/api/catalog", () => ({
 vi.mock("@/components/auth/auth-provider", () => ({
   useSession: () => ({ user: null }),
 }));
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (actual) => ({
+  ...(await actual<typeof import("next/navigation")>()),
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/movie/120",
 }));
+
+// Next's notFound() throws this digest. The router turns it into a 404 and
+// renders the route's not-found.tsx.
+const NOT_FOUND = { digest: expect.stringMatching(/^NEXT_HTTP_ERROR_FALLBACK;404/) };
 
 function film(tmdbId: number, title: string): MediaSummary {
   return {
@@ -48,6 +53,20 @@ describe("MoviePage", () => {
     getMovie.mockReset();
     getMovieCollection.mockReset().mockResolvedValue([]);
     getSimilar.mockReset().mockResolvedValue([]);
+  });
+
+  it("answers 404 when the API has no such film", async () => {
+    getMovie.mockResolvedValue(null);
+    await expect(
+      MoviePage({ params: Promise.resolve({ id: "999999999" }) })
+    ).rejects.toMatchObject(NOT_FOUND);
+  });
+
+  it("answers 404 for an id that isn't a number", async () => {
+    await expect(
+      MoviePage({ params: Promise.resolve({ id: "abc" }) })
+    ).rejects.toMatchObject(NOT_FOUND);
+    expect(getMovie).not.toHaveBeenCalled();
   });
 
   it("starts the shelf requests without waiting for the film", async () => {

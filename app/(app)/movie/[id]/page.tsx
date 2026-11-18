@@ -1,6 +1,7 @@
 import { cache, Suspense } from "react";
+import { notFound } from "next/navigation";
 
-import { DetailError, DetailNotFound } from "@/components/media/detail-states";
+import { DetailError } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
 import { getMovie, getMovieCollection, getSimilar } from "@/lib/api/catalog";
@@ -34,7 +35,7 @@ export default async function MoviePage({
 }) {
   const { id } = await params;
   const tmdbId = Number(id);
-  if (!Number.isFinite(tmdbId) || tmdbId <= 0) return <DetailNotFound />;
+  if (!Number.isFinite(tmdbId) || tmdbId <= 0) notFound();
 
   // All three requests need only the TMDB id, so they start together.
   // Collection and similar titles are enrichment, not the page: a failure
@@ -45,7 +46,8 @@ export default async function MoviePage({
 
   const { movie: m, failed } = await load(tmdbId);
   if (failed) return <DetailError />;
-  if (!m) return <DetailNotFound />;
+  // notFound() answers 404 and renders ./not-found.tsx.
+  if (!m) notFound();
 
   return (
     <DetailLayout

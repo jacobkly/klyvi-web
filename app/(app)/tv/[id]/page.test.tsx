@@ -20,6 +20,10 @@ vi.mock("@/components/media/detail-layout", () => ({
   DetailLayout: () => null,
 }));
 
+// Next's notFound() throws this digest. The router turns it into a 404 and
+// renders the route's not-found.tsx.
+const NOT_FOUND = { digest: expect.stringMatching(/^NEXT_HTTP_ERROR_FALLBACK;404/) };
+
 const SERIES: TvDetail = {
   tmdbId: 1396,
   title: "Breaking Bad",
@@ -60,6 +64,13 @@ describe("TvPage", () => {
   beforeEach(() => {
     getTvSeries.mockReset();
     getSimilar.mockReset().mockResolvedValue([]);
+  });
+
+  it("answers 404 when the API has no such series", async () => {
+    getTvSeries.mockResolvedValue(null);
+    await expect(
+      TvPage({ params: Promise.resolve({ id: "999999999" }) })
+    ).rejects.toMatchObject(NOT_FOUND);
   });
 
   it("starts the similar request without waiting for the series", async () => {

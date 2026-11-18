@@ -1,10 +1,7 @@
 import { cache } from "react";
+import { notFound } from "next/navigation";
 
-import {
-  DetailError,
-  DetailNotFound,
-  SeasonNotFound,
-} from "@/components/media/detail-states";
+import { DetailError, SeasonNotFound } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { getTvSeason, getTvSeries } from "@/lib/api/catalog";
 import { formatDate } from "@/lib/mock-media";
@@ -42,14 +39,15 @@ export default async function SeasonPage({
   const { id, n } = await params;
   const tmdbId = Number(id);
   const seasonNumber = Number(n);
-  if (!Number.isFinite(tmdbId) || tmdbId <= 0) return <DetailNotFound />;
+  if (!Number.isFinite(tmdbId) || tmdbId <= 0) notFound();
   if (!Number.isFinite(seasonNumber) || seasonNumber < 1) {
     return <SeasonNotFound tmdbId={tmdbId} />;
   }
 
   const { series, season, failed } = await load(tmdbId, seasonNumber);
   if (failed) return <DetailError />;
-  if (!series) return <DetailNotFound />;
+  // An unknown series is a 404, rendered by ../../not-found.tsx.
+  if (!series) notFound();
   if (!season) return <SeasonNotFound tmdbId={tmdbId} />;
 
   // A season poster is often missing; the series poster is the fallback so
