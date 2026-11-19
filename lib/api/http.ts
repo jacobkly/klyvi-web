@@ -18,6 +18,8 @@ import {
   getBrowserSupabase,
 } from "@/lib/supabase/browser";
 
+import { reportApiFailure } from "./errors";
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -157,14 +159,20 @@ export async function apiFetch<T>(
     throw new ApiError("Klyvi API URL is not configured", 0, null);
   }
 
-  const timeout = timeoutSignal(
-    opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    opts.signal
-  );
+  const ms = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const timeout = timeoutSignal(ms, opts.signal);
+  const call = `${opts.method ?? "GET"} ${path}`;
   try {
     return await fetchAndParse<T>(path, { ...opts, signal: timeout.signal });
   } catch (e) {
-    if (timeout.timedOut()) throw new ApiError(TIMEOUT_MESSAGE, 0, null);
+    // The API never saw these, so it can't have recorded them.
+    if (timeout.timedOut()) {
+      void reportApiFailure("Timeout", `${call}: no answer after ${ms} ms`);
+      throw new ApiError(TIMEOUT_MESSAGE, 0, null);
+    }
+    if (e instanceof ApiError && e.status === 0) {
+      void reportApiFailure("NetworkError", `${call}: ${e.message}`);
+    }
     throw e;
   } finally {
     timeout.done();
@@ -201,12 +209,21 @@ async function fetchAndParse<T>(path: string, opts: FetchOptions): Promise<T> {
 
   if (!res.ok) {
     const errBody = parsed as { error?: unknown } | null;
-    const msg =
+    const fromApi =
       errBody &&
       typeof errBody === "object" &&
-      typeof errBody.error === "string"
-        ? errBody.error
-        : `Request failed (${res.status})`;
+      typeof errBody.error === "string";
+    // A 5xx without the API's { error } body came from something in front
+    // of it (Cloudflare, the tunnel), so the API has no record of it.
+    if (res.status >= 500 && !fromApi) {
+      void reportApiFailure(
+        `HTTP ${res.status}`,
+        `${opts.method ?? "GET"} ${path}: answered ${res.status} without an API error body`
+      );
+    }
+    const msg = fromApi
+      ? (errBody.error as string)
+      : `Request failed (${res.status})`;
     throw new ApiError(msg, res.status, parsed);
   }
 

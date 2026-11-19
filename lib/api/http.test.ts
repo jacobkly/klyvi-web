@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { reportApiFailure } from "./errors";
 import { ApiError, apiFetch } from "./http";
+
+vi.mock("./errors", () => ({ reportApiFailure: vi.fn() }));
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -15,6 +18,7 @@ describe("apiFetch", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockReset();
+    vi.mocked(reportApiFailure).mockReset();
   });
 
   afterEach(() => {
@@ -138,6 +142,41 @@ describe("apiFetch", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  describe("reporting failures the API can't record", () => {
+    it("reports a dropped connection", async () => {
+      fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      await apiFetch("/v1/movies/550?append=credits").catch(() => {});
+      expect(reportApiFailure).toHaveBeenCalledWith(
+        "NetworkError",
+        "GET /v1/movies/550?append=credits: Network error: Failed to fetch"
+      );
+    });
+
+    it("reports a 5xx from something in front of the API", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("<html>Bad gateway</html>", { status: 502 })
+      );
+      await apiFetch("/v1/reco/feed", { token: "t" }).catch(() => {});
+      expect(reportApiFailure).toHaveBeenCalledWith(
+        "HTTP 502",
+        "GET /v1/reco/feed: answered 502 without an API error body"
+      );
+    });
+
+    it("leaves the API's own errors to the API", async () => {
+      fetchMock
+        .mockResolvedValueOnce(
+          jsonResponse({ error: "internal server error" }, 500)
+        )
+        .mockResolvedValueOnce(jsonResponse({ error: "not found" }, 404))
+        .mockResolvedValueOnce(new Response("nope", { status: 404 }));
+      await apiFetch("/v1/tracking", { token: "t" }).catch(() => {});
+      await apiFetch("/v1/movies/1").catch(() => {});
+      await apiFetch("/v1/movies/2").catch(() => {});
+      expect(reportApiFailure).not.toHaveBeenCalled();
+    });
+  });
+
   describe("timeouts", () => {
     // A fetch that never answers, and fails only when its signal aborts.
     function hangingFetch() {
@@ -171,6 +210,10 @@ describe("apiFetch", () => {
       expect(err).toBeInstanceOf(ApiError);
       expect(err.status).toBe(0);
       expect(err.message).toMatch(/took too long/);
+      expect(reportApiFailure).toHaveBeenCalledWith(
+        "Timeout",
+        "GET /v1/reco/feed: no answer after 8000 ms"
+      );
     });
 
     it("lets a caller give an upload longer", async () => {
@@ -200,6 +243,7 @@ describe("apiFetch", () => {
       controller.abort();
       const err = (await pending) as DOMException;
       expect(err.name).toBe("AbortError");
+      expect(reportApiFailure).not.toHaveBeenCalled();
     });
   });
 });

@@ -82,8 +82,8 @@ const SECTIONS: ProseSection[] = [
             library, recommendations, notices, and account email.
           </li>
           <li>
-            <strong>Legitimate interests:</strong> logs and rate limits, which
-            keep Klyvi running and secure.
+            <strong>Legitimate interests:</strong> logs, error reports and rate
+            limits, which keep Klyvi running and secure.
           </li>
         </ul>
       </>
@@ -124,6 +124,27 @@ const SECTIONS: ProseSection[] = [
           long a line lasts depends on how busy Klyvi is. The whole log is
           cleared whenever a new version goes live. Deleting your account does
           not remove log lines, they age out the same way.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "error-reports",
+    title: "Error reports",
+    body: (
+      <>
+        <p>
+          When something breaks, in the app or on the API, Klyvi keeps an
+          error report: what went wrong, the page or address it happened on,
+          and your user id if you were signed in. Passwords, sign-in tokens
+          and email addresses are removed from a report before it is stored.
+          Reports are used only to find and fix bugs.
+        </p>
+        <p>
+          Error reports are kept 30 days after the error last happened, then
+          deleted. They are not part of Download JSON. Email{" "}
+          <a href="mailto:hello@klyvi.net">hello@klyvi.net</a> to ask for the
+          ones that name you.
         </p>
       </>
     ),
@@ -248,8 +269,9 @@ const SECTIONS: ProseSection[] = [
           at once. No other copy is kept.
         </p>
         <p>
-          The only thing left afterwards is log lines, which are capped at 30
-          MB and roll over as described under Logs.
+          The only things left afterwards are log lines, which are capped at
+          30 MB and roll over as described under Logs, and error reports,
+          which no longer name you and are deleted within 30 days.
         </p>
       </>
     ),

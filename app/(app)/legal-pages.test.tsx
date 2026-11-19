@@ -168,7 +168,16 @@ describe("the privacy page", () => {
   it("says deleting removes your data at once, logs aside", () => {
     const text = privacy();
     expect(text).toMatch(/deleting your account removes.{0,200}at once/i);
-    expect(text).toMatch(/only thing left.{0,80}log lines.{0,80}30 MB/i);
+    expect(text).toMatch(/only things left.{0,80}log lines.{0,80}30 MB/i);
+    expect(text).toMatch(/error reports, which no longer name you/i);
+  });
+
+  it("says error reports are kept 30 days with your user id, scrubbed", () => {
+    const text = privacy();
+    expect(text).toMatch(/error report.{0,300}your user id/i);
+    expect(text).toMatch(/error reports are kept 30 days/i);
+    expect(text).toMatch(/sign-in tokens and email addresses are removed/i);
+    expect(text).toMatch(/logs, error reports and rate limits/i);
   });
 
   it("describes sign-in cookies rather than one session cookie", () => {

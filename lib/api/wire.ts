@@ -420,3 +420,12 @@ export type WireSearchResponse = {
   total_pages: number;
   total_results: number;
 };
+
+/** POST /v1/errors body. Only message is required; the API scrubs and trims. */
+export type WireErrorReport = {
+  kind?: string;
+  message: string;
+  stack?: string;
+  page?: string;
+  digest?: string;
+};
