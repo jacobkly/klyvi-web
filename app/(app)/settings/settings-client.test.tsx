@@ -27,6 +27,13 @@ vi.mock("@/components/settings/profile-section", () => ({
   ),
 }));
 
+vi.mock("@/components/settings/account-section", () => ({
+  AccountSection: () => <p>account form</p>,
+}));
+vi.mock("@/components/settings/appearance-section", () => ({
+  AppearanceSection: () => <p>appearance form</p>,
+}));
+
 describe("SettingsClient", () => {
   beforeEach(() => {
     getMe.mockReset();
@@ -50,5 +57,24 @@ describe("SettingsClient", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(reloadProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the section the url names", () => {
+    session = { profile: { username: "jacob", avatarUrl: null }, profileFailed: false };
+    render(<SettingsClient initialSection="account" />);
+    expect(screen.getByText("account form")).toBeTruthy();
+  });
+
+  it("gives each section its own url, so Back returns to the last one", async () => {
+    session = { profile: { username: "jacob", avatarUrl: null }, profileFailed: false };
+    window.history.replaceState(null, "", "/settings");
+    render(<SettingsClient />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Appearance" })[0]);
+    expect(screen.getByText("appearance form")).toBeTruthy();
+    expect(window.location.search).toBe("?section=appearance");
+
+    window.history.back();
+    expect(await screen.findByText("profile form for jacob")).toBeTruthy();
   });
 });

@@ -155,7 +155,23 @@ export function FindClient({ simulate }: { simulate?: string }) {
     [mock]
   );
 
+  // The picks are a step past the mood, so Back returns to the mood rather
+  // than leaving Find. The entry keeps the same url, and Next's patched
+  // pushState carries its own router state into it.
+  React.useEffect(() => {
+    const onPop = () => {
+      if (window.history.state?.findStage !== "picks") {
+        setPhase({ kind: "idle" });
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   async function fetchPicks() {
+    if (phase.kind === "idle") {
+      window.history.pushState({ findStage: "picks" }, "");
+    }
     setPhase({ kind: "loading" });
 
     if (mock) {

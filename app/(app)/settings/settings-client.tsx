@@ -13,16 +13,9 @@ import { ProfileSection } from "@/components/settings/profile-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { readSection, type SectionId } from "@/lib/settings-sections";
 import { cn } from "@/lib/utils";
 
-type SectionId =
-  | "profile"
-  | "account"
-  | "appearance"
-  | "lists"
-  | "notifications"
-  | "data"
-  | "delete";
 
 const SECTIONS: {
   group: string;
@@ -58,7 +51,11 @@ const SECTIONS: {
  * sections split into components/settings/*. Mobile collapses the rail to
  * horizontal scrolling tabs.
  */
-export function SettingsClient() {
+export function SettingsClient({
+  initialSection = "profile",
+}: {
+  initialSection?: SectionId;
+}) {
   // The session already holds the profile, so Settings reads it from there
   // rather than fetching its own. Saves return the new row, which goes back
   // into the session, so greetings update without a reload.
@@ -69,7 +66,23 @@ export function SettingsClient() {
     reloadProfile: retry,
     setProfile: onProfileSaved,
   } = useSession();
-  const [active, setActive] = React.useState<SectionId>("profile");
+  const [active, setActiveState] = React.useState<SectionId>(initialSection);
+
+  // Each section has its own url, so a link, a reload and Back all land on it.
+  const setActive = (id: SectionId) => {
+    if (id === active) return;
+    setActiveState(id);
+    const qs = id === "profile" ? "" : `?section=${id}`;
+    window.history.pushState(null, "", window.location.pathname + qs);
+  };
+  React.useEffect(() => {
+    const onPop = () =>
+      setActiveState(
+        readSection(new URLSearchParams(window.location.search).get("section"))
+      );
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const avatarSrc = me?.avatarUrl ?? null;
 
   // The profile and notification forms start from the loaded profile. Shown

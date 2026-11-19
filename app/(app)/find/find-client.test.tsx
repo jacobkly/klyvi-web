@@ -361,6 +361,20 @@ describe("FindClient", () => {
     expect(screen.queryByRole("heading", { name: "Game of Thrones" })).toBeNull();
   });
 
+  it("goes back from the picks to the mood step", async () => {
+    // Earlier tests left their own picks entries in jsdom's shared history.
+    window.history.pushState(null, "", "/find");
+    await showPick();
+    expect(window.history.state?.findStage).toBe("picks");
+
+    window.history.back();
+
+    expect(
+      await screen.findByRole("heading", { name: "What are you in the mood for?" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Game of Thrones" })).toBeNull();
+  });
+
   it("turns a show's save toast into an error when the save fails", async () => {
     toast.mockReturnValue("t1");
     listTracking.mockRejectedValue(new Error("503"));
