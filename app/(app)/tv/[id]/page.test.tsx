@@ -101,7 +101,8 @@ describe("TvPage", () => {
 
   it("passes the series crew and a similar shelf to the layout", async () => {
     getTvSeries.mockResolvedValue(SERIES);
-    const page = await TvPage({ params: Promise.resolve({ id: "1396" }) });
+    // The layout sits inside the provider that shares your seasons.
+    const page = (await TvPage({ params: Promise.resolve({ id: "1396" }) })).props.children;
 
     expect(page.props.crew).toEqual(SERIES.crew);
     expect(page.props.shelves).toBeTruthy();
@@ -109,7 +110,8 @@ describe("TvPage", () => {
 
   it("hands the layout the series facts and the phone strip", async () => {
     getTvSeries.mockResolvedValue(SERIES);
-    const page = await TvPage({ params: Promise.resolve({ id: "1396" }) });
+    // The layout sits inside the provider that shares your seasons.
+    const page = (await TvPage({ params: Promise.resolve({ id: "1396" }) })).props.children;
 
     expect(page.props.metadata).toContainEqual({
       label: "Last episode",
@@ -124,7 +126,8 @@ describe("TvPage", () => {
     getTvSeries.mockResolvedValue(SERIES);
     getSimilar.mockRejectedValue(new Error("503"));
     getFamily.mockRejectedValue(new Error("503"));
-    const page = await TvPage({ params: Promise.resolve({ id: "1396" }) });
+    // The layout sits inside the provider that shares your seasons.
+    const page = (await TvPage({ params: Promise.resolve({ id: "1396" }) })).props.children;
 
     expect(page.props.title).toBe("Breaking Bad");
     const { container } = render(

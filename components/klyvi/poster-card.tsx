@@ -79,6 +79,7 @@ function PosterCard({
   actions,
   current = false,
   kind,
+  label,
   eager = false,
   sizes = "(max-width: 640px) 38vw, (max-width: 1024px) 24vw, 180px",
   className,
@@ -97,6 +98,9 @@ function PosterCard({
   /** "Film" or "Series" beside the year where a shelf mixes both (below
    *  only). */
   kind?: string;
+  /** The visible name in place of title and season, where the page already
+   *  names the show ("Season 2" on the series page). */
+  label?: string;
   /** In the first screen: load now, ahead of the lazy ones below. */
   eager?: boolean;
   /** The slot's width for the srcset. The default fits rails and grids:
@@ -111,6 +115,7 @@ function PosterCard({
       ? ` Season ${media.seasonNumber}`
       : "";
   const accessibleName = `${media.title}${seasonSuffix}`;
+  const shownName = label ?? accessibleName;
 
   const progressText = progress
     ? progress.total != null
@@ -155,8 +160,7 @@ function PosterCard({
           ) : (
             <div className="flex h-full items-center justify-center p-3 text-center">
               <span className="text-xs leading-snug text-muted-foreground">
-                {media.title}
-                {seasonSuffix}
+                {accessibleName}
               </span>
             </div>
           )}
@@ -178,8 +182,7 @@ function PosterCard({
           {inScrim ? (
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-2">
               <p className="line-clamp-2 text-xs font-medium leading-snug text-white">
-                {media.title}
-                {seasonSuffix}
+                {shownName}
               </p>
               {hasBadge ? (
                 <div className="mt-1 flex items-center gap-1.5">
@@ -221,8 +224,7 @@ function PosterCard({
         {variant === "below" ? (
           <div className="mt-1.5">
             <p className="line-clamp-2 text-xs font-medium leading-snug text-foreground">
-              {media.title}
-              {seasonSuffix}
+              {shownName}
             </p>
             {media.year != null || progressText || kind || current ? (
               <div className="mt-0.5 flex items-center gap-2">

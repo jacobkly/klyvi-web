@@ -6,8 +6,10 @@ import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
 import { WhereToWatch } from "@/components/media/where-to-watch";
 import { SeriesActions } from "@/components/media/series-actions";
-import { PosterCard } from "@/components/klyvi/poster-card";
-import { SectionHeader } from "@/components/klyvi/section-header";
+import {
+  SeasonGrid,
+  SeriesTrackingProvider,
+} from "@/components/media/series-tracking";
 import { getFamily, getSimilar, getTvSeries } from "@/lib/api/catalog";
 import { byLine, tvFacts, tvStrip } from "@/lib/media-facts";
 import type { MediaSummary } from "@/lib/types";
@@ -56,66 +58,60 @@ export default async function TvPage({
   // notFound() answers 404 and renders ./not-found.tsx.
   if (!t) notFound();
 
-  const seasons: MediaSummary[] = t.seasons.map((s) => ({
-    mediaId: 0,
-    mediaType: "season",
-    tmdbId: t.tmdbId,
-    title: t.title,
-    posterPath: s.posterPath,
-    year: s.year,
-    seasonNumber: s.seasonNumber,
-  }));
+  const seasons: (MediaSummary & { episodeCount: number })[] = t.seasons.map(
+    (s) => ({
+      mediaId: 0,
+      mediaType: "season",
+      tmdbId: t.tmdbId,
+      title: t.title,
+      posterPath: s.posterPath,
+      year: s.year,
+      seasonNumber: s.seasonNumber,
+      episodeCount: s.episodeCount,
+    })
+  );
 
   return (
-    <DetailLayout
-      media={{
-        mediaId: 0,
-        mediaType: "movie",
-        tmdbId: t.tmdbId,
-        title: t.title,
-        posterPath: t.posterPath,
-        year: t.year,
-      }}
-      trackable={false}
-      actions={
-        <SeriesActions
-          tmdbId={t.tmdbId}
-          seasonNumbers={t.seasons.map((s) => s.seasonNumber)}
-        />
-      }
-      backdropPath={t.backdropPath}
-      posterPath={t.posterPath}
-      title={t.title}
-      year={t.year}
-      certification={t.certification}
-      trailerKey={t.trailerKey}
-      directorLine={t.creator ? byLine("Created by", [t.creator]) : null}
-      tagline={t.tagline}
-      overview={t.overview}
-      genres={t.genres}
-      metadata={tvFacts(t)}
-      strip={tvStrip(t)}
-      keywords={t.keywords}
-      cast={t.cast}
-      crew={t.crew}
-      shelves={
-        <Suspense fallback={<DetailShelvesSkeleton />}>
-          <TvShelves family={family} similar={similar} />
-        </Suspense>
-      }
-      watch={<WhereToWatch kind="tv" tmdbId={tmdbId} title={t.title} />}
-      extra={
-        seasons.length > 0 ? (
-          <section className="mb-10">
-            <SectionHeader title="Seasons" className="mb-4" />
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-              {seasons.map((s) => (
-                <PosterCard key={s.seasonNumber} media={s} variant="below" />
-              ))}
-            </div>
-          </section>
-        ) : undefined
-      }
-    />
+    <SeriesTrackingProvider tmdbId={t.tmdbId}>
+      <DetailLayout
+        media={{
+          mediaId: 0,
+          mediaType: "movie",
+          tmdbId: t.tmdbId,
+          title: t.title,
+          posterPath: t.posterPath,
+          year: t.year,
+        }}
+        trackable={false}
+        actions={
+          <SeriesActions
+            tmdbId={t.tmdbId}
+            seasonNumbers={t.seasons.map((s) => s.seasonNumber)}
+          />
+        }
+        backdropPath={t.backdropPath}
+        posterPath={t.posterPath}
+        title={t.title}
+        year={t.year}
+        certification={t.certification}
+        trailerKey={t.trailerKey}
+        directorLine={t.creator ? byLine("Created by", [t.creator]) : null}
+        tagline={t.tagline}
+        overview={t.overview}
+        genres={t.genres}
+        metadata={tvFacts(t)}
+        strip={tvStrip(t)}
+        keywords={t.keywords}
+        cast={t.cast}
+        crew={t.crew}
+        shelves={
+          <Suspense fallback={<DetailShelvesSkeleton />}>
+            <TvShelves family={family} similar={similar} />
+          </Suspense>
+        }
+        watch={<WhereToWatch kind="tv" tmdbId={tmdbId} title={t.title} />}
+        extra={<SeasonGrid seasons={seasons} />}
+      />
+    </SeriesTrackingProvider>
   );
 }
