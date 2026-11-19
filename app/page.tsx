@@ -13,6 +13,7 @@ export const metadata = {
   title: "Klyvi · Know what to watch right now",
   description:
     "Klyvi learns what you actually like and tells you what to watch right now, with the reason it picked it.",
+  alternates: { canonical: "/" },
 };
 
 /**

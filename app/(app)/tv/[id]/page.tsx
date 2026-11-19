@@ -13,6 +13,7 @@ import {
 import { getFamily, getSimilar, getTvSeries } from "@/lib/api/catalog";
 import { byLine, tvFacts, tvStrip } from "@/lib/media-facts";
 import type { MediaSummary } from "@/lib/types";
+import { titleMetadata } from "@/lib/title-metadata";
 
 import { TvShelves } from "./tv-shelves";
 
@@ -31,7 +32,8 @@ export async function generateMetadata({
 }) {
   const { id } = await params;
   const { tv } = await load(Number(id));
-  return { title: tv ? `${tv.title} · Klyvi` : "Klyvi" };
+  if (!tv) return { title: "Klyvi" };
+  return titleMetadata({ ...tv, path: `/tv/${tv.tmdbId}` });
 }
 
 /**

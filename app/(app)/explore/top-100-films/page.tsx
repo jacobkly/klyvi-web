@@ -1,6 +1,9 @@
 import { RankingList } from "@/components/explore/ranking-list";
 
-export const metadata = { title: "Top 100 films · Klyvi" };
+export const metadata = {
+  title: "Top 100 films · Klyvi",
+  alternates: { canonical: "/explore/top-100-films" },
+};
 
 export default function Top100FilmsPage() {
   return (

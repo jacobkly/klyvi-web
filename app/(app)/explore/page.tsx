@@ -1,6 +1,9 @@
 import { ExploreClient } from "./explore-client";
 
-export const metadata = { title: "Explore · Klyvi" };
+export const metadata = {
+  title: "Explore · Klyvi",
+  alternates: { canonical: "/explore" },
+};
 
 export default async function ExplorePage({
   searchParams,

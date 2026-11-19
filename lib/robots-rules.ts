@@ -12,7 +12,8 @@ export const INDEXED_HOST = new URL(SITE_URL).host;
  * so a second copy of the site never ends up in search results.
  */
 export function robotsFor(host: string | null): MetadataRoute.Robots {
-  const sitemap = `${SITE_URL}/sitemap.xml`;
+  // The pages, then the titles (app/titles/sitemap.ts).
+  const sitemap = [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/titles/sitemap.xml`];
   if (host?.toLowerCase() !== INDEXED_HOST) {
     return { rules: { userAgent: "*", disallow: "/" } };
   }

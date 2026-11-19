@@ -6,7 +6,10 @@ import {
   type ProseSection,
 } from "@/components/klyvi/prose-layout";
 
-export const metadata = { title: "Terms of use · Klyvi" };
+export const metadata = {
+  title: "Terms of use · Klyvi",
+  alternates: { canonical: "/terms" },
+};
 
 function S({ children }: { children: React.ReactNode }) {
   return (

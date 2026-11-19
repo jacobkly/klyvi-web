@@ -2,7 +2,10 @@ import type * as React from "react";
 
 import { ProseLayout } from "@/components/klyvi/prose-layout";
 
-export const metadata = { title: "Copyright · Klyvi" };
+export const metadata = {
+  title: "Copyright · Klyvi",
+  alternates: { canonical: "/copyright" },
+};
 
 function S({ children }: { children: React.ReactNode }) {
   return (

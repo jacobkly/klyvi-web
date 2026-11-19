@@ -5,7 +5,7 @@ import { MOCK_MOVIE } from "@/lib/mock-media";
 import type { MediaSummary, SimilarTitle } from "@/lib/types";
 
 import { MovieBand, MovieShelves } from "./movie-shelves";
-import MoviePage from "./page";
+import MoviePage, { generateMetadata } from "./page";
 
 const getMovie = vi.fn();
 const getMovieCollection = vi.fn();
@@ -57,6 +57,20 @@ describe("MoviePage", () => {
     getMovieCollection.mockReset().mockResolvedValue([]);
     getSimilar.mockReset().mockResolvedValue([]);
     getFamily.mockReset().mockResolvedValue([]);
+  });
+
+  // #44, #116: a shared film previews as itself, not as Klyvi.
+  it("gives the film its own description, share image and canonical link", async () => {
+    getMovie.mockResolvedValue(MOCK_MOVIE);
+    const m = await generateMetadata({
+      params: Promise.resolve({ id: String(MOCK_MOVIE.tmdbId) }),
+    });
+    expect(m.title).toBe(`${MOCK_MOVIE.title} · Klyvi`);
+    expect(m.description).toBeTruthy();
+    expect(m.alternates?.canonical).toBe(`/movie/${MOCK_MOVIE.tmdbId}`);
+    expect(JSON.stringify(m.openGraph)).toContain(
+      `image.tmdb.org/t/p/w1280${MOCK_MOVIE.backdropPath}`
+    );
   });
 
   it("answers 404 when the API has no such film", async () => {

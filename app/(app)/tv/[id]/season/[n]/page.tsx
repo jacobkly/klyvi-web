@@ -9,6 +9,7 @@ import { SeasonNav } from "@/components/media/season-nav";
 import { WhereToWatch } from "@/components/media/where-to-watch";
 import { getFamily, getTvSeason, getTvSeries } from "@/lib/api/catalog";
 import { seasonFacts } from "@/lib/media-facts";
+import { titleMetadata } from "@/lib/title-metadata";
 
 import { TvShelves } from "../../tv-shelves";
 
@@ -30,10 +31,17 @@ export async function generateMetadata({
   params: Promise<{ id: string; n: string }>;
 }) {
   const { id, n } = await params;
-  const { series } = await load(Number(id), Number(n));
-  return {
-    title: series ? `${series.title} Season ${n} · Klyvi` : "Klyvi",
-  };
+  const { series, season } = await load(Number(id), Number(n));
+  if (!series) return { title: "Klyvi" };
+  // The season's own words and poster where it has them, the series' where
+  // it doesn't. The backdrop is the series', so a share stays wide.
+  return titleMetadata({
+    title: `${series.title} Season ${n}`,
+    overview: season?.overview || series.overview,
+    backdropPath: series.backdropPath,
+    posterPath: season?.posterPath ?? series.posterPath,
+    path: `/tv/${series.tmdbId}/season/${n}`,
+  });
 }
 
 /** Season detail: the real trackable unit for TV. */

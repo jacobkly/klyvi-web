@@ -2,7 +2,10 @@ import Image from "next/image";
 
 import { ProseLayout } from "@/components/klyvi/prose-layout";
 
-export const metadata = { title: "Attribution \u00b7 Klyvi" };
+export const metadata = {
+  title: "Attribution \u00b7 Klyvi",
+  alternates: { canonical: "/attribution" },
+};
 
 export default function AttributionPage() {
   return (

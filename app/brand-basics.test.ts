@@ -55,8 +55,11 @@ describe("robots.txt", () => {
     }
   );
 
-  it("points at the sitemap on the real domain", () => {
-    expect(robots().sitemap).toBe("https://www.klyvi.net/sitemap.xml");
+  it("points at both sitemaps on the real domain", () => {
+    expect(robots().sitemap).toEqual([
+      "https://www.klyvi.net/sitemap.xml",
+      "https://www.klyvi.net/titles/sitemap.xml",
+    ]);
   });
 
   it.each(["staging.klyvi.net", "klyvi-web-abc123.vercel.app", "localhost:3000", null])(
@@ -67,7 +70,7 @@ describe("robots.txt", () => {
   );
 
   it("treats the main host case-insensitively", () => {
-    expect(robotsFor("WWW.KLYVI.NET").sitemap).toBe("https://www.klyvi.net/sitemap.xml");
+    expect(robotsFor("WWW.KLYVI.NET").sitemap).toContain("https://www.klyvi.net/sitemap.xml");
   });
 });
 
@@ -114,6 +117,15 @@ describe("the web manifest", () => {
     const m = manifest();
     expect(m.background_color).toBe("#09090b");
     expect(m.theme_color).toBe("#09090b");
+  });
+
+  // #117: the plain icon's rounded corners and full-size K get cropped by a
+  // launcher's mask. The maskable one is full bleed with the K in the safe zone.
+  it("has its own padded maskable icon", () => {
+    const maskable = (manifest().icons ?? []).filter(
+      (i) => i.purpose === "maskable"
+    );
+    expect(maskable.map((i) => i.src)).toEqual(["/icon-maskable-512.png"]);
   });
 
   it("lists icons that exist at the size they claim", () => {

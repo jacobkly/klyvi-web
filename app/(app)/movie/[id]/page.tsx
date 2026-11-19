@@ -12,6 +12,7 @@ import {
   getSimilar,
 } from "@/lib/api/catalog";
 import { byLine, movieFacts, movieStrip } from "@/lib/media-facts";
+import { titleMetadata } from "@/lib/title-metadata";
 
 import { MovieBand, MovieShelves } from "./movie-shelves";
 
@@ -31,7 +32,8 @@ export async function generateMetadata({
 }) {
   const { id } = await params;
   const { movie } = await load(Number(id));
-  return { title: movie ? `${movie.title} · Klyvi` : "Klyvi" };
+  if (!movie) return { title: "Klyvi" };
+  return titleMetadata({ ...movie, path: `/movie/${movie.tmdbId}` });
 }
 
 export default async function MoviePage({
