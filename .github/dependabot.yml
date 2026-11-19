@@ -1,0 +1,19 @@
+# One grouped PR per ecosystem each month, so updates arrive as a small,
+# reviewable batch instead of a steady trickle.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      npm-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

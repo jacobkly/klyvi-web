@@ -53,7 +53,7 @@ Pages paint by section: requests start up front and slower sections stream in be
 
 ## Local development
 
-Requires Node 20.9+ and a running [Klyvi API](https://github.com/jacobkly/klyvi) (by default at `http://localhost:8080`).
+Requires Node 22+ and a running [Klyvi API](https://github.com/jacobkly/klyvi) (by default at `http://localhost:8080`).
 
 ```bash
 npm install
