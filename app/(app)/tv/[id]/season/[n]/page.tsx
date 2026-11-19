@@ -4,8 +4,11 @@ import { notFound } from "next/navigation";
 import { DetailError, SeasonNotFound } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
+import { EpisodeList } from "@/components/media/episode-list";
+import { SeasonNav } from "@/components/media/season-nav";
+import { WhereToWatch } from "@/components/media/where-to-watch";
 import { getFamily, getTvSeason, getTvSeries } from "@/lib/api/catalog";
-import { formatDate } from "@/lib/mock-media";
+import { seasonFacts } from "@/lib/media-facts";
 
 import { TvShelves } from "../../tv-shelves";
 
@@ -60,11 +63,16 @@ export default async function SeasonPage({
   // A season poster is often missing; the series poster is the fallback so
   // the S-badge still has artwork to sit on.
   const posterPath = season.posterPath ?? series.posterPath;
+  const facts = seasonFacts(series, season);
   const episodeCount =
     season.episodeCount ??
     series.seasons.find((s) => s.seasonNumber === seasonNumber)
       ?.episodeCount ??
     null;
+  const next =
+    series.nextEpisode?.season === seasonNumber
+      ? series.nextEpisode.episode
+      : null;
 
   return (
     <DetailLayout
@@ -86,18 +94,19 @@ export default async function SeasonPage({
       tagline={null}
       overview={season.overview ?? series.overview}
       genres={series.genres}
-      metadata={[
-        { label: "Episodes", value: episodeCount },
-        { label: "First aired", value: formatDate(series.firstAirDate) },
-        { label: "Language", value: series.language },
-        {
-          label: "Average score",
-          value:
-            season.voteAverage != null
-              ? Math.round(season.voteAverage * 10)
-              : null,
-        },
-      ]}
+      metadata={facts}
+      nav={
+        <SeasonNav
+          tmdbId={series.tmdbId}
+          seriesTitle={series.title}
+          seasons={series.seasons}
+          current={seasonNumber}
+        />
+      }
+      watch={
+        <WhereToWatch kind="tv" tmdbId={series.tmdbId} title={series.title} />
+      }
+      extra={<EpisodeList episodes={season.episodes} next={next} />}
       keywords={series.keywords}
       cast={series.cast}
       shelves={

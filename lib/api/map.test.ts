@@ -9,6 +9,7 @@ import {
   mapSimilar,
   mapStats,
   mapTrackingEntry,
+  mapTvSeason,
   mapTvSeries,
   mapUser,
   mapWatchProviders,
@@ -776,5 +777,39 @@ describe("mapWatchProviders", () => {
     });
     expect(p.link).toBeNull();
     expect(p.free).toEqual([]);
+  });
+});
+
+describe("mapTvSeason", () => {
+  it("dates the season and lists its episodes in order", () => {
+    const s = mapTvSeason({
+      tv_id: 95396,
+      season_number: 2,
+      air_date: "2025-01-17T00:00:00Z",
+      name: "Season 2",
+      overview: "",
+      poster_path: null,
+      vote_average: 8.4,
+      episodes: [
+        { episode_number: 2, name: "Goodbye, Mrs. Selvig", air_date: "2025-01-24", runtime: 49, still_path: "/b.jpg", overview: "" },
+        { episode_number: 1, name: "Hello, Ms. Cobel", air_date: "2025-01-17", runtime: 59, still_path: null, overview: "Mark returns." },
+        { name: "No number" },
+      ],
+    });
+    expect(s.airDate).toBe("2025-01-17T00:00:00Z");
+    expect(s.episodeCount).toBe(3);
+    expect(s.episodes).toEqual([
+      { number: 1, name: "Hello, Ms. Cobel", airDate: "2025-01-17", runtime: 59, stillPath: null, overview: "Mark returns." },
+      { number: 2, name: "Goodbye, Mrs. Selvig", airDate: "2025-01-24", runtime: 49, stillPath: "/b.jpg", overview: null },
+    ]);
+  });
+
+  it("has no episodes before the season is cached", () => {
+    const s = mapTvSeason({
+      tv_id: 1, season_number: 1, air_date: null, name: null, overview: null,
+      poster_path: null, vote_average: 0, episodes: null,
+    });
+    expect(s.episodes).toEqual([]);
+    expect(s.episodeCount).toBeNull();
   });
 });

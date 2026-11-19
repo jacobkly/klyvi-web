@@ -6,6 +6,7 @@ import {
   type MovieDetail,
   type TvDetail,
 } from "@/lib/mock-media";
+import type { SeasonDetail } from "@/lib/api/map";
 
 /**
  * One row of a title page's facts column. A row with no value and no links
@@ -37,7 +38,7 @@ const MONTHS = [
 /** "12 Dec 2026", short enough for the facts column. Spelled out by hand:
  *  ICU's short months differ between runtimes ("Sep" or "Sept"), and the
  *  server's HTML must match the browser's. */
-function shortDate(iso: string | null): string | null {
+export function shortDate(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso.slice(0, 10) + "T00:00:00Z");
   if (Number.isNaN(d.getTime())) return null;
@@ -156,6 +157,22 @@ export function tvFacts(t: TvDetail): Fact[] {
     list("Spoken language", "Spoken languages", t.spokenLanguages),
     { label: "Average score", value: average(t.voteAverage) },
     links(t.imdbId, t.homepage),
+  ]);
+}
+
+/** A season's facts. Its date is its own: season 2 of a 2022 show aired
+ *  in 2025, and saying 2022 there is wrong. */
+export function seasonFacts(t: TvDetail, s: SeasonDetail): Fact[] {
+  const episodes =
+    s.episodeCount ??
+    t.seasons.find((x) => x.seasonNumber === s.seasonNumber)?.episodeCount ??
+    null;
+  return present([
+    { label: "Episodes", value: episodes },
+    { label: "First aired", value: formatDate(s.airDate) },
+    list("Network", "Networks", t.networks),
+    { label: "Original language", value: t.language },
+    { label: "Average score", value: average(s.voteAverage) },
   ]);
 }
 

@@ -15,6 +15,7 @@ import type { PoolEntry } from "@/lib/mock-onboarding";
 import { trailerKey } from "@/lib/trailer";
 import type {
   AppNotification,
+  Episode,
   ImportJob,
   ImportStatus,
   Interaction,
@@ -49,6 +50,7 @@ import type {
   WireWatchProviders,
   WireStats,
   WireTrackingEntry,
+  WireEpisode,
   WireTvSeason,
   WireTvSeries,
   WireUser,
@@ -357,8 +359,12 @@ export type SeasonDetail = {
   overview: string | null;
   posterPath: string | null;
   year: number | null;
+  /** The season's own first air date, not the series'. */
+  airDate: string | null;
   episodeCount: number | null;
   voteAverage: number | null;
+  /** In airing order. Empty before the season is cached. */
+  episodes: Episode[];
 };
 
 export function mapTvSeason(w: WireTvSeason): SeasonDetail {
@@ -368,9 +374,29 @@ export function mapTvSeason(w: WireTvSeason): SeasonDetail {
     overview: orNull(w.overview),
     posterPath: orNull(w.poster_path),
     year: yearOf(w.air_date),
+    airDate: orNull(w.air_date),
     episodeCount: w.episodes?.length ?? null,
     voteAverage: w.vote_average > 0 ? w.vote_average : null,
+    episodes: mapEpisodes(w.episodes),
   };
+}
+
+/** Skips anything without an episode number: it can't be placed. */
+function mapEpisodes(raw: WireEpisode[] | null): Episode[] {
+  return (raw ?? [])
+    .filter(
+      (e): e is WireEpisode & { episode_number: number } =>
+        !!e && typeof e.episode_number === "number" && e.episode_number > 0
+    )
+    .map((e) => ({
+      number: e.episode_number,
+      name: orNull(e.name),
+      airDate: orNull(e.air_date),
+      runtime: e.runtime && e.runtime > 0 ? e.runtime : null,
+      stillPath: orNull(e.still_path),
+      overview: orNull(e.overview),
+    }))
+    .sort((a, b) => a.number - b.number);
 }
 
 // ---------- users / interactions / onboarding ----------

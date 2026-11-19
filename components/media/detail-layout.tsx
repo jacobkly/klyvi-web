@@ -72,6 +72,7 @@ function DetailLayout({
   shelves,
   watch,
   extra,
+  nav,
 }: {
   media: TrackableSummary;
   /**
@@ -112,6 +113,8 @@ function DetailLayout({
   /** Where to watch, first in the main column: it is what you act on. */
   watch?: React.ReactNode;
   extra?: React.ReactNode;
+  /** Above the hero row: the season page's way back to its series. */
+  nav?: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -248,6 +251,7 @@ function DetailLayout({
     <main className="mx-auto w-full max-w-[1400px]">
       <BackdropHero backdropPath={backdropPath}>
         <div className="px-4 md:px-6">
+          {nav}
           <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
             {/* Poster + primary action, first viewport at every width. */}
             <div className="w-36 shrink-0 sm:w-44 lg:w-52">

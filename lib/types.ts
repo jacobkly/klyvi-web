@@ -183,6 +183,18 @@ export type WatchProvider = {
   logoPath: string | null;
 };
 
+/** One episode of a season, in airing order. */
+export type Episode = {
+  number: number;
+  name: string | null;
+  /** YYYY-MM-DD, null before it is scheduled. */
+  airDate: string | null;
+  /** Minutes. */
+  runtime: number | null;
+  stillPath: string | null;
+  overview: string | null;
+};
+
 /** Where to watch a title in one country (GET /v1/{movies,tv}/{id}/providers).
  *  The data is JustWatch's, via TMDB, and must be credited where it shows. */
 export type WatchProviders = {

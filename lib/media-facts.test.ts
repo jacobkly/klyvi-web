@@ -8,6 +8,7 @@ import {
   formatMoney,
   movieFacts,
   movieStrip,
+  seasonFacts,
   tvFacts,
   tvStrip,
 } from "./media-facts";
@@ -187,5 +188,34 @@ describe("formatters", () => {
 
   it("formats an episode without a date as just its number", () => {
     expect(formatEpisode({ season: 1, episode: 2, airDate: null })).toBe("S1 E2");
+  });
+});
+
+describe("seasonFacts", () => {
+  const season = {
+    seasonNumber: 2,
+    name: "Season 2",
+    overview: null,
+    posterPath: null,
+    year: 2025,
+    airDate: "2025-01-17T00:00:00Z",
+    episodeCount: 10,
+    voteAverage: 8.4,
+    episodes: [],
+  };
+
+  it("dates the season, not the series", () => {
+    const facts = seasonFacts(
+      { ...MOCK_TV, firstAirDate: "2022-02-17T00:00:00Z" },
+      season
+    );
+    expect(value(facts, "First aired")).toBe("17 January 2025");
+    expect(value(facts, "Episodes")).toBe(10);
+    expect(value(facts, "Average score")).toBe(84);
+  });
+
+  it("leaves out a date it doesn't know", () => {
+    const facts = seasonFacts(MOCK_TV, { ...season, airDate: null });
+    expect(labels(facts)).not.toContain("First aired");
   });
 });

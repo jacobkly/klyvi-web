@@ -135,7 +135,18 @@ export type WireTvSeason = {
   overview: string | null;
   poster_path: string | null;
   vote_average: number;
-  episodes: unknown[] | null;
+  episodes: WireEpisode[] | null;
+};
+
+/** TMDB's episode as the API passes it through (crew and guests removed).
+ *  Every field is optional: it is TMDB's shape, not one the API checks. */
+export type WireEpisode = {
+  episode_number?: number;
+  name?: string | null;
+  air_date?: string | null;
+  runtime?: number | null;
+  still_path?: string | null;
+  overview?: string | null;
 };
 
 export type WireCollectionMovie = {
