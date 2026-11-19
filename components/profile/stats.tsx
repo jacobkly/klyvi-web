@@ -26,6 +26,13 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  bandRange,
+  countryName,
+  decadeBuckets,
+  formatHours,
+  formatLabel,
+} from "@/lib/stats-format";
 import { STATUS_LABELS, type TrackingStatus, type UserStats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +123,50 @@ function bandCeiling(band: string): string {
   return parts[1] ?? band;
 }
 
+/** The page's own outline while the stats call runs (about a second). */
+function StatsSkeleton() {
+  return (
+    <div role="status" aria-label="Loading your stats" className="py-8">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skeleton key={i} className="h-20 rounded-lg" />
+        ))}
+      </div>
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="mt-12">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <Skeleton className="h-4 w-36 rounded-full" />
+            <Skeleton className="h-8 w-32 rounded-full" />
+          </div>
+          <Skeleton data-skeleton="chart" className="h-56 w-full rounded-lg" />
+        </div>
+      ))}
+      <div className="mt-12">
+        <Skeleton className="mb-5 h-4 w-24 rounded-full" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton
+              key={i}
+              data-skeleton="genre"
+              className="h-[104px] rounded-lg"
+            />
+          ))}
+        </div>
+      </div>
+      <div className="mt-12 grid gap-8 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex flex-col gap-2">
+            <Skeleton className="mb-2 h-4 w-20 rounded-full" />
+            {Array.from({ length: 3 }).map((_, j) => (
+              <Skeleton key={j} className="h-4 w-full rounded-full" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ProfileStats() {
   const data = useProfile();
   const [scoreMeasure, setScoreMeasure] = React.useState<Measure>("titles");
@@ -127,18 +178,7 @@ export function ProfileStats() {
   const rated = data.entries.filter((e) => e.score != null).length;
   const progress = statsProgress(data.entries);
 
-  if (stats === undefined) {
-    return (
-      <div className="py-8">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-lg" />
-          ))}
-        </div>
-        <Skeleton className="mt-12 h-56 w-full rounded-lg" />
-      </div>
-    );
-  }
+  if (stats === undefined) return <StatsSkeleton />;
 
   // No stats payload (fetch failed), or too little history to say anything
   // honest: one empty state, an invitation to rate or finish more. Overview
@@ -158,8 +198,11 @@ export function ProfileStats() {
 
   const scoreDist = stats.scoreDistribution.map((b) => ({
     ...b,
+    hours: Math.round(b.hours * 10) / 10,
     label: bandCeiling(b.band),
+    range: bandRange(b.band),
   }));
+  const decades = decadeBuckets(stats.releaseYears);
 
   const kpis: { label: string; value: string }[] = [
     { label: "Total films", value: String(stats.kpis.totalFilms) },
@@ -205,15 +248,25 @@ export function ProfileStats() {
       </div>
 
       {rated > 0 ? (
-        <StatsSection title="Score distribution">
-          <MeasureToggle value={scoreMeasure} onChange={setScoreMeasure} />
+        <StatsSection
+          title="Score distribution"
+          action={<MeasureToggle value={scoreMeasure} onChange={setScoreMeasure} />}
+        >
           <ChartContainer
             config={chartConfig}
             className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
           >
             <BarChart data={scoreDist} margin={{ top: 20 }}>
               <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} />
-              <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(_, payload) =>
+                      `Scores ${payload?.[0]?.payload?.range ?? ""}`
+                    }
+                  />
+                }
+              />
               <Bar
                 dataKey={scoreMeasure}
                 fill={`var(--color-${scoreMeasure})`}
@@ -231,36 +284,40 @@ export function ProfileStats() {
         </StatsSection>
       ) : null}
 
-      {stats.releaseYears.length > 0 ? (
-        <StatsSection title="Release year">
-          <MeasureToggle value={releaseMeasure} onChange={setReleaseMeasure} />
+      {decades.length > 0 ? (
+        <StatsSection
+          title="Release decade"
+          action={
+            <MeasureToggle value={releaseMeasure} onChange={setReleaseMeasure} />
+          }
+        >
           <ChartContainer
             config={chartConfig}
             className="h-56 w-full rounded-lg bg-card p-4 ring-1 ring-foreground/10"
           >
-            <LineChart data={stats.releaseYears} margin={{ top: 16, left: 12, right: 12 }}>
+            <BarChart data={decades} margin={{ top: 20 }}>
               <CartesianGrid vertical={false} strokeOpacity={0.15} />
-              <XAxis
-                dataKey="year"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={6}
-                interval="preserveStartEnd"
-              />
-              <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-              <Line
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar
                 dataKey={releaseMeasure}
-                type="monotone"
-                stroke={`var(--color-${releaseMeasure})`}
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
+                fill={`var(--color-${releaseMeasure})`}
+                radius={[3, 3, 0, 0]}
+              >
+                <LabelList
+                  position="top"
+                  offset={6}
+                  className="fill-muted-foreground"
+                  fontSize={10}
+                />
+              </Bar>
+            </BarChart>
           </ChartContainer>
         </StatsSection>
       ) : null}
 
-      {stats.watchYears.length > 0 ? (
+      {/* One year of history is a single dot, not a trend. */}
+      {stats.watchYears.length >= 2 ? (
         <StatsSection title="Watch year">
           <ChartContainer
             config={chartConfig}
@@ -308,7 +365,7 @@ export function ProfileStats() {
                     value={rated > 0 ? g.meanScore.toFixed(1) : "–"}
                     label="Mean score"
                   />
-                  <Metric value={`${g.hours}h`} label="Watched" />
+                  <Metric value={formatHours(g.hours)} label="Watched" />
                 </div>
               </div>
             ))}
@@ -319,7 +376,9 @@ export function ProfileStats() {
       <div className="mt-12 grid gap-8 md:grid-cols-3">
         <section>
           <SectionHeader title="Format" className="mb-4" />
-          <Distributions rows={stats.formats} />
+          <Distributions
+            rows={stats.formats.map((r) => ({ ...r, label: formatLabel(r.label) }))}
+          />
         </section>
 
         <section>
@@ -344,28 +403,33 @@ export function ProfileStats() {
 
         <section>
           <SectionHeader title="Country" className="mb-4" />
-          <Distributions rows={stats.countries} />
+          <Distributions
+            rows={stats.countries.map((r) => ({ ...r, label: countryName(r.label) }))}
+          />
         </section>
       </div>
     </div>
   );
 }
 
+/** A chart section: the title, with an optional control beside it, then
+ *  the chart. */
 function StatsSection({
   title,
+  action,
   children,
 }: {
   title: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [head, ...rest] = React.Children.toArray(children);
   return (
-    <section className="mt-12">
-      <div className="mb-5 flex items-center justify-between gap-4">
+    <section aria-label={title} className="mt-12">
+      <div className="mb-5 flex min-h-8 items-center justify-between gap-4">
         <SectionHeader title={title} />
-        {head}
+        {action}
       </div>
-      {rest}
+      {children}
     </section>
   );
 }
