@@ -70,6 +70,7 @@ export default async function MoviePage({
       posterPath={m.posterPath}
       title={m.title}
       year={m.year}
+      releaseDate={m.releaseDate}
       certification={m.certification}
       trailerKey={m.trailerKey}
       directorLine={byLine("Directed by", m.directors, m.writers)}

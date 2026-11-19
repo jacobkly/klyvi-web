@@ -90,6 +90,7 @@ export default async function SeasonPage({
       posterPath={posterPath}
       title={`${series.title} · ${season.name ?? `Season ${seasonNumber}`}`}
       year={season.year}
+      releaseDate={season.airDate}
       directorLine={null}
       tagline={null}
       overview={season.overview ?? series.overview}

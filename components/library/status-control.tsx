@@ -30,11 +30,14 @@ function StatusControl({
   status,
   onChange,
   size = "default",
+  options = ORDER,
   className,
 }: {
   status: TrackingStatus | null;
   onChange: (next: TrackingStatus) => void;
   size?: "default" | "sm" | "touch";
+  /** The statuses on offer. An unreleased title offers only Planning. */
+  options?: TrackingStatus[];
   className?: string;
 }) {
   return (
@@ -59,7 +62,7 @@ function StatusControl({
         }
       />
       <DropdownMenuContent align="start" className="min-w-44">
-        {ORDER.map((s) => (
+        {options.map((s) => (
           <DropdownMenuItem key={s} onClick={() => onChange(s)}>
             <span
               aria-hidden="true"

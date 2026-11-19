@@ -10,23 +10,26 @@ import { DetailLayout } from "./detail-layout";
 const listTracking = vi.fn();
 const lookupTracking = vi.fn();
 const updateTracking = vi.fn();
+const addTracking = vi.fn();
+const push = vi.fn();
 const toast = vi.fn();
+let sessionLoading = false;
 let sessionUser: { id: string } | null = { id: "u1" };
 
 vi.mock("@/lib/api/tracking", () => ({
   listTracking: (...a: unknown[]) => listTracking(...a),
   lookupTracking: (...a: unknown[]) => lookupTracking(...a),
-  addTracking: vi.fn(),
+  addTracking: (...a: unknown[]) => addTracking(...a),
   updateTracking: (...a: unknown[]) => updateTracking(...a),
   deleteTracking: vi.fn(),
 }));
 vi.mock("@/lib/api/interactions", () => ({ recordInteraction: vi.fn() }));
 vi.mock("sonner", () => ({ toast: (...a: unknown[]) => toast(...a) }));
 vi.mock("@/components/auth/auth-provider", () => ({
-  useSession: () => ({ user: sessionUser }),
+  useSession: () => ({ user: sessionUser, loading: sessionLoading }),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push }),
   usePathname: () => "/tv/95396/season/2",
 }));
 
@@ -123,12 +126,11 @@ describe("DetailLayout saves", () => {
     toast.mockReset();
   });
 
-  /** Picks Paused from the status menu and saves the dialog it opens. */
+  /** Picks Paused from the status menu: it saves at once (#77). */
   async function pause() {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /Completed/ }));
     await user.click(await screen.findByRole("menuitem", { name: "Paused" }));
-    await user.click(await screen.findByRole("button", { name: "Save" }));
   }
 
   it("shows the new status before the request resolves", async () => {
@@ -137,6 +139,7 @@ describe("DetailLayout saves", () => {
 
     await pause();
 
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(updateTracking).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: /Paused/ })).toBeInTheDocument();
     expect(toast).toHaveBeenCalledWith("Paused");
@@ -188,7 +191,8 @@ describe("DetailLayout facts", () => {
       directorLine: "Directed by Christopher Nolan. Written by Christopher Nolan",
     });
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^Severance\s*2025$/);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^Severance$/);
+    expect(screen.getByText("2025")).toBeInTheDocument();
     expect(
       screen.getByText("Directed by Christopher Nolan. Written by Christopher Nolan")
     ).toBeInTheDocument();
@@ -227,13 +231,14 @@ describe("DetailLayout rating and trailer", () => {
 
   it("shows the age rating beside the year", () => {
     renderDetail({ certification: "TV-MA" });
-    const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading).toHaveTextContent("Severance 2025 Rated TV-MA");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^Severance$/);
+    expect(screen.getByText("TV-MA")).toBeInTheDocument();
+    expect(screen.getByText("Rated")).toBeInTheDocument();
   });
 
   it("leaves the rating and trailer out when there are none", () => {
     renderDetail();
-    expect(screen.getByRole("heading", { level: 1 })).not.toHaveTextContent(/Rated/);
+    expect(screen.queryByText("Rated")).toBeNull();
     expect(screen.queryByRole("button", { name: "Trailer" })).toBeNull();
   });
 
@@ -241,5 +246,105 @@ describe("DetailLayout rating and trailer", () => {
     renderDetail({ trailerKey: "xEQP4VVuyrY" });
     expect(screen.getByRole("button", { name: "Trailer" })).toBeInTheDocument();
     expect(document.querySelector("iframe")).toBeNull();
+  });
+});
+
+describe("DetailLayout for the visitor (U.21)", () => {
+  beforeEach(() => {
+    sessionUser = { id: "u1" };
+    sessionLoading = false;
+    lookupTracking.mockReset().mockResolvedValue(null);
+    addTracking.mockReset().mockReturnValue(new Promise(() => {}));
+    updateTracking.mockReset();
+    push.mockReset();
+    toast.mockReset();
+  });
+
+  it("saves a status the moment it's picked, with no editor (#77)", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+    await waitFor(() => expect(lookupTracking).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: /Add to library/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Watching" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(addTracking).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tmdbId: 95396,
+        mediaType: "season",
+        seasonNumber: 2,
+        status: "watching",
+      })
+    );
+    expect(screen.getByRole("button", { name: /Watching/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add a score" })).toBeInTheDocument();
+  });
+
+  it("counts every episode when a season is picked as completed", async () => {
+    const user = userEvent.setup();
+    renderDetail({ episodeCount: 10 });
+    await waitFor(() => expect(lookupTracking).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: /Add to library/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Completed" }));
+
+    expect(addTracking).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "completed", episodeProgress: 10 })
+    );
+  });
+
+  it("dates an unreleased title and offers only Planning (#48)", async () => {
+    const user = userEvent.setup();
+    renderDetail({ releaseDate: "2099-12-16" });
+    expect(screen.getByText("Out 16 December 2099")).toBeInTheDocument();
+    await waitFor(() => expect(lookupTracking).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: /Add to library/ }));
+    const items = await screen.findAllByRole("menuitem");
+    expect(items.map((i) => i.textContent)).toEqual(["Planning"]);
+  });
+
+  it("asks a signed-out visitor to sign in, then brings them back (#101)", async () => {
+    sessionUser = null;
+    const user = userEvent.setup();
+    renderDetail();
+
+    expect(screen.queryByRole("button", { name: /Add to library/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Sign in to track" }));
+    expect(push).toHaveBeenCalledWith("/signin?next=%2Ftv%2F95396%2Fseason%2F2");
+  });
+
+  it("keeps the usual control while the session is still loading", () => {
+    sessionUser = null;
+    sessionLoading = true;
+    renderDetail();
+    expect(screen.getByRole("button", { name: /Add to library/ })).toBeInTheDocument();
+  });
+
+  it("marks a favourite in the hero (#41)", async () => {
+    lookupTracking.mockResolvedValue(tracked({ favorite: true }));
+    renderDetail();
+    expect(await screen.findByText("Favourite")).toBeInTheDocument();
+  });
+
+  it("keeps a favourite when the status changes", async () => {
+    lookupTracking.mockResolvedValue(tracked({ favorite: true }));
+    updateTracking.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(await screen.findByRole("button", { name: /Completed/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Paused" }));
+    expect(updateTracking).toHaveBeenCalledWith(
+      955,
+      expect.objectContaining({ status: "paused", favorite: true })
+    );
+  });
+
+  it("puts one status control on the page", async () => {
+    renderDetail();
+    await waitFor(() => expect(lookupTracking).toHaveBeenCalled());
+    expect(screen.getAllByRole("button", { name: /Add to library/ })).toHaveLength(1);
   });
 });
