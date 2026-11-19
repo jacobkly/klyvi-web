@@ -19,6 +19,13 @@ export function MarketingNav() {
           Klyvi
         </Link>
         <div className="flex items-center gap-2">
+          {/* #109: browsing comes before signing up. */}
+          <Link
+            href="/explore"
+            className="tap-target inline-flex items-center rounded-full px-3 py-1.5 text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            Explore
+          </Link>
           <Link
             href="/signin"
             className="tap-target inline-flex items-center rounded-full px-3 py-1.5 text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"

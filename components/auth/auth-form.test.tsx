@@ -161,13 +161,36 @@ describe("AuthForm", () => {
     expect(
       screen.getByText("Usernames need 3 to 40 characters.")
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("That does not look like an email address.")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Passwords need at least 8 characters.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Enter your email.")).toBeInTheDocument();
+    expect(screen.getByText("Enter your password.")).toBeInTheDocument();
     expect(signUp).not.toHaveBeenCalled();
+  });
+
+  // #105: an empty field is missing, not malformed, and focus goes to it.
+  it("asks for the email and password on an empty sign-in, focusing the email", async () => {
+    const user = userEvent.setup();
+    render(<AuthForm mode="signin" />);
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(screen.getByText("Enter your email.")).toBeInTheDocument();
+    expect(screen.getByText("Enter your password.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toHaveFocus();
+  });
+
+  it("focuses the password when it is the only field missing", async () => {
+    render(<AuthForm mode="signin" />);
+    const user = await fill("a@b.com", "");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(screen.getByLabelText("Password")).toHaveFocus();
+  });
+
+  // #106: 36 px fields are below the touch floor on a phone.
+  it("grows its inputs to 44 px on touch", () => {
+    render(<AuthForm mode="signup" />);
+    for (const label of ["Username", "Email", "Password", "Confirm password"]) {
+      expect(screen.getByLabelText(label).className).toContain(
+        "pointer-coarse:h-11"
+      );
+    }
   });
 
   it("keeps the submit button enabled while the form is incomplete", () => {

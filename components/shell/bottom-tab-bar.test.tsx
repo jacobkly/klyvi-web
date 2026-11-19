@@ -118,4 +118,23 @@ describe("BottomTabBar", () => {
       "/signin"
     );
   });
+
+  // #102: the tabs a visitor can use, and a way in.
+  it("gives a signed-out visitor Explore, Search, Sign in and Get started", () => {
+    session.user = null;
+    render(<BottomTabBar />);
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((l) => l.textContent)
+    ).toEqual(["Explore", "Search", "Sign in", "Get started"]);
+    expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute(
+      "href",
+      "/signup"
+    );
+    for (const link of within(nav).getAllByRole("link")) {
+      expect(link.className).toMatch(/min-h-11|hit-44/);
+    }
+  });
 });

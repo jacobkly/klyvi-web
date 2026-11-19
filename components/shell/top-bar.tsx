@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { PRIMARY_NAV, isActive } from "@/lib/nav";
+import { useSession } from "@/components/auth/auth-provider";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { PRIMARY_NAV, SIGNED_OUT_NAV, isActive } from "@/lib/nav";
 import { modifierLabel, useIsMac } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./user-menu";
@@ -24,6 +25,11 @@ function TopBar({
 }) {
   const pathname = usePathname();
   const isMac = useIsMac();
+  const { user, loading } = useSession();
+  // Until the session resolves, assume signed in: most visitors to an app
+  // page are, and a visitor sees the right bar a moment later.
+  const signedOut = !loading && !user;
+  const nav = signedOut ? SIGNED_OUT_NAV : PRIMARY_NAV;
 
   return (
     <header
@@ -36,14 +42,14 @@ function TopBar({
     >
       <div className="mx-auto flex h-full max-w-[1400px] items-center gap-6 px-6">
         <Link
-          href="/home"
+          href={signedOut ? "/" : "/home"}
           className="rounded-full text-[15px] font-semibold tracking-tight text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
         >
           Klyvi
         </Link>
 
         <nav aria-label="Primary" className="flex items-center gap-1">
-          {PRIMARY_NAV.map((item) => {
+          {nav.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <Link
@@ -82,7 +88,21 @@ function TopBar({
               </kbd>
             ) : null}
           </Button>
-          <UserMenu />
+          {signedOut ? (
+            <>
+              <Link
+                href="/signin"
+                className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+              >
+                Sign in
+              </Link>
+              <Link href="/signup" className={buttonVariants({ size: "sm" })}>
+                Get started
+              </Link>
+            </>
+          ) : (
+            <UserMenu />
+          )}
         </div>
       </div>
     </header>

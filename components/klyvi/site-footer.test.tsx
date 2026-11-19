@@ -1,9 +1,35 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const session = vi.hoisted(() => ({
+  user: { email: "a@b.com" } as { email: string } | null,
+}));
+vi.mock("@/components/auth/auth-provider", () => ({
+  useSession: () => ({ user: session.user, loading: false }),
+}));
 
 import { SiteFooter } from "./site-footer";
 
+beforeEach(() => {
+  session.user = { email: "a@b.com" };
+});
+
 describe("SiteFooter", () => {
+  // #102: links that would only bounce a visitor to sign-in are left out.
+  it("links a signed-out visitor only to pages they can open", () => {
+    session.user = null;
+    render(<SiteFooter />);
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    for (const gated of ["/find", "/library", "/profile/stats", "/settings"]) {
+      expect(hrefs).not.toContain(gated);
+    }
+    expect(hrefs).toEqual(
+      expect.arrayContaining(["/explore", "/signup", "/signin", "/privacy"])
+    );
+  });
+
   it("has no Donate link", () => {
     render(<SiteFooter />);
     const hrefs = screen

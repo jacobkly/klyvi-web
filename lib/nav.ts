@@ -18,6 +18,14 @@ export const PRIMARY_NAV: NavItem[] = [
   { href: "/explore", label: "Explore", icon: Compass },
 ];
 
+/**
+ * Signed out, Home, Find next and Library would only bounce to sign-in, so a
+ * visitor gets the one tab they can use. Sign in and Get started sit beside it.
+ */
+export const SIGNED_OUT_NAV: NavItem[] = [
+  { href: "/explore", label: "Explore", icon: Compass },
+];
+
 /** True when the current pathname belongs to this nav item. */
 export function isActive(pathname: string, href: string): boolean {
   if (href === "/home") return pathname === "/home" || pathname === "/";

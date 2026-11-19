@@ -46,6 +46,7 @@ export function ResetPasswordForm() {
     const emailError = validateEmail(email);
     if (emailError) {
       setFieldError(emailError);
+      document.getElementById("reset-email")?.focus();
       return;
     }
     setFieldError(null);
@@ -74,6 +75,7 @@ export function ResetPasswordForm() {
     const passwordError = validatePassword(password);
     if (passwordError) {
       setFieldError(passwordError);
+      document.getElementById("new-password")?.focus();
       return;
     }
     setFieldError(null);
@@ -135,6 +137,7 @@ export function ResetPasswordForm() {
               <Input
                 {...field}
                 name="new-password"
+                className="pointer-coarse:h-11"
                 type="password"
                 autoComplete="new-password"
                 value={password}
@@ -211,6 +214,7 @@ export function ResetPasswordForm() {
             <Input
               {...field}
               name="reset-email"
+              className="pointer-coarse:h-11"
               type="email"
               autoComplete="email"
               value={email}

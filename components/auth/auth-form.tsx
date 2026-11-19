@@ -24,6 +24,9 @@ import {
   validatePasswordConfirm,
 } from "@/lib/validation";
 
+/** 44 px on a phone, the touch floor. The default 36 px stays on desktop. */
+const FIELD = "pointer-coarse:h-11";
+
 const PROVIDERS = [
   { id: "google", name: "Google", Mark: GoogleMark },
   { id: "azure", name: "Microsoft", Mark: MicrosoftMark },
@@ -193,6 +196,10 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
     }
     if (Object.keys(found).length > 0) {
       setFieldErrors(found);
+      // Straight to the first field that needs fixing. checks is in the
+      // form's order.
+      const first = checks.find((name) => found[name]);
+      document.getElementById(`auth-${first}`)?.focus();
       return;
     }
     setFieldErrors({});
@@ -383,6 +390,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
               <Input
                 {...field}
                 name="auth-username"
+                className={FIELD}
                 autoComplete="username"
                 value={username}
                 onChange={(e) => {
@@ -400,6 +408,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
             <Input
               {...field}
               name="auth-email"
+              className={FIELD}
               type="email"
               autoComplete="email"
               value={email}
@@ -435,7 +444,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
                 name="auth-password"
                 type={showPassword ? "text" : "password"}
                 autoComplete={signin ? "current-password" : "new-password"}
-                className="pr-10"
+                className={`${FIELD} pr-10`}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -473,6 +482,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
               <Input
                 {...field}
                 name="auth-confirm"
+                className={FIELD}
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 value={confirm}

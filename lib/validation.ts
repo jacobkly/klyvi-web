@@ -11,6 +11,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const PASSWORD_MIN = 8;
 
 export function validateEmail(raw: string): string | null {
+  // Missing is not malformed, and saying so is clearer.
+  if (raw.trim() === "") return "Enter your email.";
   if (!EMAIL_RE.test(raw.trim())) {
     return "That does not look like an email address.";
   }
@@ -18,6 +20,7 @@ export function validateEmail(raw: string): string | null {
 }
 
 export function validatePassword(raw: string): string | null {
+  if (raw === "") return "Enter your password.";
   if (raw.length < PASSWORD_MIN) {
     return `Passwords need at least ${PASSWORD_MIN} characters.`;
   }

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { MOCK_POOL } from "@/lib/mock-onboarding";
@@ -63,11 +64,19 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </p>
       </div>
 
+      {/* #103: the way back to the site, where the app bar keeps it. */}
+      <Link
+        href="/"
+        className="absolute top-4 left-6 z-10 inline-flex min-h-11 items-center rounded-full text-[15px] font-semibold tracking-tight text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30 lg:left-10"
+      >
+        Klyvi
+      </Link>
+
       {/* The form block centres in its column at every width, so its midpoint
           lands on the quarter line of the page at lg. Tried a 2/3 column
           (midpoint on the third line) and it read as off-balance against the
           artwork, so the halves stay. */}
-      <div className="relative flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:shrink-0 lg:px-10">
+      <div className="relative flex w-full flex-col justify-center px-6 pt-16 pb-12 lg:w-1/2 lg:shrink-0 lg:px-10">
         <div className="mx-auto w-full max-w-[380px]">{children}</div>
       </div>
     </div>

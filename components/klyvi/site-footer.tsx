@@ -1,8 +1,23 @@
+"use client";
+
 import Link from "next/link";
 
+import { useSession } from "@/components/auth/auth-provider";
 import { cn } from "@/lib/utils";
 
-const COLUMNS: { heading: string; links: [string, string][] }[] = [
+type Column = { heading: string; links: [string, string][] };
+
+const LEGAL: Column = {
+  heading: "Legal",
+  links: [
+    ["Terms of use", "/terms"],
+    ["Privacy policy", "/privacy"],
+    ["Copyright", "/copyright"],
+    ["Attribution", "/attribution"],
+  ],
+};
+
+const SIGNED_IN: Column[] = [
   {
     heading: "Product",
     links: [
@@ -12,15 +27,7 @@ const COLUMNS: { heading: string; links: [string, string][] }[] = [
       ["Your stats", "/profile/stats"],
     ],
   },
-  {
-    heading: "Legal",
-    links: [
-      ["Terms of use", "/terms"],
-      ["Privacy policy", "/privacy"],
-      ["Copyright", "/copyright"],
-      ["Attribution", "/attribution"],
-    ],
-  },
+  LEGAL,
   {
     heading: "Support",
     links: [
@@ -30,12 +37,28 @@ const COLUMNS: { heading: string; links: [string, string][] }[] = [
   },
 ];
 
+/** Signed out, the app's own pages would only bounce to sign-in. */
+const SIGNED_OUT: Column[] = [
+  {
+    heading: "Product",
+    links: [
+      ["Explore", "/explore"],
+      ["Get started", "/signup"],
+      ["Sign in", "/signin"],
+    ],
+  },
+  LEGAL,
+  { heading: "Support", links: [["Contact", "mailto:hello@klyvi.net"]] },
+];
+
 /**
  * The shared site footer: brand block plus three link columns, used by the
  * marketing page and every signed-in screen. `wide` matches the app
  * container (1400px); default matches the marketing column.
  */
 export function SiteFooter({ wide = false }: { wide?: boolean }) {
+  const { user } = useSession();
+  const columns = user ? SIGNED_IN : SIGNED_OUT;
   return (
     <footer className="border-t border-border">
       <div
@@ -53,7 +76,7 @@ export function SiteFooter({ wide = false }: { wide?: boolean }) {
           </div>
 
           <div className="flex flex-wrap gap-x-16 gap-y-8">
-            {COLUMNS.map((col) => (
+            {columns.map((col) => (
               <nav
                 key={col.heading}
                 aria-label={col.heading}
