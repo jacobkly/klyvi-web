@@ -11,16 +11,22 @@ export default function AttributionPage() {
   return (
     <ProseLayout title="Third-party data and attribution" updated="17 November 2026">
       <h2>TMDB</h2>
-      {/* TMDB's own logo, unchanged and smaller than Klyvi's mark, as its
-          API terms ask. */}
-      <Image
-        src="/tmdb-logo.svg"
-        alt="TMDB"
-        width={92}
-        height={12}
-        unoptimized
-        className="mb-4 h-3 w-auto"
-      />
+      {/* TMDB's own logo, unchanged and no more prominent than Klyvi's
+          mark, as its API terms ask. */}
+      <a
+        href="https://www.themoviedb.org"
+        aria-label="TMDB"
+        className="mb-4 inline-flex rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+      >
+        <Image
+          src="/tmdb-logo.svg"
+          alt="TMDB"
+          width={123}
+          height={16}
+          unoptimized
+          className="h-4 w-auto"
+        />
+      </a>
       <p>
         Film and television data, posters, and images are provided by The
         Movie Database (TMDB).

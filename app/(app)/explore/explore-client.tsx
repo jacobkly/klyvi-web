@@ -247,7 +247,7 @@ export function ExploreClient({
     <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Search the catalog, or browse when you do not know.
+        Find a title by name, or browse the catalog.
       </p>
 
       {/* Search field: prominent, since this is the only search surface. */}
@@ -262,7 +262,7 @@ export function ExploreClient({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search films, TV, and people"
+            placeholder="Search titles"
             aria-label="Search films, TV, and people"
             className="h-11 pr-10 pl-9 text-base"
           />

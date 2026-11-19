@@ -104,6 +104,13 @@ describe("ExploreClient search", () => {
     };
   }
 
+  it("has a short placeholder that fits a phone, and a full name", () => {
+    render(<ExploreClient />);
+    const box = screen.getByRole("textbox", { name: "Search films, TV, and people" });
+    expect(box).toHaveAttribute("placeholder", "Search titles");
+    expect(screen.getByText("Find a title by name, or browse the catalog.")).toBeInTheDocument();
+  });
+
   it("recovers from a failed search with Try again", async () => {
     search
       .mockRejectedValueOnce(new Error("boom"))

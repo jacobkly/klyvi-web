@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import { useSession } from "@/components/auth/auth-provider";
@@ -99,10 +100,26 @@ export function SiteFooter({ wide = false }: { wide?: boolean }) {
           </div>
         </div>
 
-        <p className="mt-10 text-xs text-muted-foreground">
-          This website uses TMDB and the TMDB APIs but is not endorsed,
-          certified, or otherwise approved by TMDB.
-        </p>
+        <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <a
+            href="https://www.themoviedb.org"
+            aria-label="TMDB"
+            className="tap-target inline-flex shrink-0 items-center rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            <Image
+              src="/tmdb-logo.svg"
+              alt=""
+              width={92}
+              height={12}
+              unoptimized
+              className="h-3 w-auto"
+            />
+          </a>
+          <p className="text-xs text-muted-foreground">
+            This website uses TMDB and the TMDB APIs but is not endorsed,
+            certified, or otherwise approved by TMDB.
+          </p>
+        </div>
       </div>
     </footer>
   );

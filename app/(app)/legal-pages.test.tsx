@@ -89,6 +89,22 @@ describe.each<[string, ComponentType]>([
   });
 });
 
+describe("the TMDB logo", () => {
+  it("links to TMDB on the attribution page, larger than before", () => {
+    render(<AttributionPage />);
+    const link = screen.getByRole("link", { name: "TMDB" });
+    expect(link).toHaveAttribute("href", "https://www.themoviedb.org");
+    expect(within(link).getByRole("img", { name: "TMDB" }).className).toContain("h-4");
+  });
+
+  it("sits beside the notice in the footer, linked", () => {
+    render(<SiteFooter />);
+    const link = screen.getByRole("link", { name: "TMDB" });
+    expect(link).toHaveAttribute("href", "https://www.themoviedb.org");
+    expect(link.parentElement?.textContent).toMatch(/not endorsed, certified/);
+  });
+});
+
 describe("the footer", () => {
   it("has a Contact link under Support", () => {
     render(<SiteFooter />);
@@ -194,7 +210,7 @@ describe("the privacy page", () => {
     const text = privacy();
     expect(text).toMatch(/legal basis/i);
     expect(text).toMatch(/legitimate interests?/i);
-    expect(text).toMatch(/Download your data/);
+    expect(text).toMatch(/Download JSON, in Settings under\s+Import and export/);
     expect(text).toMatch(/complain.{0,80}(regulator|data protection)/i);
   });
 
