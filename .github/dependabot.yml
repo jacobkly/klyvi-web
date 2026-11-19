@@ -6,9 +6,12 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # Minor and patch bumps share one PR. Each major arrives alone, so one
+    # breaking upgrade can't hold back the safe ones.
     groups:
       npm-dependencies:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: github-actions
     directory: /
