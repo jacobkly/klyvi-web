@@ -22,9 +22,21 @@ vi.mock("@/lib/supabase/browser", () => ({
   }),
 }));
 
+// The username check is a network call. Stub it so sign-up tests never
+// reach a real API.
+const checkUsernameAvailable = vi.fn();
+vi.mock("@/lib/api/users", () => ({
+  checkUsernameAvailable: (...args: unknown[]) =>
+    checkUsernameAvailable(...args),
+}));
+
 describe("AuthForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    checkUsernameAvailable.mockResolvedValue({
+      available: true,
+      reason: null,
+    });
   });
 
   async function fill(email: string, password: string) {
