@@ -9,7 +9,7 @@ export const metadata = {
 
 export default function AttributionPage() {
   return (
-    <ProseLayout title="Third-party data and attribution" updated="17 November 2026">
+    <ProseLayout title="Third-party data and attribution" updated="19 November 2026">
       <h2>TMDB</h2>
       {/* TMDB's own logo, unchanged and no more prominent than Klyvi's
           mark, as its API terms ask. */}
@@ -65,7 +65,9 @@ export default function AttributionPage() {
       <p>
         Klyvi is built on open-source software including Next.js, React,
         Tailwind CSS, Base UI, Lucide, and shadcn/ui, each under its own
-        license.
+        license. The full text of{" "}
+        <a href="/third-party-notices.txt">the license of every package</a>{" "}
+        this site ships is in one file.
       </p>
     </ProseLayout>
   );

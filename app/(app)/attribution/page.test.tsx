@@ -17,6 +17,13 @@ describe("AttributionPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("links the full license texts of the open-source code it ships", () => {
+    render(<AttributionPage />);
+    expect(
+      screen.getByRole("link", { name: "the license of every package" })
+    ).toHaveAttribute("href", "/third-party-notices.txt");
+  });
+
   it("credits Wikipedia's plot text under its license", () => {
     render(<AttributionPage />);
     expect(screen.getByRole("heading", { name: "Wikipedia" })).toBeInTheDocument();

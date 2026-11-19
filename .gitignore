@@ -53,3 +53,5 @@ yarn-error.log*
 next-env.d.ts
 
 docs/
+# Written by scripts/third-party-notices.mjs before each build
+/public/third-party-notices.txt
