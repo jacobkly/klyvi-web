@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Scored } from "@/lib/types";
 
@@ -117,7 +117,26 @@ describe("FindClient", () => {
     toast.mockReset();
     push.mockReset();
     window.localStorage.clear();
+    Element.prototype.scrollIntoView = vi.fn();
   });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The options passed with the most recent toast. */
+  function lastToast() {
+    return toast.mock.calls.at(-1) as [
+      string,
+      { duration?: number; action?: { label: string; onClick: () => void } }?,
+    ];
+  }
+
+  async function showFeed() {
+    render(<FindClient />);
+    fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+    await screen.findByRole("heading", { name: "Memories of Murder" });
+  }
 
   /** The "Track seasons" action on the most recent toast. */
   function trackSeasonsAction() {
@@ -155,11 +174,86 @@ describe("FindClient", () => {
 
   it("records dismissing a show as a tv interaction", async () => {
     await showPick();
+    vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: "Not interested" }));
+    vi.advanceTimersByTime(5000);
 
     expect(recordInteraction).toHaveBeenCalledWith(
       expect.objectContaining({ tmdbId: 1399, mediaType: "tv", kind: "dismissed" })
     );
+  });
+
+  it("holds a hidden pick for five seconds and Undo puts it back unwritten", async () => {
+    await showFeed();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole("button", { name: "Not interested" }));
+
+    expect(screen.queryByRole("heading", { name: "Memories of Murder" })).toBeNull();
+    const [message, options] = lastToast();
+    expect(message).toBe("Hid Memories of Murder from your recommendations");
+    expect(options?.duration).toBe(5000);
+    expect(options?.action?.label).toBe("Undo");
+
+    act(() => options?.action?.onClick());
+    vi.advanceTimersByTime(5000);
+
+    expect(screen.getByRole("heading", { name: "Memories of Murder" })).toBeInTheDocument();
+    expect(screen.getByText("1 of 4", { exact: false })).toBeInTheDocument();
+    expect(toast).toHaveBeenCalledWith("Memories of Murder is back in your picks");
+    expect(recordInteraction).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "dismissed" })
+    );
+  });
+
+  it("writes the hide once the undo window has passed", async () => {
+    await showFeed();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole("button", { name: "Not interested" }));
+    expect(recordInteraction).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(5000);
+
+    expect(recordInteraction).toHaveBeenCalledWith(
+      expect.objectContaining({ tmdbId: 11423, kind: "dismissed", source: "feed" })
+    );
+  });
+
+  it("refills the set from the rest of the feed after an action", async () => {
+    render(<FindClient />);
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+    await screen.findByRole("heading", { name: "Memories of Murder" });
+    expect(screen.getByRole("heading", { name: /Your 3 picks/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
+
+    expect(screen.getByRole("heading", { name: /Your 3 picks/ })).toBeInTheDocument();
+    expect(screen.queryByText(/set is getting smaller/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Next pick" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next pick" }));
+    expect(screen.getByRole("heading", { name: "City of God" })).toBeInTheDocument();
+  });
+
+  it("says the set is shrinking once nothing is left to refill it", async () => {
+    await showFeed();
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
+
+    expect(screen.getByRole("heading", { name: /Your 3 picks/ })).toBeInTheDocument();
+    expect(screen.getByText(/set is getting smaller/)).toBeInTheDocument();
+  });
+
+  it("brings the next pick into view after an action", async () => {
+    await showFeed();
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
+
+    await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled());
+  });
+
+  it("names the title in the save toast", async () => {
+    await showFeed();
+    fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
+
+    expect(toast).toHaveBeenCalledWith("Added Memories of Murder to your watchlist");
   });
 
   it("records rating a show as a tv interaction and never tracks it as a film", async () => {
@@ -205,7 +299,7 @@ describe("FindClient", () => {
     );
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        "Season 2 added to your watchlist",
+        "Added Game of Thrones season 2 to your watchlist",
         expect.anything()
       )
     );
@@ -237,7 +331,7 @@ describe("FindClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Seen it" }));
     fireEvent.click(await screen.findByRole("button", { name: "Save rating" }));
 
-    expect(toast).toHaveBeenCalledWith("Rated");
+    expect(toast).toHaveBeenCalledWith("Rated Memories of Murder 75");
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
         "Could not add that to your library. Try again"
@@ -357,7 +451,7 @@ describe("FindClient", () => {
     await showPick();
     fireEvent.click(screen.getByRole("button", { name: "Add to watchlist" }));
 
-    expect(toast).toHaveBeenCalledWith("Adding to your watchlist");
+    expect(toast).toHaveBeenCalledWith("Adding Game of Thrones to your watchlist");
     expect(screen.queryByRole("heading", { name: "Game of Thrones" })).toBeNull();
   });
 

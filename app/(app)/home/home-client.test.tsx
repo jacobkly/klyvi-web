@@ -176,7 +176,7 @@ describe("HomeClient", () => {
         mediaType: "movie",
         status: "planning",
       });
-      expect(toast).toHaveBeenCalledWith("Added to your watchlist");
+      expect(toast).toHaveBeenCalledWith("Added Film 1 to your watchlist");
       expect(within(heroOf()).getByRole("heading", { name: "Film 2" })).toBeInTheDocument();
     });
 
@@ -185,14 +185,44 @@ describe("HomeClient", () => {
       render(<HomeClient />);
       await screen.findByRole("region", { name: "Tonight's pick" });
 
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        await userEvent.click(
+          within(heroOf()).getByRole("button", { name: "Not for me" })
+        );
+        expect(within(heroOf()).getByRole("heading", { name: "Film 2" })).toBeInTheDocument();
+        // Held for the undo window, then written.
+        expect(recordInteraction).not.toHaveBeenCalledWith(
+          expect.objectContaining({ kind: "dismissed" })
+        );
+        vi.advanceTimersByTime(5000);
+        expect(recordInteraction).toHaveBeenCalledWith(
+          expect.objectContaining({ tmdbId: 1000, kind: "dismissed", source: "feed" })
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("brings a hidden pick back with Undo", async () => {
+      getFeed.mockResolvedValue(picks(2));
+      render(<HomeClient />);
+      await screen.findByRole("region", { name: "Tonight's pick" });
+
       await userEvent.click(
         within(heroOf()).getByRole("button", { name: "Not for me" })
       );
+      const [message, options] = toast.mock.calls.at(-1) as [
+        string,
+        { action: { label: string; onClick: () => void } },
+      ];
+      expect(message).toBe("Hid Film 1 from your recommendations");
+      expect(options.action.label).toBe("Undo");
 
-      expect(recordInteraction).toHaveBeenCalledWith(
-        expect.objectContaining({ tmdbId: 1000, kind: "dismissed", source: "feed" })
-      );
-      expect(within(heroOf()).getByRole("heading", { name: "Film 2" })).toBeInTheDocument();
+      act(() => options.action.onClick());
+
+      expect(within(heroOf()).getByRole("heading", { name: "Film 1" })).toBeInTheDocument();
+      expect(toast).toHaveBeenCalledWith("Film 1 is back in your picks");
     });
 
     it("asks how it was when you've seen it", async () => {
@@ -367,7 +397,7 @@ describe("HomeClient", () => {
     getFeed.mockResolvedValue(picks(3, () => ({ reasons: [noir, drama] })));
     render(<HomeClient />);
     const taste = await screen.findByRole("region", { name: "Your taste" });
-    expect(within(taste).getByText("neo-noir")).toBeInTheDocument();
+    expect(within(taste).getByText("Neo-Noir")).toBeInTheDocument();
     expect(within(taste).queryByText("Drama")).toBeNull();
   });
 

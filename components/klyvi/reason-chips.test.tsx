@@ -15,8 +15,23 @@ const reasons: Reason[] = [
 describe("ReasonChips", () => {
   it("renders named reasons as chips", () => {
     render(<ReasonChips reasons={reasons.slice(0, 2)} />);
-    expect(screen.getByText("slow-burn")).toBeInTheDocument();
+    expect(screen.getByText("Slow-Burn")).toBeInTheDocument();
     expect(screen.getByText("Drama")).toBeInTheDocument();
+  });
+
+  it("writes keywords in title case, leaving short joining words small", () => {
+    render(
+      <ReasonChips
+        reasons={[
+          { kind: "keyword", id: 1, name: "based on novel or book" },
+          { kind: "keyword", id: 2, name: "1970s" },
+          { kind: "because", id: 3, name: "the Thing" },
+        ]}
+      />
+    );
+    expect(screen.getByText("Based on Novel or Book")).toBeInTheDocument();
+    expect(screen.getByText("1970s")).toBeInTheDocument();
+    expect(screen.getByText("because you liked the Thing")).toBeInTheDocument();
   });
 
   it("renders nothing at all for an empty list (Tier 0)", () => {
@@ -46,11 +61,11 @@ describe("ReasonChips", () => {
 
   it("collapses overflow past max into a +N chip", () => {
     render(<ReasonChips reasons={reasons} max={3} />);
-    expect(screen.getByText("slow-burn")).toBeInTheDocument();
-    expect(screen.getByText("heist")).toBeInTheDocument();
+    expect(screen.getByText("Slow-Burn")).toBeInTheDocument();
+    expect(screen.getByText("Heist")).toBeInTheDocument();
     expect(screen.getByText("+2")).toBeInTheDocument();
     expect(screen.queryByText("Crime")).not.toBeInTheDocument();
-    expect(screen.queryByText("neo-noir")).not.toBeInTheDocument();
+    expect(screen.queryByText("Neo-Noir")).not.toBeInTheDocument();
   });
 
   it("shows no overflow chip when at or under max", () => {
@@ -68,7 +83,7 @@ describe("ReasonChips", () => {
       />
     );
     expect(screen.getByText("because you liked Parasite")).toBeInTheDocument();
-    expect(screen.getByText("slow-burn")).toBeInTheDocument();
+    expect(screen.getByText("Slow-Burn")).toBeInTheDocument();
   });
 
   it("keeps the full title of a long because reason in its tooltip", () => {

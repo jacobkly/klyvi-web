@@ -174,7 +174,7 @@ describe("TvShelves", () => {
       screen.getByRole("heading", { name: "More like this" })
     ).toBeInTheDocument();
     expect(screen.getByText("Better Call Saul")).toBeInTheDocument();
-    expect(screen.getByText("drug cartel")).toBeInTheDocument();
+    expect(screen.getByText("Drug Cartel")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Better Call Saul/ })
     ).toHaveAttribute("href", "/tv/60059");

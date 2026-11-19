@@ -28,6 +28,7 @@ import {
 } from "@/lib/library-filter";
 import type { PageSink } from "@/lib/api/tracking";
 import { libraryQuery, type LibraryParams } from "@/lib/library-params";
+import { editToast } from "@/lib/edit-toast";
 import { usePref } from "@/lib/local-prefs";
 import {
   STATUS_LABELS,
@@ -106,6 +107,7 @@ function LibraryView({
   // here. Derived rather than copied into state, so the stored pref still
   // lands after hydration (the server snapshot is the default).
   const [listOrder] = usePref("listOrder");
+  const [scoringSystem] = usePref("scoringSystem");
   const [picked, setPicked] = React.useState<{
     key: LibrarySortKey;
     order: SortOrder;
@@ -257,6 +259,7 @@ function LibraryView({
           : e
       ),
     });
+    toast(editToast(entry, edit, scoringSystem));
     onSave?.(entry, edit).catch(() => {
       setState({ phase: "ready", entries: prev });
       toast("Could not update that. Try again");

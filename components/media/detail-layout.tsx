@@ -30,12 +30,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Fact } from "@/lib/media-facts";
 import type { CastMember, CrewGroup, Keyword } from "@/lib/mock-media";
-import {
-  STATUS_VERBS,
-  type LibraryEntry,
-  type TrackableSummary,
-  type TrackingStatus,
+import type {
+  LibraryEntry,
+  TrackableSummary,
+  TrackingStatus,
 } from "@/lib/types";
+import { editToast } from "@/lib/edit-toast";
 import { usePref } from "@/lib/local-prefs";
 import { outLabel } from "@/lib/release";
 import { formatScore } from "@/lib/score";
@@ -214,7 +214,7 @@ function DetailLayout({
     setProgress(edit.progress);
     setNotes(edit.notes);
     setFavorite(edit.favorite);
-    toast(STATUS_VERBS[edit.status]);
+    toast(editToast(prev, edit, scoringSystem));
 
     const write =
       mediaId != null

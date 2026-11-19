@@ -28,7 +28,7 @@ export const DEMO_PICKS: Scored[] = [
     reasons: [
       { kind: "keyword", id: 1, name: "mind-bender" },
       { kind: "keyword", id: 2, name: "heist" },
-      { kind: "keyword", id: 3, name: "because you liked The Matrix" },
+      { kind: "because", id: 3, name: "The Matrix" },
     ],
   },
   {
@@ -48,7 +48,7 @@ export const DEMO_PICKS: Scored[] = [
     reasons: [
       { kind: "keyword", id: 4, name: "crime epic" },
       { kind: "keyword", id: 5, name: "vigilante" },
-      { kind: "keyword", id: 6, name: "because you rate villains highly" },
+      { kind: "keyword", id: 6, name: "iconic villain" },
     ],
   },
   {
@@ -67,7 +67,7 @@ export const DEMO_PICKS: Scored[] = [
       "Paul Atreides unites with the Fremen to wage war on House Harkonnen, torn between the love of his life and the fate of the known universe.",
     reasons: [
       { kind: "keyword", id: 7, name: "epic world-building" },
-      { kind: "keyword", id: 8, name: "because you liked Blade Runner 2049" },
+      { kind: "because", id: 8, name: "Blade Runner 2049" },
       { kind: "keyword", id: 9, name: "chosen one" },
     ],
   },
@@ -88,7 +88,7 @@ export const DEMO_PICKS: Scored[] = [
     reasons: [
       { kind: "keyword", id: 10, name: "unreliable narrator" },
       { kind: "keyword", id: 11, name: "twist ending" },
-      { kind: "keyword", id: 12, name: "because you liked Se7en" },
+      { kind: "because", id: 12, name: "Se7en" },
     ],
   },
   {

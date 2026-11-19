@@ -29,6 +29,7 @@ import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
 import { usePref } from "@/lib/local-prefs";
 import { mediaHref } from "@/lib/media-href";
 import { formatRuntime, formatSeasons } from "@/lib/mock-media";
+import { useReducedMotion } from "@/lib/motion";
 import { watchWindowPhrase } from "@/lib/time-of-day";
 import type { FeedMedia, Scored } from "@/lib/types";
 
@@ -95,7 +96,16 @@ type Phase =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "error" }
-  | { kind: "ready"; picks: Scored[]; index: number };
+  | {
+      kind: "ready";
+      picks: Scored[];
+      index: number;
+      /** The rest of the feed that fits, which refills the set as picks
+       *  leave it. */
+      reserve: Scored[];
+      /** How many picks were asked for. */
+      size: number;
+    };
 
 /**
  * Find Next, built as a decision surface rather than a list: ONE pick at a
@@ -117,6 +127,11 @@ export function FindClient({ simulate }: { simulate?: string }) {
     number | null
   >(null);
   const [rating, setRating] = React.useState<Scored | null>(null);
+  const reduceMotion = useReducedMotion();
+  const topRef = React.useRef<HTMLElement>(null);
+  // Counts the picks that have left the set, so each departure brings the
+  // next pick into full view.
+  const [departures, setDepartures] = React.useState(0);
 
   const mockTier: RecoTier =
     simulate === "tier0" ? 0 : simulate === "tier2" ? 2 : 1;
@@ -175,12 +190,14 @@ export function FindClient({ simulate }: { simulate?: string }) {
       setTimeout(() => {
         if (simulate === "error") setPhase({ kind: "error" });
         else if (simulate === "exhausted")
-          setPhase({ kind: "ready", picks: [], index: 0 });
+          setPhase({ kind: "ready", picks: [], index: 0, reserve: [], size: count });
         else
           setPhase({
             kind: "ready",
             picks: mockFeed(mockTier, count),
             index: 0,
+            reserve: [],
+            size: count,
           });
       }, 550);
       return;
@@ -191,8 +208,15 @@ export function FindClient({ simulate }: { simulate?: string }) {
       // A films-only mood asks for the films feed, so every slot is a
       // candidate instead of the share a mixed feed leaves to films.
       const feed = await getFeed({ media: m.filmsOnly ? "movie" : media });
-      const picks = feed.filter(m.fits).slice(0, count);
-      setPhase({ kind: "ready", picks, index: 0 });
+      const fits = feed.filter(m.fits);
+      const picks = fits.slice(0, count);
+      setPhase({
+        kind: "ready",
+        picks,
+        index: 0,
+        reserve: fits.slice(count),
+        size: count,
+      });
       sawPick(picks[0]);
     } catch {
       setPhase({ kind: "error" });
@@ -213,16 +237,50 @@ export function FindClient({ simulate }: { simulate?: string }) {
     sawPick(phase.picks[next]);
   }
 
+  /** The current pick leaves, and the next one that fits joins the end of
+   *  the set, so it stays the size asked for while the feed lasts. */
   function removeCurrent() {
     if (phase.kind !== "ready") return;
     const cur = phase.picks[phase.index];
+    const [refill, ...reserve] = phase.reserve;
     const picks = phase.picks.filter((p) => p.mediaId !== cur.mediaId);
+    if (refill) picks.push(refill);
     setPhase({
-      kind: "ready",
+      ...phase,
       picks,
+      reserve,
       index: Math.min(phase.index, Math.max(0, picks.length - 1)),
     });
+    setDepartures((n) => n + 1);
   }
+
+  /** Undo on a hidden pick: it goes back where it was and is shown again.
+   *  A set that would grow past its size hands its last pick back to the
+   *  reserve. Read from the latest phase, since the toast outlives renders. */
+  function restore(p: Scored, at: number) {
+    setPhase((ph) => {
+      if (ph.kind !== "ready" || ph.picks.some((x) => x.mediaId === p.mediaId)) {
+        return ph;
+      }
+      const picks = [...ph.picks];
+      const index = Math.min(at, picks.length);
+      picks.splice(index, 0, p);
+      let reserve = ph.reserve;
+      if (picks.length > ph.size) reserve = [picks.pop() as Scored, ...reserve];
+      return { ...ph, picks, reserve, index };
+    });
+    setDepartures((n) => n + 1);
+  }
+
+  // A pick left (or came back): the next one belongs in full view, not cut
+  // off under wherever the page was scrolled to reach the buttons.
+  React.useEffect(() => {
+    if (departures === 0) return;
+    topRef.current?.scrollIntoView?.({
+      block: "start",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+  }, [departures, reduceMotion]);
 
   /** A show is recommended whole but tracked season by season, so a toast
    *  about one points at its page, where the seasons are. */
@@ -244,7 +302,10 @@ export function FindClient({ simulate }: { simulate?: string }) {
     }
 
     if (kind === "save") savePick(cur, { mock, seasons: trackSeasons });
-    if (kind === "dismiss") dismissPick(cur, { mock });
+    if (kind === "dismiss") {
+      const at = phase.index;
+      dismissPick(cur, { mock, onUndo: () => restore(cur, at) });
+    }
     removeCurrent();
   }
 
@@ -271,24 +332,26 @@ export function FindClient({ simulate }: { simulate?: string }) {
   if (phase.kind === "idle") {
     return (
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-16 md:px-6">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="hero-rise text-3xl font-semibold tracking-tight sm:text-4xl">
           What are you in the mood for?
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="hero-rise mt-2 text-sm text-muted-foreground">
           Pick a shape, or do not. Klyvi will find one thing worth your
           time.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-2">
-          {MOODS.map((m) => (
+          {MOODS.map((m, i) => (
             <button
               key={m.id}
               type="button"
+              // Each chip rises a beat after the one before it.
+              style={{ animationDelay: `calc(${i + 1} * var(--dur-press) / 2)` }}
               onClick={() => setMood(m.id)}
               aria-pressed={mood === m.id}
               disabled={m.filmsOnly === true && media === "tv"}
               className={
-                "tap-target rounded-full px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 " +
+                "hero-rise tap-target rounded-full px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 " +
                 (mood === m.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-card text-muted-foreground ring-1 ring-foreground/10 hover:text-foreground")
@@ -441,7 +504,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-8 md:px-6">
-      <header className="text-center">
+      <header ref={topRef} className="scroll-mt-16 text-center">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           {total === 1
             ? `Your pick for ${timePhrase}`
@@ -450,6 +513,12 @@ export function FindClient({ simulate }: { simulate?: string }) {
         <p data-numeric className="mt-1 font-mono text-xs text-muted-foreground">
           {phase.index + 1} of {total}
         </p>
+        {total < phase.size && phase.reserve.length === 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Nothing else fits right now, so the set is getting smaller. New set
+            looks again.
+          </p>
+        ) : null}
       </header>
 
       {/* The stage. The current pick sits on top at two thirds of the width;

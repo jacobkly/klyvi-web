@@ -212,7 +212,20 @@ export function HomeClient({ simulate }: { simulate?: string }) {
       return;
     }
     if (kind === "save") savePick(hero, { mock, seasons });
-    else dismissPick(hero, { mock });
+    else {
+      const p = hero;
+      const at = (picks ?? []).indexOf(p);
+      // Undo puts it back where it was, which is where the hero is.
+      dismissPick(p, {
+        mock,
+        onUndo: () =>
+          setPicks((prev) =>
+            Array.isArray(prev) && !prev.some((x) => x.mediaId === p.mediaId)
+              ? [...prev.slice(0, at), p, ...prev.slice(at)]
+              : prev
+          ),
+      });
+    }
     removePick(hero);
   }
 

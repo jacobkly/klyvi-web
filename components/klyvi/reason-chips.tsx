@@ -60,9 +60,30 @@ function ReasonChips({
   );
 }
 
-/** A because reason names the title. The others show their label as it is. */
+/** A because reason names the title. A keyword reads as a tag, in title
+ *  case. The others show their label as it is. */
 function chipLabel(r: Reason & { name: string }): string {
-  return r.kind === "because" ? `because you liked ${r.name}` : r.name;
+  if (r.kind === "because") return `because you liked ${r.name}`;
+  return r.kind === "keyword" ? titleCase(r.name) : r.name;
+}
+
+/** Joining words stay small unless they open the label. */
+const SMALL = new Set([
+  "a", "an", "and", "as", "at", "but", "by", "for", "in", "nor", "of", "on",
+  "or", "the", "to", "vs",
+]);
+
+/** "based on novel or book" reads "Based on Novel or Book", and each part of
+ *  a hyphenated word is capitalised ("Neo-Noir"). Digits are left alone. */
+export function titleCase(s: string): string {
+  return s
+    .split(" ")
+    .map((word, i) =>
+      i > 0 && SMALL.has(word.toLowerCase())
+        ? word.toLowerCase()
+        : word.replace(/(^|-)(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase())
+    )
+    .join(" ");
 }
 
 export { ReasonChips };

@@ -159,7 +159,7 @@ describe("MovieShelves", () => {
       screen.getByRole("heading", { name: "More like this" })
     ).toBeInTheDocument();
     expect(screen.getByText("The Empire Strikes Back")).toBeInTheDocument();
-    expect(screen.getByText("chosen one")).toBeInTheDocument();
+    expect(screen.getByText("Chosen One")).toBeInTheDocument();
     expect(screen.queryByText("The Fellowship of the Ring")).toBeNull();
   });
 
