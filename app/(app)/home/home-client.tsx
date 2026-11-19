@@ -1,33 +1,45 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
-import { ArrowRight, Sparkles, X } from "lucide-react";
+import { X } from "lucide-react";
+import { toast } from "sonner";
 
 import { useSession } from "@/components/auth/auth-provider";
+import { MediaRail } from "@/components/klyvi/media-rail";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
-import { ScoreValue } from "@/components/klyvi/score-value";
 import { SectionHeader } from "@/components/klyvi/section-header";
+import { RatingDialog } from "@/components/media/rating-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listInteractions } from "@/lib/api/interactions";
 import { getFeed } from "@/lib/api/reco";
+import { listTrackingPaged, updateTracking } from "@/lib/api/tracking";
+import {
+  comingUp,
+  greetingName,
+  HERO_POOL,
+  heroStart,
+  reasonRails,
+  tasteKeywords,
+} from "@/lib/home";
 import { queueSignal } from "@/lib/interactions-batch";
-import { mediaHref } from "@/lib/media-href";
-import { listTrackingPaged } from "@/lib/api/tracking";
-import { mockFeed } from "@/lib/mock-reco";
-import { MOCK_LIBRARY } from "@/lib/mock-library";
 import { recentActivity } from "@/lib/library-filter";
 import { usePref } from "@/lib/local-prefs";
-import {
-  STATUS_VERBS,
-  type LibraryEntry,
-  type Reason,
-  type Scored,
-} from "@/lib/types";
+import { mediaHref } from "@/lib/media-href";
+import { MOCK_LIBRARY } from "@/lib/mock-library";
+import { mockFeed } from "@/lib/mock-reco";
+import { dismissPick, ratePick, savePick } from "@/lib/pick-actions";
+import type { LibraryEntry, Scored } from "@/lib/types";
+
+import { HomeHero, type HeroAction } from "./home-hero";
+import { ActivityList, ComingUpCard, ContinueCard } from "./home-sections";
 
 const NUDGE_KEY = "klyvi:nudge-dismissed";
+/** Counts visits, so the hero leads with a different top pick each time. */
+const HERO_TURN_KEY = "klyvi:hero-turn";
 const TIER_THRESHOLD = 20;
 
 function greeting(): string {
@@ -37,22 +49,15 @@ function greeting(): string {
   return "Evening";
 }
 
-/** Top reasons across the whole feed, by frequency: the taste snapshot. */
-function aggregateReasons(picks: Scored[]): Reason[] {
-  const seen = new Map<string, { reason: Reason; count: number }>();
-  for (const p of picks) {
-    for (const r of p.reasons) {
-      if (!r.name) continue;
-      const key = `${r.kind}:${r.id}`;
-      const cur = seen.get(key);
-      if (cur) cur.count++;
-      else seen.set(key, { reason: r, count: 1 });
-    }
+/** This visit's hero turn, and the next visit's saved. Storage can throw. */
+function takeHeroTurn(): number {
+  try {
+    const turn = Number(window.localStorage.getItem(HERO_TURN_KEY)) || 0;
+    window.localStorage.setItem(HERO_TURN_KEY, String(turn + 1));
+    return turn;
+  } catch {
+    return 0;
   }
-  return [...seen.values()]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
-    .map((x) => x.reason);
 }
 
 /** One section's data: undefined while it loads, null when it failed. */
@@ -69,16 +74,27 @@ function useHydrated(): boolean {
   );
 }
 
+function RailSkeleton({ title }: { title: string }) {
+  return (
+    <MediaRail title={title}>
+      {Array.from({ length: 7 }).map((_, i) => (
+        <Skeleton key={i} className="aspect-[2/3] w-full rounded-art" />
+      ))}
+    </MediaRail>
+  );
+}
+
 /**
- * The dashboard (archetype D). Find-next strip owns the top; continue
- * watching second; activity and taste snapshot quieter. Each section paints
- * as its own request lands, with its own skeleton until then, so the feed
- * (the slowest call) never holds back the library column, and one failure
+ * Home: tonight's pick over its backdrop, then rows of posters (picks, what
+ * you're watching, what's coming), then what you did lately. Each section
+ * paints as its own request lands, with its own skeleton until then, so the
+ * feed (the slowest call) never holds back the library rows, and one failure
  * never blanks the other (the partial state, phase1 §states).
  */
 export function HomeClient({ simulate }: { simulate?: string }) {
   const mock = simulate != null;
-  const { profile } = useSession();
+  const router = useRouter();
+  const { profile, user } = useSession();
   const hydrated = useHydrated();
   const [activityFeed] = usePref("activityFeed");
   // Dismissed on an earlier visit (read after hydration; the server render
@@ -91,8 +107,10 @@ export function HomeClient({ simulate }: { simulate?: string }) {
   const [dismissedNow, setDismissedNow] = React.useState(false);
   const nudgeDismissed = dismissedBefore || dismissedNow;
   const [picks, setPicks] = React.useState<Loaded<Scored[]>>(() =>
-    mock ? mockFeed(2, 3) : undefined
+    mock ? mockFeed(2, 7) : undefined
   );
+  const [heroIndex, setHeroIndex] = React.useState(0);
+  const [rating, setRating] = React.useState<Scored | null>(null);
   const [entries, setEntries] = React.useState<Loaded<LibraryEntry[]>>(() =>
     mock ? MOCK_LIBRARY : undefined
   );
@@ -107,14 +125,16 @@ export function HomeClient({ simulate }: { simulate?: string }) {
     let live = true;
     getFeed().then(
       (v) => {
-        if (live) setPicks(v);
+        if (!live) return;
+        setPicks(v);
+        setHeroIndex(heroStart(takeHeroTurn(), v.length));
       },
       () => {
         if (live) setPicks(null);
       }
     );
-    // The first page paints the sections. Later pages fill in the counts,
-    // and if one fails the library shows its error rather than a short count.
+    // The first page paints the sections. Later pages fill in the rest, and
+    // if one fails the library shows its error rather than a partial list.
     listTrackingPaged({
       live: () => live,
       page: (more) =>
@@ -141,6 +161,22 @@ export function HomeClient({ simulate }: { simulate?: string }) {
     };
   }, [mock, attempt]);
 
+  const pool = (picks ?? []).slice(0, HERO_POOL);
+  const heroAt = Math.min(heroIndex, Math.max(0, pool.length - 1));
+  const hero = pool[heroAt] ?? null;
+
+  // The hero pick on screen is an impression; batched and deduped in the
+  // signal queue, so a revisit or re-render cannot double-count.
+  React.useEffect(() => {
+    if (mock || !hero) return;
+    queueSignal({
+      tmdbId: hero.tmdbId,
+      mediaType: hero.mediaType,
+      kind: "impression",
+      source: "feed",
+    });
+  }, [mock, hero]);
+
   function retry() {
     setPicks(undefined);
     setEntries(undefined);
@@ -148,24 +184,79 @@ export function HomeClient({ simulate }: { simulate?: string }) {
     setAttempt((n) => n + 1);
   }
 
-  // The two picks on screen are impressions; batched and deduped in the
-  // signal queue, so a revisit or re-render cannot double-count.
-  React.useEffect(() => {
-    if (mock || !picks) return;
-    for (const p of picks.slice(0, 2)) {
-      queueSignal({
-        tmdbId: p.tmdbId,
-        mediaType: p.mediaType,
-        kind: "impression",
-        source: "feed",
-      });
-    }
-  }, [mock, picks]);
-
   function dismissNudge() {
     setDismissedNow(true);
     // Permanent by design: one dismissal, no nagging (onboarding spec §3C).
     window.localStorage.setItem(NUDGE_KEY, "1");
+  }
+
+  /** A show is recommended whole but tracked season by season, so a toast
+   *  about one points at its page, where the seasons are. */
+  const seasons = (p: Scored) => ({
+    label: "Track seasons",
+    onClick: () => router.push(mediaHref(p)),
+  });
+
+  /** The acted-on pick leaves, and the next of the top few slides in. */
+  function removePick(p: Scored) {
+    setPicks((prev) =>
+      Array.isArray(prev) ? prev.filter((x) => x.mediaId !== p.mediaId) : prev
+    );
+  }
+
+  function actOnHero(kind: HeroAction) {
+    if (!hero) return;
+    if (kind === "seen") {
+      // The moment they say they've seen it is the moment to ask how it was.
+      setRating(hero);
+      return;
+    }
+    if (kind === "save") savePick(hero, { mock, seasons });
+    else dismissPick(hero, { mock });
+    removePick(hero);
+  }
+
+  function submitRating(score: number | null) {
+    const cur = rating;
+    setRating(null);
+    if (!cur) return;
+    ratePick(cur, score, { mock, seasons });
+    if (!mock && score != null) setRatedCount((n) => (n != null ? n + 1 : n));
+    removePick(cur);
+  }
+
+  function openPick(p: Scored) {
+    if (mock) return;
+    queueSignal({
+      tmdbId: p.tmdbId,
+      mediaType: p.mediaType,
+      kind: "clicked",
+      source: "feed",
+    });
+  }
+
+  /** +1 episode. Shown at once, put back if the write fails. The last
+   *  episode finishes the season. */
+  function stepEpisode(e: LibraryEntry) {
+    const next = (e.progress ?? 0) + 1;
+    const finished = e.progressTotal != null && next >= e.progressTotal;
+    const patch = (row: LibraryEntry) => (x: LibraryEntry) =>
+      x.mediaId === row.mediaId ? row : x;
+    const stepped: LibraryEntry = {
+      ...e,
+      progress: next,
+      ...(finished ? { status: "completed" as const } : {}),
+    };
+    setEntries((prev) => (Array.isArray(prev) ? prev.map(patch(stepped)) : prev));
+    if (finished) toast(`Season ${e.seasonNumber} finished`);
+    if (mock) return;
+    updateTracking(e.mediaId, {
+      episodeProgress: next,
+      ...(finished ? { status: "completed" as const } : {}),
+    }).catch(() => {
+      setEntries((prev) => (Array.isArray(prev) ? prev.map(patch(e)) : prev));
+      toast("Could not update that. Try again");
+    });
   }
 
   // ---------- error (both pillars down) ----------
@@ -185,12 +276,16 @@ export function HomeClient({ simulate }: { simulate?: string }) {
     );
   }
 
-  const topPicks = (picks ?? []).slice(0, 2);
-  const tasteReasons = aggregateReasons(picks ?? []);
+  const name = greetingName(profile, user?.user_metadata);
+  const heroIds = new Set(pool.map((p) => p.mediaId));
+  const topPicks = (picks ?? []).filter((p) => !heroIds.has(p.mediaId));
+  const rails = reasonRails(picks ?? []);
+  const taste = tasteKeywords(picks ?? []);
   const inProgress = (entries ?? []).filter(
     (e) => e.status === "watching" || e.status === "rewatching"
   );
-  const recent = recentActivity(entries ?? [], activityFeed, 5);
+  const upcoming = comingUp(entries ?? []);
+  const recent = recentActivity(entries ?? [], activityFeed, 6);
   const showNudge =
     !nudgeDismissed && ratedCount != null && ratedCount < TIER_THRESHOLD;
 
@@ -202,9 +297,7 @@ export function HomeClient({ simulate }: { simulate?: string }) {
           the viewer's. */}
       {hydrated ? (
         <h1 className="text-2xl font-semibold tracking-tight">
-          {profile?.username
-            ? `${greeting()}, ${profile.username}`
-            : greeting()}
+          {name ? `${greeting()}, ${name}` : greeting()}
         </h1>
       ) : (
         <Skeleton className="h-8 w-40 rounded-lg" />
@@ -244,244 +337,143 @@ export function HomeClient({ simulate }: { simulate?: string }) {
         </div>
       ) : null}
 
-      <div className="mt-8 flex flex-col gap-10 lg:flex-row">
-        {/* Main column */}
-        <div className="min-w-0 flex-1">
-          <section>
-            <SectionHeader
-              title="Your top picks"
-              action={{ label: "Find something to watch", href: "/find" }}
-              className="mb-4"
-            />
-            {picks === undefined ? (
-              <div className="flex flex-col gap-3">
-                <Skeleton className="h-20 w-full rounded-lg" />
-                <Skeleton className="h-20 w-full rounded-lg" />
-              </div>
-            ) : picks === null ? (
-              <p className="text-sm text-muted-foreground">
-                Could not load your picks right now.
-              </p>
-            ) : topPicks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nothing to pick from yet. Rate a few films or shows and this fills in.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {topPicks.map((p) => (
-                  <Link
-                    key={p.mediaId}
-                    href={mediaHref(p)}
-                    onClick={() => {
-                      if (!mock)
-                        queueSignal({
-                          tmdbId: p.tmdbId,
-                          mediaType: p.mediaType,
-                          kind: "clicked",
-                          source: "feed",
-                        });
-                    }}
-                    className="group flex items-center gap-4 rounded-lg bg-card p-3 ring-1 ring-foreground/10 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/30"
-                  >
-                    <div className="relative aspect-[2/3] w-14 shrink-0 overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
-                      {p.posterPath ? (
-                        // Plain <img>: PosterCard is a link and links cannot
-                        // nest.
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={`https://image.tmdb.org/t/p/w154${p.posterPath}`}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {p.title}{" "}
-                        <span
-                          data-numeric
-                          className="font-mono text-xs font-normal text-muted-foreground"
-                        >
-                          {p.year}
-                        </span>
-                      </p>
-                      <ReasonChips
-                        reasons={p.reasons}
-                        max={2}
-                        className="mt-1.5"
-                      />
-                    </div>
-                    <ArrowRight
-                      aria-hidden="true"
-                      className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                      strokeWidth={2}
-                    />
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="mt-10">
-            <SectionHeader
-              title="Continue watching"
-              action={{ label: "View all", href: "/library" }}
-              className="mb-4"
-            />
-            {entries === undefined ? (
-              <div className="flex gap-3 overflow-hidden pb-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton
-                    key={i}
-                    className="aspect-[2/3] w-28 shrink-0 rounded-art sm:w-32"
-                  />
-                ))}
-              </div>
-            ) : entries === null ? (
-              <p className="text-sm text-muted-foreground">
-                Could not load your library right now.
-              </p>
-            ) : inProgress.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nothing in progress. Anything you start turns up here.
-              </p>
-            ) : (
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {inProgress.map((e) => (
-                  <div key={e.mediaId} className="w-28 shrink-0 sm:w-32">
-                    <PosterCard
-                      media={e}
-                      variant="below"
-                      status={e.status}
-                      progress={
-                        e.progress != null
-                          ? { watched: e.progress, total: e.progressTotal }
-                          : undefined
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="mt-10">
-            <SectionHeader title="Recent activity" className="mb-4" />
-            {entries === undefined ? (
-              <div className="flex flex-col gap-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-5 w-2/3 rounded-lg" />
-                ))}
-              </div>
-            ) : entries === null ? (
-              <p className="text-sm text-muted-foreground">
-                Could not load your activity right now.
-              </p>
-            ) : recent.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Your activity shows up here once you start tracking.
-              </p>
-            ) : (
-              <ul className="flex flex-col">
-                {recent.map((e) => (
-                  <li
-                    key={e.mediaId}
-                    className="flex items-baseline justify-between gap-4 border-b border-border py-2 text-sm last:border-b-0"
-                  >
-                    <span className="min-w-0 truncate text-muted-foreground">
-                      {STATUS_VERBS[e.status]}{" "}
-                      <span className="text-foreground">
-                        {e.title}
-                        {e.mediaType === "season"
-                          ? ` Season ${e.seasonNumber}`
-                          : ""}
-                      </span>
-                    </span>
-                    {e.score != null ? (
-                      <span
-                        data-numeric
-                        className="shrink-0 font-mono text-xs text-muted-foreground"
-                      >
-                        <ScoreValue score={e.score} />
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
-
-        {/* Sidebar: quieter, demotes below main on mobile. */}
-        <aside className="w-full shrink-0 lg:w-80">
-          <section className="rounded-lg bg-card p-5 ring-1 ring-foreground/10">
-            <h2 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
-              Your taste right now
-            </h2>
-            {picks === undefined ? (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-5 w-20 rounded-full" />
-                ))}
-              </div>
-            ) : tasteReasons.length > 0 ? (
-              <>
-                <ReasonChips reasons={tasteReasons} max={5} className="mt-3" />
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Built from what you rate. It sharpens as you track.
-                </p>
-              </>
-            ) : (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Klyvi cannot describe your taste yet. Rate a few films or shows
-                and the picture forms here.
-              </p>
-            )}
-          </section>
-
-          <section className="mt-4 rounded-lg bg-card p-5 ring-1 ring-foreground/10">
-            <h2 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
-              Your library
-            </h2>
-            <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              {(
-                [
-                  ["Watching", "watching"],
-                  ["Planning", "planning"],
-                  ["Completed", "completed"],
-                  ["Paused", "paused"],
-                ] as const
-              ).map(([label, key]) => (
-                <div
-                  key={key}
-                  className="flex items-baseline justify-between rounded-md bg-muted/50 px-3 py-2"
-                >
-                  <dt className="text-muted-foreground">{label}</dt>
-                  <dd data-numeric className="font-mono text-foreground">
-                    {entries === undefined ? (
-                      <Skeleton className="h-4 w-4 rounded-lg" />
-                    ) : (
-                      (entries ?? []).filter((e) => e.status === key).length
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+      <div className="mt-6">
+        {picks === undefined ? (
+          <Skeleton
+            role="status"
+            aria-label="Loading your picks"
+            className="h-80 w-full rounded-lg sm:h-[22rem]"
+          />
+        ) : picks === null ? (
+          <p className="rounded-lg bg-card px-4 py-6 text-sm text-muted-foreground ring-1 ring-foreground/10">
+            Could not load your picks right now.
+          </p>
+        ) : hero ? (
+          <HomeHero
+            picks={pool}
+            index={heroAt}
+            onSelect={setHeroIndex}
+            onAct={actOnHero}
+            onOpen={openPick}
+          />
+        ) : (
+          <div className="rounded-lg bg-card px-4 py-6 ring-1 ring-foreground/10">
+            <p className="text-sm text-muted-foreground">
+              Nothing to pick from yet. Rate a few films or shows and this fills in.
+            </p>
             <Link
-              href="/profile/stats"
-              className="tap-target mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-text hover:underline"
+              href="/onboarding/rate"
+              className={buttonVariants({ size: "sm", className: "mt-3" })}
             >
-              <Sparkles
-                aria-hidden="true"
-                className="size-3.5"
-                strokeWidth={2}
-              />
-              See your stats
+              Start rating
             </Link>
-          </section>
-        </aside>
+          </div>
+        )}
       </div>
+
+      <div className="mt-10 flex flex-col gap-10">
+        {picks === undefined ? (
+          <RailSkeleton title="Top picks for you" />
+        ) : topPicks.length > 0 ? (
+          <MediaRail
+            title="Top picks for you"
+            action={{ label: "Find something to watch", href: "/find" }}
+          >
+            {topPicks.map((p, i) => (
+              <PosterCard key={p.mediaId} media={p} variant="below" eager={i < 7} />
+            ))}
+          </MediaRail>
+        ) : null}
+
+        {rails.map((r) => (
+          <MediaRail key={r.key} title={r.title}>
+            {r.picks.map((p) => (
+              <PosterCard key={p.mediaId} media={p} variant="below" />
+            ))}
+          </MediaRail>
+        ))}
+
+        {entries === undefined ? (
+          <RailSkeleton title="Continue watching" />
+        ) : entries === null ? (
+          <section>
+            <SectionHeader title="Continue watching" className="mb-4" />
+            <p className="text-sm text-muted-foreground">
+              Could not load your library right now.
+            </p>
+          </section>
+        ) : (
+          <>
+            {inProgress.length > 0 ? (
+              <MediaRail
+                title="Continue watching"
+                action={{ label: "View all", href: "/library?status=watching" }}
+              >
+                {inProgress.map((e) => (
+                  <ContinueCard key={e.mediaId} entry={e} onStep={stepEpisode} />
+                ))}
+              </MediaRail>
+            ) : null}
+
+            {upcoming.length > 0 ? (
+              <MediaRail title="Coming up">
+                {upcoming.map(({ entry, label }) => (
+                  <ComingUpCard key={entry.mediaId} entry={entry} label={label} />
+                ))}
+              </MediaRail>
+            ) : null}
+
+            <div className="flex flex-col gap-10 lg:flex-row">
+              <section className="min-w-0 flex-1">
+                <SectionHeader
+                  title="Recent activity"
+                  action={{ label: "Your stats", href: "/profile/stats" }}
+                  className="mb-2"
+                />
+                {recent.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Your activity shows up here once you start tracking.
+                  </p>
+                ) : (
+                  <ActivityList entries={recent} />
+                )}
+              </section>
+
+              {taste.length > 0 ? (
+                <section
+                  aria-label="Your taste"
+                  className="w-full shrink-0 self-start rounded-lg bg-card p-5 ring-1 ring-foreground/10 lg:w-80"
+                >
+                  <h2 className="text-xs font-medium tracking-[0.12em] text-muted-foreground uppercase">
+                    Your taste
+                  </h2>
+                  <ReasonChips
+                    reasons={taste}
+                    max={6}
+                    label="Themes in your picks"
+                    className="mt-3"
+                  />
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Themes that keep turning up in your picks. They sharpen as
+                    you rate.
+                  </p>
+                </section>
+              ) : null}
+            </div>
+          </>
+        )}
+      </div>
+
+      {rating ? (
+        <RatingDialog
+          title={rating.title}
+          year={rating.year}
+          posterPath={rating.posterPath}
+          open
+          onOpenChange={(o) => !o && setRating(null)}
+          onSubmit={submitRating}
+        />
+      ) : null}
     </main>
   );
 }

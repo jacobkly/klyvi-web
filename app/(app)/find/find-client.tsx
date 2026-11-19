@@ -12,7 +12,6 @@ import {
   RotateCcw,
   Sparkles,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { useSession } from "@/components/auth/auth-provider";
 import { NeighbourPick, PickHero } from "@/components/find/pick-stage";
@@ -22,12 +21,10 @@ import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { recordInteraction } from "@/lib/api/interactions";
 import { getFeed } from "@/lib/api/reco";
-import { addTracking } from "@/lib/api/tracking";
 import { listInteractions } from "@/lib/api/interactions";
 import { queueSignal } from "@/lib/interactions-batch";
-import { trackFirstUntrackedSeason } from "@/lib/track-show";
+import { dismissPick, ratePick, savePick } from "@/lib/pick-actions";
 import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
 import { usePref } from "@/lib/local-prefs";
 import { mediaHref } from "@/lib/media-href";
@@ -246,53 +243,8 @@ export function FindClient({ simulate }: { simulate?: string }) {
       return;
     }
 
-    if (kind === "save") {
-      if (!mock && cur.mediaType === "tv") {
-        // Never tracked as a film (the ids overlap, so that would list an
-        // unrelated film). Its first untracked season goes in instead.
-        // Finding it takes two requests, so the tap is answered now and the
-        // same toast names the season once it is known.
-        const id = toast("Adding to your watchlist");
-        trackFirstUntrackedSeason(cur.tmdbId)
-          .then((season) =>
-            toast(
-              season != null
-                ? `Season ${season} added to your watchlist`
-                : "Every season is already in your library",
-              { id, action: trackSeasons(cur) }
-            )
-          )
-          .catch(() => toast("Could not update that. Try again", { id }));
-      } else {
-        toast("Added to your watchlist");
-        if (!mock) {
-          addTracking({
-            tmdbId: cur.tmdbId,
-            mediaType: "movie",
-            status: "planning",
-          }).catch(() => toast("Could not update that. Try again"));
-        }
-      }
-      if (!mock) {
-        recordInteraction({
-          tmdbId: cur.tmdbId,
-          mediaType: cur.mediaType,
-          kind: "saved",
-          source: "feed",
-        }).catch(() => {});
-      }
-    }
-    if (kind === "dismiss") {
-      toast("Hidden from your recommendations");
-      if (!mock) {
-        recordInteraction({
-          tmdbId: cur.tmdbId,
-          mediaType: cur.mediaType,
-          kind: "dismissed",
-          source: "feed",
-        }).catch(() => {});
-      }
-    }
+    if (kind === "save") savePick(cur, { mock, seasons: trackSeasons });
+    if (kind === "dismiss") dismissPick(cur, { mock });
     removeCurrent();
   }
 
@@ -300,40 +252,8 @@ export function FindClient({ simulate }: { simulate?: string }) {
     const cur = rating;
     setRating(null);
     if (!cur) return;
-    const done = score != null ? "Rated" : "Marked as seen";
-    // A show's rating and "seen" are series-level signals. Nothing is
-    // tracked for the whole series, so the toast offers its seasons.
-    if (cur.mediaType === "tv") toast(done, { action: trackSeasons(cur) });
-    else toast(done);
-    if (!mock) {
-      if (score != null) {
-        recordInteraction({
-          tmdbId: cur.tmdbId,
-          mediaType: cur.mediaType,
-          kind: "rated",
-          rating: score,
-          source: "feed",
-        }).catch(() => {});
-        setInteractions((n) => (n != null ? n + 1 : n));
-      } else {
-        recordInteraction({
-          tmdbId: cur.tmdbId,
-          mediaType: cur.mediaType,
-          kind: "logged",
-          source: "feed",
-        }).catch(() => {});
-      }
-      if (cur.mediaType === "movie") {
-        addTracking({
-          tmdbId: cur.tmdbId,
-          mediaType: "movie",
-          status: "completed",
-          score,
-          // The "Rated" toast has already gone up, so a failed write has to
-          // say so or the film silently never reaches the library.
-        }).catch(() => toast("Could not add that to your library. Try again"));
-      }
-    }
+    ratePick(cur, score, { mock, seasons: trackSeasons });
+    if (!mock && score != null) setInteractions((n) => (n != null ? n + 1 : n));
     removeCurrent();
   }
 

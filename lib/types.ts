@@ -90,6 +90,8 @@ export type LibraryEntry = TrackableSummary & {
   updatedAt: string;
   /** From the tracking list. Absent on entries the client builds itself. */
   backdropPath?: string | null;
+  /** YYYY-MM-DD from the tracking list: release, or the season's air date. */
+  releaseDate?: string | null;
 };
 
 /** One item from GET /v1/reco/feed, enriched server-side: a film or a whole

@@ -41,6 +41,7 @@ const SEASON_ROW = {
   poster_path: "/1yeVJox3rjo2jBKrrihIMj7uoS9.jpg",
   backdrop_path: "/x.jpg",
   release_year: 2008,
+  release_date: "2008-01-20",
 } as WireTrackingEntry;
 
 /** Verbatim from API.md, GET /v1/tracking (movie row). */
@@ -59,6 +60,7 @@ const MOVIE_ROW = {
   poster_path: "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
   backdrop_path: "/rr7E0NoGKxvbkb89eR1GwfoYjpA.jpg",
   release_year: 1999,
+  release_date: "1999-10-15",
   season_number: null,
   season_name: null,
   episode_count: null,
@@ -97,6 +99,13 @@ describe("mapTrackingEntry", () => {
     expect(e.score).toBe(95);
     expect(e.seasonNumber).toBeUndefined();
     expect(e.progress).toBeNull();
+  });
+
+  it("keeps the release day, which Coming up on home is built from", () => {
+    expect(mapTrackingEntry(MOVIE_ROW).releaseDate).toBe("1999-10-15");
+    expect(
+      mapTrackingEntry({ ...MOVIE_ROW, release_date: null }).releaseDate
+    ).toBeNull();
   });
 
   it("keeps the backdrop, which the profile banner is built from", () => {

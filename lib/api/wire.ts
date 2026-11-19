@@ -207,6 +207,8 @@ export type WireTrackingEntry = {
   poster_path: string | null;
   backdrop_path: string | null;
   release_year: number | null;
+  /** YYYY-MM-DD: the film's release, or the season's air date. */
+  release_date?: string | null;
   season_number: number | null;
   season_name: string | null;
   /** Episodes in the cached season. Null on movies and uncached seasons. */

@@ -199,6 +199,7 @@ export function mapTrackingEntry(w: WireTrackingEntry): LibraryEntry {
     favorite: w.favorite ?? false,
     updatedAt: w.updated_at,
     backdropPath: orNull(w.backdrop_path),
+    releaseDate: orNull(w.release_date),
   };
 }
 
