@@ -100,6 +100,10 @@ export function ProfileSection({
     skip: me?.username,
   });
   const availabilityNote = availabilityMessage(availability, username);
+  // Save waits for a change, and turns off again when the change is undone.
+  const dirty =
+    me != null &&
+    (username.trim() !== me.username || bio !== (me.bio ?? ""));
 
   function save() {
     const name = username.trim();
@@ -223,7 +227,7 @@ export function ProfileSection({
           )}
         </FormField>
         <div>
-          <Button onClick={save} disabled={saving}>
+          <Button onClick={save} disabled={saving || !dirty}>
             {saving ? "Saving" : "Save"}
           </Button>
         </div>

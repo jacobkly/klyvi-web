@@ -22,7 +22,7 @@ const SECTIONS: {
   items: { id: SectionId; label: string }[];
 }[] = [
   {
-    group: "Profile",
+    group: "Account",
     items: [
       { id: "profile", label: "Profile" },
       { id: "account", label: "Account" },
@@ -105,7 +105,7 @@ export function SettingsClient({
 
   const sections: Record<SectionId, React.ReactNode> = {
     profile: needsProfile(<ProfileSection me={me} onSaved={onProfileSaved} />),
-    account: <AccountSection />,
+    account: <AccountSection onOpenData={() => setActive("data")} />,
     appearance: <AppearanceSection />,
     lists: <ListsSection />,
     notifications: needsProfile(

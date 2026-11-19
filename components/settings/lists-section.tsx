@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import {
@@ -26,7 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { deleteTrackingScope, resetScores } from "@/lib/api/tracking";
+import {
+  deleteTrackingScope,
+  listTracking,
+  resetScores,
+} from "@/lib/api/tracking";
+import { exportTracking } from "@/lib/api/users";
 import { usePref, type Prefs } from "@/lib/local-prefs";
 import {
   STATUS_LABELS,
@@ -60,9 +66,18 @@ const ACTIVITY: { status: TrackingStatus; label: string }[] = [
   { status: "dropped", label: "Dropped activity" },
 ];
 
+/** "12 films", "1 season". */
+function countOf(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
 /**
  * A destructive action behind a confirmation that names exactly what is
  * destroyed. `onConfirm` returns the affected-row count for the toast.
+ *
+ * A whole-list delete also passes `count`, read when the dialog opens so the
+ * button can say how much goes ("Delete 12 films"), and `backup`, a download
+ * of the list to keep before it goes.
  */
 function DangerAction({
   trigger,
@@ -71,6 +86,8 @@ function DangerAction({
   confirmLabel,
   onConfirm,
   done,
+  count,
+  backup,
 }: {
   trigger: string;
   title: string;
@@ -78,19 +95,49 @@ function DangerAction({
   confirmLabel: string;
   onConfirm: () => Promise<number>;
   done: (affected: number) => string;
+  count?: {
+    load: () => Promise<number>;
+    label: (n: number) => string;
+    empty: string;
+  };
+  backup?: () => Promise<void>;
 }) {
+  const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  // null while it loads, or when it could not be read. The button then
+  // names the list instead of a number.
+  const [n, setN] = React.useState<number | null>(null);
+
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next || !count) return;
+    setN(null);
+    count
+      .load()
+      .then(setN)
+      .catch(() => setN(null));
+  }
 
   function run() {
     setBusy(true);
     onConfirm()
-      .then((affected) => toast(done(affected)))
+      .then((affected) => {
+        toast(done(affected));
+        setOpen(false);
+      })
       .catch(() => toast("Could not do that. Try again."))
       .finally(() => setBusy(false));
   }
 
+  const empty = n === 0;
+  const label = empty
+    ? "Nothing to delete"
+    : count && n != null
+      ? count.label(n)
+      : confirmLabel;
+
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogTrigger
         className={buttonVariants({ variant: "destructive", size: "sm" })}
       >
@@ -99,16 +146,69 @@ function DangerAction({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogDescription>
+            {empty && count ? count.empty : description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
+        {backup && !empty ? (
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                backup().catch(() =>
+                  toast("Could not prepare the download. Try again.")
+                )
+              }
+            >
+              Download a copy first
+            </Button>
+          </div>
+        ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             className={buttonVariants({ variant: "destructive" })}
-            disabled={busy}
+            disabled={busy || empty}
             onClick={run}
           >
-            {confirmLabel}
+            {label}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+/**
+ * Redo asks first, since it starts the rating deck over, and says plainly
+ * what happens to the taste Klyvi has already learned.
+ */
+function RedoTaste() {
+  const router = useRouter();
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger
+        className={buttonVariants({ variant: "outline", size: "sm" })}
+      >
+        <RotateCcw aria-hidden="true" data-icon="inline-start" />
+        Redo
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Redo your taste?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You&apos;ll go through the rating deck again from the first card.
+            Your new answers add to what Klyvi already knows from your ratings
+            and library. Nothing is erased, and your library is not touched.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => router.push("/onboarding/rate?redo=1")}
+          >
+            Start the deck
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -139,17 +239,9 @@ export function ListsSection() {
 
         <SettingRow
           title="Redo my taste"
-          description="Runs the rating deck again from scratch. Your library is not touched."
+          description="Runs the rating deck again. Your library is not touched."
         >
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => (window.location.href = "/onboarding/rate")}
-          >
-            <RotateCcw aria-hidden="true" data-icon="inline-start" />
-            Redo
-          </Button>
+          <RedoTaste />
         </SettingRow>
 
         <SettingRow
@@ -275,6 +367,13 @@ export function ListsSection() {
               confirmLabel="Delete film list"
               onConfirm={() => deleteTrackingScope("movie" as MediaType)}
               done={(n) => `Deleted ${n} film ${n === 1 ? "entry" : "entries"}.`}
+              count={{
+                load: () =>
+                  listTracking({ mediaType: "movie" }).then((l) => l.length),
+                label: (n) => `Delete ${countOf(n, "film", "films")}`,
+                empty: "Your film list is already empty.",
+              }}
+              backup={() => exportTracking("csv")}
             />
             <DangerAction
               trigger="Delete TV list"
@@ -285,6 +384,13 @@ export function ListsSection() {
               done={(n) =>
                 `Deleted ${n} season ${n === 1 ? "entry" : "entries"}.`
               }
+              count={{
+                load: () =>
+                  listTracking({ mediaType: "season" }).then((l) => l.length),
+                label: (n) => `Delete ${countOf(n, "season", "seasons")}`,
+                empty: "Your TV list is already empty.",
+              }}
+              backup={() => exportTracking("csv")}
             />
           </div>
         </div>

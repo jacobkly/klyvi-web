@@ -8,7 +8,6 @@ import { FormField } from "@/components/klyvi/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { downloadAccountData } from "@/lib/api/users";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import {
   validateOnBlur,
@@ -46,7 +45,24 @@ function hasPasswordSignIn(user: {
   return meta?.provider == null || meta.provider === "email";
 }
 
-export function AccountSection() {
+/** Who holds the email for an account with no password: Google or
+ *  Microsoft. Null for a password account, whose email is its own. */
+function emailProvider(user: {
+  app_metadata?: { provider?: string; providers?: string[] };
+} | null): string | null {
+  if (hasPasswordSignIn(user)) return null;
+  const meta = user?.app_metadata;
+  const ids = meta?.providers ?? (meta?.provider ? [meta.provider] : []);
+  if (ids.includes("google")) return "Google";
+  if (ids.includes("azure")) return "Microsoft";
+  return null;
+}
+
+/**
+ * Email, password and sign-out. The export lives in Import and export, so
+ * this only points there (`onOpenData` switches the pane).
+ */
+export function AccountSection({ onOpenData }: { onOpenData?: () => void }) {
   const { user, signOut } = useSession();
   const [current, setCurrent] = React.useState("");
   const [currentError, setCurrentError] = React.useState<string | null>(null);
@@ -57,6 +73,7 @@ export function AccountSection() {
   );
   const [confirmError, setConfirmError] = React.useState<string | null>(null);
   const [changing, setChanging] = React.useState(false);
+  const provider = emailProvider(user);
 
   /**
    * The current password is checked first, by signing in with it, so
@@ -117,7 +134,11 @@ export function AccountSection() {
         <FormField
           id="st-email"
           label="Email"
-          hint="Managed through your sign-in provider."
+          hint={
+            provider
+              ? `Managed through your ${provider} sign-in.`
+              : "The address you sign in with."
+          }
         >
           {(field) => (
             <Input {...field} type="email" disabled value={user?.email ?? ""} />
@@ -217,19 +238,11 @@ export function AccountSection() {
         <Separator />
 
         <SettingRow
-          title="Download your data"
-          description="One JSON file with your account, library, ratings, and interaction history."
+          title="Your data"
+          description="Download your library or everything Klyvi holds, in Import and export."
         >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              downloadAccountData().catch(() =>
-                toast("Could not prepare the download. Try again.")
-              )
-            }
-          >
-            Download
+          <Button variant="outline" size="sm" onClick={onOpenData}>
+            Go to Import and export
           </Button>
         </SettingRow>
 

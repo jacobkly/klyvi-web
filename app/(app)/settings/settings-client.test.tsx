@@ -40,6 +40,14 @@ describe("SettingsClient", () => {
     reloadProfile.mockReset();
   });
 
+  it("groups Profile and Account under Account, so no group shares an item's name", () => {
+    session = { profile: { username: "jacob", avatarUrl: null }, profileFailed: false };
+    render(<SettingsClient />);
+    const rail = screen.getByRole("navigation", { name: "Settings" });
+    const groups = Array.from(rail.querySelectorAll("p")).map((p) => p.textContent);
+    expect(groups).toEqual(["Account", "Preferences", "Data"]);
+  });
+
   it("starts from the profile the session already holds, with no fetch of its own", () => {
     session = { profile: { username: "jacob", avatarUrl: null }, profileFailed: false };
     render(<SettingsClient />);

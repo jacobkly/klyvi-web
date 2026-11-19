@@ -123,10 +123,27 @@ describe("ProfileSection avatar and profile fields", () => {
     render(<ProfileSection me={me()} onSaved={() => {}} />);
 
     expect(screen.queryByLabelText(/birthday/i)).toBeNull();
+    await user.type(screen.getByLabelText("Bio"), "Slow films");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(updateMe).toHaveBeenCalledTimes(1));
     const [patch] = updateMe.mock.lastCall as unknown as [object];
     expect(patch).not.toHaveProperty("birthday");
+  });
+
+  it("keeps Save off until a field changes, and off again once it's put back", async () => {
+    const user = userEvent.setup();
+    render(<ProfileSection me={me()} onSaved={() => {}} />);
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Bio"), "x");
+    expect(save).toBeEnabled();
+
+    await user.type(screen.getByLabelText("Bio"), "{Backspace}");
+    expect(save).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Username"), "2");
+    expect(save).toBeEnabled();
   });
 });

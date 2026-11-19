@@ -31,6 +31,41 @@ async function fillPasswords(
   await user.type(screen.getByLabelText("Retype new password"), confirm);
 }
 
+describe("AccountSection email and data", () => {
+  beforeEach(() => {
+    sessionUser = passwordUser;
+  });
+
+  it("says the email is managed elsewhere only for Google and Microsoft", () => {
+    const { unmount } = render(<AccountSection />);
+    expect(screen.queryByText(/sign-in provider/i)).toBeNull();
+    expect(screen.getByText("The address you sign in with.")).toBeInTheDocument();
+    unmount();
+
+    for (const provider of ["google", "azure"]) {
+      sessionUser = {
+        email: "jacob@example.com",
+        app_metadata: { provider, providers: [provider] },
+      };
+      const r = render(<AccountSection />);
+      expect(
+        screen.getByText(/^Managed through your (Google|Microsoft) sign-in\.$/)
+      ).toBeInTheDocument();
+      r.unmount();
+    }
+  });
+
+  it("points to the one export instead of a second download", async () => {
+    const onOpenData = vi.fn();
+    const user = userEvent.setup();
+    render(<AccountSection onOpenData={onOpenData} />);
+
+    expect(screen.queryByRole("button", { name: "Download" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Go to Import and export" }));
+    expect(onOpenData).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("AccountSection password change", () => {
   beforeEach(() => {
     updateUser.mockReset();

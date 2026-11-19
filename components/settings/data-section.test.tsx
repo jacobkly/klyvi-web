@@ -1,10 +1,34 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataSection } from "./data-section";
 
+const exportTracking = vi.fn(() => Promise.resolve());
+const downloadAccountData = vi.fn(() => Promise.resolve());
+vi.mock("@/lib/api/users", () => ({
+  exportTracking: (...a: unknown[]) => exportTracking(...(a as [])),
+  downloadAccountData: () => downloadAccountData(),
+}));
+
 beforeEach(() => window.localStorage.clear());
+
+describe("DataSection export", () => {
+  it("offers one download per format and says what each holds", async () => {
+    const user = userEvent.setup();
+    render(<DataSection />);
+
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.getByText(/one row per film or season/i)).toBeInTheDocument();
+    expect(screen.getByText(/taste profile/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Download CSV" }));
+    expect(exportTracking).toHaveBeenCalledWith("csv");
+
+    await user.click(screen.getByRole("button", { name: "Download JSON" }));
+    expect(downloadAccountData).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("DataSection import dialog", () => {
   it("opens, accepts a picked file, and shows it by name and size", async () => {

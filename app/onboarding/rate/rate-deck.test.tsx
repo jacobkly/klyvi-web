@@ -89,6 +89,18 @@ describe("RateDeck", () => {
     expect(push).toHaveBeenCalledWith("/onboarding/done?rated=1");
   });
 
+  it("starts a redo from the first card, even after a full onboarding", async () => {
+    listInteractions.mockResolvedValue(
+      Array.from({ length: 20 }, () => ({ kind: "rated", source: "onboarding" }))
+    );
+    window.localStorage.setItem("klyvi:onboarding-index", "2");
+    render(<RateDeck redo />);
+
+    await caption("Alien");
+    expect(screen.getByText("0 / 20")).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("names the way out once there are enough ratings", async () => {
     listInteractions.mockResolvedValue(
       Array.from({ length: 10 }, () => ({ kind: "rated", source: "onboarding" }))

@@ -35,7 +35,7 @@ export const SOURCE_HELP: Record<
     result: "Matched films land as completed entries.",
   },
   trakt: {
-    hint: "Or click to browse. Upload the ZIP from Trakt's Settings, Data page.",
+    hint: "Or click to browse. Use the ZIP from Trakt's data export.",
     accept: ".zip,.json",
     result: "Films land as completed, and seasons as completed or watching.",
   },
@@ -151,7 +151,7 @@ export function ImportFlow({
             <p className="mt-3 text-sm font-medium text-foreground">
               Drop the export here
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-balance text-muted-foreground">
               {help.hint}
             </p>
           </>

@@ -4,7 +4,7 @@ import * as React from "react";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { exportTracking } from "@/lib/api/users";
+import { downloadAccountData, exportTracking } from "@/lib/api/users";
 import { ImportFlow } from "@/components/imports/import-flow";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -15,10 +15,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-import { FieldStack, SectionHeading } from "./section";
+import { FieldStack, SectionHeading, SettingRow } from "./section";
+
+/** Runs a download and says so if it fails. */
+function download(run: () => Promise<void>) {
+  run().catch(() => toast("Could not prepare the download. Try again."));
+}
 
 /**
  * Import runs in a dialog: pick the source, drop the export, watch the
@@ -57,9 +60,12 @@ function ImportDialog() {
   );
 }
 
+/**
+ * Import, and the one export. CSV is the library for a spreadsheet. JSON is
+ * everything Klyvi holds about the account, the same bundle a data request
+ * would get.
+ */
 export function DataSection() {
-  const [format, setFormat] = React.useState("csv");
-
   return (
     <section>
       <SectionHeading>Import and export</SectionHeading>
@@ -76,37 +82,39 @@ export function DataSection() {
           </div>
         </div>
 
-        <div>
-          <p className="text-sm font-medium text-foreground">
-            Export your data
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Everything you have tracked, as a file you can keep.
-          </p>
-          <RadioGroup
-            value={format}
-            onValueChange={(v) => setFormat(v ?? "csv")}
-            className="mt-3 flex w-auto flex-row gap-4"
+        <div className="flex flex-col gap-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Export your data
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Files you can keep. Nothing leaves Klyvi unless you download it.
+            </p>
+          </div>
+          <SettingRow
+            title="Your library"
+            description="One row per film or season, with status, score and progress. Opens in any spreadsheet."
           >
-            <Label className="flex cursor-pointer items-center gap-2 text-sm">
-              <RadioGroupItem value="csv" /> CSV
-            </Label>
-            <Label className="flex cursor-pointer items-center gap-2 text-sm">
-              <RadioGroupItem value="json" /> JSON
-            </Label>
-          </RadioGroup>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() =>
-              exportTracking(format as "csv" | "json").catch(() =>
-                toast("Could not prepare the export. Try again.")
-              )
-            }
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => download(() => exportTracking("csv"))}
+            >
+              Download CSV
+            </Button>
+          </SettingRow>
+          <SettingRow
+            title="Everything"
+            description="Your account, library, ratings, full history, imports and taste profile, as Klyvi keeps them."
           >
-            Download
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => download(downloadAccountData)}
+            >
+              Download JSON
+            </Button>
+          </SettingRow>
         </div>
       </FieldStack>
     </section>

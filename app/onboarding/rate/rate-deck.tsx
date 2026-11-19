@@ -78,7 +78,7 @@ export function swipeVerdict(dx: number): "liked" | "disliked" | null {
  * "Done for now" is there from the first card. The last answer can be undone,
  * so it is written when the next one comes in or on the way out.
  */
-export function RateDeck() {
+export function RateDeck({ redo = false }: { redo?: boolean } = {}) {
   const router = useRouter();
   const reduced = useReducedMotion();
   const [deck, setDeck] = React.useState<DeckState>({ kind: "loading" });
@@ -109,12 +109,16 @@ export function RateDeck() {
     ])
       .then(([films, interactions]) => {
         if (!live) return;
-        const done = interactions.filter(
-          (i) => i.kind === "rated" && i.source === "onboarding"
-        ).length;
+        // A redo counts from zero. Resuming from the earlier run's count
+        // would finish the deck before a card shows.
+        const done = redo
+          ? 0
+          : interactions.filter(
+              (i) => i.kind === "rated" && i.source === "onboarding"
+            ).length;
         setRated(Math.min(done, TARGET));
         const savedIndex = Number(
-          window.localStorage.getItem(INDEX_KEY) ?? "0"
+          (redo ? null : window.localStorage.getItem(INDEX_KEY)) ?? "0"
         );
         setIndex(
           Number.isFinite(savedIndex)
@@ -129,7 +133,7 @@ export function RateDeck() {
     return () => {
       live = false;
     };
-  }, [attempt]);
+  }, [attempt, redo]);
 
   /** Write the held answer, if it was an opinion. A failed write costs one
    *  signal, not the flow. */
