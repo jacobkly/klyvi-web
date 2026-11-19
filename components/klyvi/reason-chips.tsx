@@ -14,10 +14,13 @@ import { cn } from "@/lib/utils";
 function ReasonChips({
   reasons,
   max = 3,
+  label = "Why this was picked",
   className,
 }: {
   reasons: Reason[];
   max?: number;
+  /** What the row is, for a screen reader. A pick's reasons by default. */
+  label?: string;
   className?: string;
 }) {
   const named = reasons.filter(
@@ -30,7 +33,7 @@ function ReasonChips({
 
   return (
     <ul
-      aria-label="Why this was picked"
+      aria-label={label}
       className={cn("flex flex-wrap items-center gap-1.5", className)}
     >
       {shown.map((r) => {
@@ -47,7 +50,7 @@ function ReasonChips({
       })}
       {hidden > 0 ? (
         <li
-          aria-label={`${hidden} more reasons`}
+          aria-label={`${hidden} more`}
           className="inline-flex h-5 items-center rounded-full bg-muted px-2 text-xs font-medium text-muted-foreground"
         >
           +{hidden}

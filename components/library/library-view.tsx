@@ -380,7 +380,7 @@ function LibraryView({
         onSortChange={(key, order) => setPicked({ key, order })}
         view={view} onViewChange={setView} onSurprise={() => surprise()}
         activeFilterCount={activeFilterCount} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen}
-        total={all.length} split={split}
+        total={all.length} shown={filtered.length} split={split}
       >
         {hasMissingArt ? (
           <p className="mb-4 text-xs text-muted-foreground">
@@ -476,7 +476,7 @@ function LibraryView({
 function LibraryFrame({
   children, counts, filters, onFiltersChange, sortKey, sortOrder, onSortChange,
   view, onViewChange, onSurprise, activeFilterCount, sheetOpen, onSheetOpenChange, total,
-  split,
+  shown, split,
 }: {
   children: React.ReactNode;
   counts: Record<TrackingStatus | "all", number>;
@@ -492,6 +492,8 @@ function LibraryFrame({
   sheetOpen: boolean;
   onSheetOpenChange: (open: boolean) => void;
   total: number | null;
+  /** How many titles the filters leave, once the library is loaded. */
+  shown?: number;
   /** Films and TV tabs, when Settings keeps them apart. */
   split: { tab: MediaType; onTabChange: (tab: MediaType) => void } | null;
 }) {
@@ -543,11 +545,26 @@ function LibraryFrame({
                 </Button>
               }
             />
-            <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto p-5">
+            {/* No initial focus: focusing the search would raise the phone's
+                keyboard over the filters you opened the sheet for (#66). */}
+            <SheetContent
+              side="bottom"
+              initialFocus={false}
+              className="max-h-[85dvh] overflow-y-auto p-5"
+            >
               <SheetHeader className="p-0 pb-4">
                 <SheetTitle>Filters</SheetTitle>
               </SheetHeader>
               {panel}
+              <Button
+                size="touch"
+                className="mt-5 w-full"
+                onClick={() => onSheetOpenChange(false)}
+              >
+                {shown == null
+                  ? "Done"
+                  : `Show ${shown} result${shown === 1 ? "" : "s"}`}
+              </Button>
             </SheetContent>
           </Sheet>
           </div>
@@ -577,6 +594,14 @@ function LibraryFrame({
   );
 }
 
+/** "Edit Breaking Bad Season 1": a show's seasons share a title, so the
+ *  label names which one (#64). */
+function editLabel(e: LibraryEntry): string {
+  return e.mediaType === "season" && e.seasonNumber != null
+    ? `Edit ${e.title} Season ${e.seasonNumber}`
+    : `Edit ${e.title}`;
+}
+
 /** Renders the entry set in the active view mode. */
 function EntryCollection({
   entries,
@@ -604,13 +629,18 @@ function EntryCollection({
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground">
                 {e.title}
-                {e.mediaType === "season" ? ` · Season ${e.seasonNumber}` : ""}
               </p>
+              {/* The season gets its own line so a long title's truncation
+                  can never cut it off on a phone (#64). */}
               <p className="text-xs text-muted-foreground">
-                {STATUS_LABELS[e.status]}
+                {e.mediaType === "season"
+                  ? `Season ${e.seasonNumber} · ${STATUS_LABELS[e.status]}`
+                  : STATUS_LABELS[e.status]}
               </p>
             </div>
-            {e.progress != null ? (
+            {/* Episodes are a season's. A film has no progress to show,
+                not even a 0 (#63). */}
+            {e.mediaType === "season" && e.progress != null ? (
               <span data-numeric className="font-mono text-xs text-muted-foreground">
                 {e.progressTotal != null
                   ? `${e.progress} / ${e.progressTotal}`
@@ -629,7 +659,7 @@ function EntryCollection({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`Edit ${e.title}`}
+              aria-label={editLabel(e)}
               className="hit-44 relative shrink-0"
               onClick={() => onEdit(e)}
             >
@@ -669,10 +699,12 @@ function EntryCollection({
           <Button
             variant="secondary"
             size="icon-sm"
-            aria-label={`Edit ${e.title}`}
+            aria-label={editLabel(e)}
             onClick={() => onEdit(e)}
             className={cn(
-              "hit-44 absolute top-1.5 right-1.5 bg-black/60 text-white backdrop-blur-sm",
+              // Smaller on a phone so it stays clear of the season tag in the
+              // opposite corner (#65). The tap target stays 44 px all the same.
+              "hit-44 absolute top-1 right-1 size-7 bg-black/60 text-white backdrop-blur-sm md:top-1.5 md:right-1.5 md:size-8",
               "opacity-100 transition-opacity md:opacity-0 md:group-hover/cell:opacity-100 md:focus-visible:opacity-100"
             )}
           >

@@ -101,7 +101,7 @@ describe("LibraryView list settings", () => {
   it("starts in the default list order from settings", async () => {
     writePref("listOrder", "title");
     render(<LibraryView load={load} />);
-    expect(await completedTitles()).toEqual(["Arrival", "Severance", "Whiplash"]);
+    expect(await completedTitles()).toEqual(["Arrival", "Severance Season 1", "Whiplash"]);
   });
 
   it("shows one combined list with no Films and TV tabs by default", async () => {
@@ -116,10 +116,10 @@ describe("LibraryView list settings", () => {
 
     expect(await screen.findByRole("tab", { name: "Films" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "TV" })).toBeInTheDocument();
-    expect(await completedTitles()).not.toContain("Severance");
+    expect(await completedTitles()).not.toContain("Severance Season 1");
 
     await userEvent.click(screen.getByRole("tab", { name: "TV" }));
-    expect(await completedTitles()).toEqual(["Severance"]);
+    expect(await completedTitles()).toEqual(["Severance Season 1"]);
   });
 });
 
@@ -150,7 +150,7 @@ describe("LibraryView in the URL", () => {
       "aria-selected",
       "true"
     );
-    expect(await screen.findByRole("button", { name: "Edit Severance" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Edit Severance Season 1" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit Whiplash" })).toBeNull();
   });
 
@@ -351,5 +351,51 @@ describe("LibraryView Surprise me", () => {
 
     expect(toast).toHaveBeenCalledWith("Nothing in Planning or Watching to pick from");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("LibraryView rows (U.25)", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows no bare 0 for a film in the list (#63)", async () => {
+    writePref("libraryView", "list");
+    const rows = [film(30, "Heat", { episode_progress: 0, status: "planning" })];
+    render(<LibraryView load={async () => rows.map(mapTrackingEntry)} />);
+    const row = (await screen.findByRole("button", { name: "Edit Heat" })).parentElement!;
+    expect(row.textContent).not.toMatch(/\d/);
+  });
+
+  it("gives a season its own line and names it in the edit label (#64)", async () => {
+    writePref("libraryView", "list");
+    render(<LibraryView load={async () => [wire({})].map(mapTrackingEntry)} />);
+    expect(
+      await screen.findByRole("button", { name: "Edit Breaking Bad Season 1" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Season 1 · Watching")).toBeInTheDocument();
+  });
+
+  it("names the season in a poster's edit label too (#64)", async () => {
+    render(<LibraryView load={async () => [wire({})].map(mapTrackingEntry)} />);
+    expect(
+      await screen.findByRole("button", { name: "Edit Breaking Bad Season 1" })
+    ).toBeInTheDocument();
+  });
+});
+
+describe("LibraryView filter sheet (#66)", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("opens without focusing the search, and closes on Show N results", async () => {
+    const user = userEvent.setup();
+    const rows = [film(40, "Heat"), film(41, "Ronin")];
+    render(<LibraryView load={async () => rows.map(mapTrackingEntry)} />);
+    await screen.findByRole("heading", { name: /Completed/ });
+
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    const sheet = await screen.findByRole("dialog");
+    expect(within(sheet).getByRole("textbox", { name: "Filter your library" })).not.toHaveFocus();
+
+    await user.click(within(sheet).getByRole("button", { name: "Show 2 results" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });

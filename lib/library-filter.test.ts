@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   filterLibrary,
+  defaultOrder,
   pickSurprise,
   recentActivity,
   sortLibrary,
@@ -104,6 +105,15 @@ describe("sortLibrary", () => {
     const before = entries.map((e) => e.mediaId);
     sortLibrary(entries, "title", "asc");
     expect(entries.map((e) => e.mediaId)).toEqual(before);
+  });
+});
+
+describe("defaultOrder (#68)", () => {
+  it("runs titles A to Z and everything else high to low", () => {
+    expect(defaultOrder("title")).toBe("asc");
+    for (const k of ["score", "added", "year", "progress", "updated"] as const) {
+      expect(defaultOrder(k)).toBe("desc");
+    }
   });
 });
 

@@ -12,10 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  LibraryFilters,
-  LibrarySortKey,
-  SortOrder,
+import {
+  defaultOrder,
+  type LibraryFilters,
+  type LibrarySortKey,
+  type SortOrder,
 } from "@/lib/library-filter";
 import { STATUS_LABELS, type TrackingStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -114,6 +115,7 @@ function FilterPanel({
               })
             }
             items={{ all: "All", movie: "Films", season: "TV" }}
+            modal={false}
           >
             <SelectTrigger id="lf-type" className="w-full">
               <SelectValue />
@@ -132,7 +134,14 @@ function FilterPanel({
         <div className="flex gap-2">
           <Select
             value={sortKey}
-            onValueChange={(v) => onSortChange(v as LibrarySortKey, sortOrder)}
+            // A new sort starts in its natural direction, so Title reads A to
+            // Z even when the last sort ran high to low (#68).
+            onValueChange={(v) =>
+              onSortChange(v as LibrarySortKey, defaultOrder(v as LibrarySortKey))
+            }
+            // Not modal: a modal select locks the page's scroll, and the
+            // scrollbar's going shifts the whole layout sideways (#69).
+            modal={false}
             items={Object.fromEntries(SORT_OPTIONS.map((o) => [o.key, o.label]))}
           >
             <SelectTrigger id="lf-sort" className="w-full">

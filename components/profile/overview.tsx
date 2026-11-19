@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import * as React from "react";
 
 import { ActivityHeatmap } from "@/components/profile/activity-heatmap";
@@ -13,6 +14,7 @@ import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { recentActivity } from "@/lib/library-filter";
+import { mediaHref } from "@/lib/media-href";
 import { usePref } from "@/lib/local-prefs";
 import { formatScore, type ScoringSystem } from "@/lib/score";
 import {
@@ -23,12 +25,17 @@ import {
 
 /** "Completed Dune: Part Two", "Rated Parasite 94", "Rated Up: liked it". */
 function activityLine(e: LibraryEntry, system: ScoringSystem): string {
+  // A show's seasons share its title, so the line names the season (#75).
+  const name =
+    e.mediaType === "season" && e.seasonNumber != null
+      ? `${e.title} Season ${e.seasonNumber}`
+      : e.title;
   if (e.score != null) {
     return system === "smiley"
-      ? `Rated ${e.title}: ${formatScore(e.score, system).toLowerCase()}`
-      : `Rated ${e.title} ${formatScore(e.score, system)}`;
+      ? `Rated ${name}: ${formatScore(e.score, system).toLowerCase()}`
+      : `Rated ${name} ${formatScore(e.score, system)}`;
   }
-  return `${STATUS_LABELS[e.status]}: ${e.title}`;
+  return `${STATUS_LABELS[e.status]}: ${name}`;
 }
 
 function relativeTime(iso: string): string {
@@ -188,7 +195,7 @@ export function ProfileOverview() {
             </div>
           ) : taste && taste.length > 0 ? (
             <>
-              <ReasonChips reasons={taste} max={6} />
+              <ReasonChips reasons={taste} max={6} label="Taste tags" />
               <p className="mt-3 text-xs text-muted-foreground">
                 Built from what you rate. It sharpens as you track.
               </p>
@@ -250,15 +257,18 @@ export function ProfileOverview() {
               Track something and it shows up here.
             </p>
           ) : (
-            <ol className="flex flex-col gap-2.5">
+            <ol aria-label="Recent activity" className="flex flex-col gap-2.5">
               {activity.map((e) => (
                 <li
                   key={`${e.mediaId}-${e.updatedAt}`}
                   className="flex items-baseline justify-between gap-3"
                 >
-                  <span className="min-w-0 truncate text-sm text-foreground">
+                  <Link
+                    href={mediaHref(e)}
+                    className="min-w-0 truncate rounded-sm text-sm text-foreground outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/30"
+                  >
                     {activityLine(e, scoringSystem)}
-                  </span>
+                  </Link>
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {relativeTime(e.updatedAt)}
                   </span>

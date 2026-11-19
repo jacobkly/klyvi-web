@@ -62,10 +62,16 @@ export function sortLibrary(
  * The library's sort before you pick one, from Settings' default list order.
  * Titles read A to Z, everything else best or newest first.
  */
+/** Each sort's natural direction: titles A to Z, everything else high to
+ *  low (best score, newest, most progress first). */
+export function defaultOrder(key: LibrarySortKey): SortOrder {
+  return key === "title" ? "asc" : "desc";
+}
+
 export function startingSort(
   listOrder: "updated" | "title" | "score" | "added"
 ): { key: LibrarySortKey; order: SortOrder } {
-  return { key: listOrder, order: listOrder === "title" ? "asc" : "desc" };
+  return { key: listOrder, order: defaultOrder(listOrder) };
 }
 
 /**
