@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { DetailError } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
+import { WhereToWatch } from "@/components/media/where-to-watch";
 import {
   getFamily,
   getMovie,
@@ -80,6 +81,7 @@ export default async function MoviePage({
       keywords={m.keywords}
       cast={m.cast}
       crew={m.crew}
+      watch={<WhereToWatch kind="movies" tmdbId={tmdbId} title={m.title} />}
       extra={
         <Suspense fallback={null}>
           <MovieBand

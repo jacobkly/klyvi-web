@@ -30,6 +30,8 @@ import type {
   TrackingStatus,
   UserProfile,
   UserStats,
+  WatchProvider,
+  WatchProviders,
 } from "@/lib/types";
 import type {
   WireEpisodeRef,
@@ -43,6 +45,8 @@ import type {
   WireScored,
   WireSearchResponse,
   WireSimilar,
+  WireWatchProvider,
+  WireWatchProviders,
   WireStats,
   WireTrackingEntry,
   WireTvSeason,
@@ -217,6 +221,31 @@ export function mapScored(w: WireScored): Scored {
 }
 
 // ---------- similar titles ----------
+
+function mapProviderList(w: WireWatchProvider[] | null | undefined): WatchProvider[] {
+  return (w ?? []).map((p) => ({
+    id: p.provider_id,
+    name: p.provider_name,
+    logoPath: p.logo_path ?? null,
+  }));
+}
+
+/** The API passes on only TMDB's own watch page. Checked again here, since
+ *  the link becomes an href. */
+const TMDB_WATCH_PAGE = "https://www.themoviedb.org/";
+
+export function mapWatchProviders(w: WireWatchProviders): WatchProviders {
+  return {
+    region: w.region,
+    regions: w.regions ?? [],
+    link: w.link && w.link.startsWith(TMDB_WATCH_PAGE) ? w.link : null,
+    stream: mapProviderList(w.stream),
+    free: mapProviderList(w.free),
+    ads: mapProviderList(w.ads),
+    rent: mapProviderList(w.rent),
+    buy: mapProviderList(w.buy),
+  };
+}
 
 export function mapSimilar(w: WireSimilar): SimilarTitle {
   return {

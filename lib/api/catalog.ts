@@ -3,7 +3,12 @@
  * server components and the browser alike.
  */
 
-import type { MediaSummary, Ranking, SimilarTitle } from "@/lib/types";
+import type {
+  MediaSummary,
+  Ranking,
+  SimilarTitle,
+  WatchProviders,
+} from "@/lib/types";
 
 import { apiFetch } from "./http";
 import {
@@ -13,6 +18,7 @@ import {
   mapSimilar,
   mapTvSeason,
   mapTvSeries,
+  mapWatchProviders,
   yearOf,
   type SeasonDetail,
 } from "./map";
@@ -25,6 +31,7 @@ import type {
   WireSimilar,
   WireTvSeason,
   WireTvSeries,
+  WireWatchProviders,
 } from "./wire";
 import type { MovieDetail, TvDetail } from "@/lib/mock-media";
 
@@ -149,6 +156,21 @@ export async function getSimilar(
     { allow404: true, signal }
   );
   return (w ?? []).map(mapSimilar);
+}
+
+/** Where to stream, rent or buy a title in one country. Null when TMDB has
+ *  no such title. */
+export async function getProviders(
+  kind: "movies" | "tv",
+  tmdbId: number,
+  region: string,
+  signal?: AbortSignal
+): Promise<WatchProviders | null> {
+  const w = await apiFetch<WireWatchProviders | null>(
+    `/v1/${kind}/${tmdbId}/providers?region=${encodeURIComponent(region)}`,
+    { allow404: true, signal }
+  );
+  return w ? mapWatchProviders(w) : null;
 }
 
 export async function getTvSeries(

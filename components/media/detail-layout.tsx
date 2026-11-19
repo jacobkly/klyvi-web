@@ -70,6 +70,7 @@ function DetailLayout({
   cast,
   crew,
   shelves,
+  watch,
   extra,
 }: {
   media: TrackableSummary;
@@ -108,6 +109,8 @@ function DetailLayout({
    *  A slot rather than data so the page can stream them in on their own
    *  Suspense boundary; see DetailShelves. */
   shelves?: React.ReactNode;
+  /** Where to watch, first in the main column: it is what you act on. */
+  watch?: React.ReactNode;
   extra?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -384,6 +387,7 @@ function DetailLayout({
             </aside>
 
             <div className="min-w-0 flex-1">
+              {watch}
               {extra}
 
               <section className="mb-10">

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { DetailError } from "@/components/media/detail-states";
 import { DetailLayout } from "@/components/media/detail-layout";
 import { DetailShelvesSkeleton } from "@/components/media/detail-shelves";
+import { WhereToWatch } from "@/components/media/where-to-watch";
 import { SeriesActions } from "@/components/media/series-actions";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { SectionHeader } from "@/components/klyvi/section-header";
@@ -102,6 +103,7 @@ export default async function TvPage({
           <TvShelves family={family} similar={similar} />
         </Suspense>
       }
+      watch={<WhereToWatch kind="tv" tmdbId={tmdbId} title={t.title} />}
       extra={
         seasons.length > 0 ? (
           <section className="mb-10">

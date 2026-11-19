@@ -11,6 +11,7 @@ import {
   mapTrackingEntry,
   mapTvSeries,
   mapUser,
+  mapWatchProviders,
 } from "./map";
 import type {
   WireMovie,
@@ -742,5 +743,38 @@ describe("mapSearchResults", () => {
     );
     expect(out.movies).toHaveLength(1);
     expect(out.movies[0].year).toBeNull();
+  });
+});
+
+describe("mapWatchProviders", () => {
+  const wire = {
+    region: "US",
+    regions: ["GB", "US"],
+    link: "https://www.themoviedb.org/tv/95396-severance/watch?locale=US",
+    stream: [{ provider_id: 350, provider_name: "Apple TV+", logo_path: "/a.jpg" }],
+    free: [],
+    ads: [],
+    rent: [],
+    buy: [{ provider_id: 3, provider_name: "Google Play Movies", logo_path: null }],
+  };
+
+  it("maps each kind of offer to camelCase", () => {
+    const p = mapWatchProviders(wire);
+    expect(p.region).toBe("US");
+    expect(p.regions).toEqual(["GB", "US"]);
+    expect(p.link).toBe(wire.link);
+    expect(p.stream).toEqual([{ id: 350, name: "Apple TV+", logoPath: "/a.jpg" }]);
+    expect(p.buy[0].logoPath).toBeNull();
+    expect(p.rent).toEqual([]);
+  });
+
+  it("keeps only a link to TMDB and treats missing lists as empty", () => {
+    const p = mapWatchProviders({
+      ...wire,
+      link: "javascript:alert(1)",
+      free: null as unknown as [],
+    });
+    expect(p.link).toBeNull();
+    expect(p.free).toEqual([]);
   });
 });

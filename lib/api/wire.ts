@@ -158,6 +158,25 @@ export type WireFamilyTitle = {
   release_date: string | null;
 };
 
+/** One entry of a providers list. */
+export type WireWatchProvider = {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string | null;
+};
+
+/** GET /v1/{movies,tv}/{id}/providers?region=: one country's offers. */
+export type WireWatchProviders = {
+  region: string;
+  regions: string[];
+  link: string | null;
+  stream: WireWatchProvider[];
+  free: WireWatchProvider[];
+  ads: WireWatchProvider[];
+  rent: WireWatchProvider[];
+  buy: WireWatchProvider[];
+};
+
 // ---------- tracking ----------
 
 export type WireTrackingEntry = {

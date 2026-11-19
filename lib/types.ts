@@ -176,6 +176,28 @@ export type SimilarTitle = MediaSummary & {
   reasons: Reason[];
 };
 
+/** One service that streams, rents or sells a title. */
+export type WatchProvider = {
+  id: number;
+  name: string;
+  logoPath: string | null;
+};
+
+/** Where to watch a title in one country (GET /v1/{movies,tv}/{id}/providers).
+ *  The data is JustWatch's, via TMDB, and must be credited where it shows. */
+export type WatchProviders = {
+  region: string;
+  /** Every country with any offer, for the picker. */
+  regions: string[];
+  /** TMDB's watch page for the title in this country. */
+  link: string | null;
+  stream: WatchProvider[];
+  free: WatchProvider[];
+  ads: WatchProvider[];
+  rent: WatchProvider[];
+  buy: WatchProvider[];
+};
+
 /** Aggregated profile stats (GET /v1/users/me/stats). */
 export type UserStats = {
   kpis: {
