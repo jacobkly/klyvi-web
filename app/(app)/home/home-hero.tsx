@@ -70,11 +70,15 @@ export function HomeHero({
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10" />
         <div className="absolute inset-0 hidden bg-gradient-to-r from-background/80 via-background/30 to-transparent lg:block" />
+        {/* Below lg the text sits over the top of the backdrop, where the
+            gradient is thinnest, so an even scrim keeps it readable on a
+            bright image in either theme. */}
+        <div className="absolute inset-0 bg-background/60 lg:hidden" />
       </div>
 
       <div className="flex min-h-80 flex-col justify-end gap-6 p-4 sm:min-h-[22rem] sm:p-6 lg:flex-row lg:items-end lg:justify-between lg:p-8">
         <div className="min-w-0 max-w-2xl">
-          <p className="text-xs font-medium tracking-[0.12em] text-muted-foreground uppercase">
+          <p className="text-xs font-medium tracking-[0.12em] text-foreground/80 uppercase">
             Tonight&apos;s pick
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -89,7 +93,7 @@ export function HomeHero({
           {meta.length > 0 ? (
             <p
               data-numeric
-              className="mt-1.5 font-mono text-sm text-muted-foreground"
+              className="mt-1.5 font-mono text-sm text-foreground/80"
             >
               {meta.join(" · ")}
             </p>
