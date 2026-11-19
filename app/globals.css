@@ -398,12 +398,10 @@ html[data-text-size="large"] {
 
 /* Landing hero motion.
 
-   The marquee is a DELIBERATE, DISCLOSED exception to the reduced-motion
-   floor above. It is a core design intent (the user asked for it directly),
-   it is the lowest-risk kind of motion (a slow, linear, horizontal scroll,
-   no flashing or zoom), and it pauses on hover. The entrance rise below
-   still honors reduced motion. If the marquee should honor reduced motion
-   too, delete the override block and it falls back to a static strip. */
+   The marquee honors reduced motion like everything else: the system
+   setting and Settings' Reduce motion both hold it still. Otherwise it
+   pauses on hover and from its button (data-paused), since it runs for more
+   than five seconds (WCAG 2.2.2). */
 /* The landing hero's entrance. CSS rather than framer so the hero is in the
    server HTML at rest and the rise plays without waiting for JavaScript. The
    reduced-motion floor and .reduce-motion both cut it short, and `both` fill
@@ -429,19 +427,21 @@ html[data-text-size="large"] {
 .marquee-track {
   animation: klyvi-marquee 42s linear infinite;
 }
+.marquee-track[data-paused] {
+  animation-play-state: paused;
+}
 @media (hover: hover) {
   .marquee-track:hover {
     animation-play-state: paused;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  /* Wins over the universal killer above on specificity + order. */
+  /* Still, not cut short: the floor above would run one 0.01ms loop and
+     leave the strip at its end. This holds it at the start. */
   .marquee-track {
-    animation: klyvi-marquee 42s linear infinite !important;
+    animation: none !important;
   }
 }
-/* Asking Klyvi itself for less motion is explicit, so it stops the marquee
-   too. Outranks the override above on specificity. */
 .reduce-motion .marquee-track {
   animation: none !important;
 }

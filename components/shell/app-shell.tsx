@@ -46,6 +46,23 @@ function AppShell({ children }: { children: ReactNode }) {
             to auto and the shell just wrapped its content. That left the footer
             floating mid-screen on short pages. Viewport units cannot collapse. */}
         <div className="flex min-h-dvh flex-col">
+          {/* The first Tab stop: past the nav to the page. Hidden until it
+              has focus. The click handler moves focus as well as scroll,
+              since a fragment link alone leaves focus behind in some
+              browsers. */}
+          <a
+            href="#content"
+            onClick={(e) => {
+              const target = document.getElementById("content");
+              if (!target) return;
+              e.preventDefault();
+              target.focus();
+              target.scrollIntoView?.();
+            }}
+            className="sr-only rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50"
+          >
+            Skip to content
+          </a>
           <TopBar onOpenSearch={openSearch} />
           {/* Footer inside the padded wrapper so it clears the mobile tab bar.
               flex-1 on the content region pushes the footer to the bottom of the
@@ -57,7 +74,13 @@ function AppShell({ children }: { children: ReactNode }) {
                 heights are no use here, because this wrapper's own height
                 comes from flex-grow rather than a height property, so a child
                 asking for `min-height: 100%` resolves it to zero. */}
-            <div className="flex flex-1 flex-col">{children}</div>
+            <div
+              id="content"
+              tabIndex={-1}
+              className="flex flex-1 flex-col outline-none"
+            >
+              {children}
+            </div>
             <SiteFooter wide />
           </div>
           <BottomTabBar />

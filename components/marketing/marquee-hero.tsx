@@ -1,19 +1,21 @@
 "use client";
 
+import { Pause, Play } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { getMovieList } from "@/lib/api/catalog";
 import { TAGLINE_CLAIM } from "@/lib/marketing-claims";
 import { MOCK_POOL } from "@/lib/mock-onboarding";
+import { useReducedMotion } from "@/lib/motion";
 
 /**
  * The marquee hero: real popular-film posters scrolling under the pitch,
  * adapted from the 21st.dev reference and reskinned to Klyvi (art radius,
- * no vendor colors, real Button). Motion is pure CSS now, no framer: the
- * marquee is a disclosed reduced-motion exception (see globals.css), the
- * entrance rise honors it.
+ * no vendor colors, real Button). Motion is pure CSS, no framer. Reduced
+ * motion (the system's or Settings') holds the strip still, and otherwise a
+ * button pauses it, since it moves for more than five seconds (WCAG 2.2.2).
  *
  * The rise is a CSS animation, not `Reveal`, so the server HTML is visible
  * as sent and the hero paints before the page's JavaScript loads. `Reveal`
@@ -32,6 +34,9 @@ function Rise({ delay, children }: { delay: number; children: React.ReactNode })
 const TITLE = "Stop scrolling. Start watching.";
 
 export function MarqueeHero() {
+  const reduced = useReducedMotion();
+  const [paused, setPaused] = React.useState(false);
+  const still = reduced || paused;
   const [posters, setPosters] = React.useState<string[]>(() =>
     MOCK_POOL.filter((p) => p.posterPath)
       .slice(0, 14)
@@ -114,8 +119,24 @@ export function MarqueeHero() {
       {/* The poster strip, faded at both edges. The mask is functional, not
           decoration: it stops the loop ending in a hard vertical cut. */}
       <div className="relative mt-24 w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] sm:mt-28">
-        <div className="marquee-track flex w-max">{items}</div>
+        <div
+          className="marquee-track flex w-max"
+          data-paused={still ? "" : undefined}
+        >
+          {items}
+        </div>
       </div>
+      {reduced ? null : (
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          className="mt-4 text-muted-foreground"
+          aria-label={paused ? "Play the posters" : "Pause the posters"}
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+        </Button>
+      )}
     </section>
   );
 }
