@@ -241,6 +241,16 @@ const SECTIONS: ProseSection[] = [
             Klyvi. It runs the app and writes the logs.
           </li>
         </ul>
+        <p>
+          Supabase, Vercel, Cloudflare and Resend work for Klyvi. They handle
+          your data to run the service and not for their own purposes. They
+          also keep short records of their own, for example Resend keeps a
+          record of each email it sends for 30 days.
+        </p>
+        <p>
+          Google, Microsoft, TMDB and YouTube are separate services. What they
+          receive is covered by their own privacy policies.
+        </p>
         <p>Nobody else receives your data, and none of it is sold.</p>
       </>
     ),
@@ -249,12 +259,20 @@ const SECTIONS: ProseSection[] = [
     id: "where-it-is-stored",
     title: "Where your data is stored",
     body: (
-      <p>
-        Your data is stored in the United States. If you use Klyvi from another
-        country, it travels there. Vercel and Cloudflare run worldwide
-        networks, so a request can pass through a server closer to you on the
-        way.
-      </p>
+      <>
+        <p>
+          Your data is stored in the United States. If you use Klyvi from
+          another country, it travels there. Vercel and Cloudflare run
+          worldwide networks, so a request can pass through a server closer to
+          you on the way.
+        </p>
+        <p>
+          For data that comes from the EU or the UK, Supabase, Vercel,
+          Cloudflare and Resend each protect the transfer with the EU-US Data
+          Privacy Framework, the European Commission&apos;s standard
+          contractual clauses, or both.
+        </p>
+      </>
     ),
   },
   {
@@ -353,7 +371,7 @@ const SECTIONS: ProseSection[] = [
 
 export default function PrivacyPage() {
   return (
-    <ProseLayout title="Privacy policy" updated="18 November 2026">
+    <ProseLayout title="Privacy policy" updated="19 November 2026">
       <S>
         Klyvi stores your email, what you watch, and how you rate it. That is
         what makes recommendations work. It is not sold and not shared for

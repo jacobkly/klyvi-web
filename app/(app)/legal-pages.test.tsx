@@ -54,12 +54,12 @@ describe.each<[string, ComponentType]>([
   });
 });
 
-describe.each<[string, ComponentType]>([
-  ["privacy", PrivacyPage],
-  ["terms", TermsPage],
-])("the %s page's layout", (_name, Page) => {
+describe.each<[string, ComponentType, string]>([
+  ["privacy", PrivacyPage, "19 November 2026"],
+  ["terms", TermsPage, "18 November 2026"],
+])("the %s page's layout", (_name, Page, date) => {
   it("carries this round's date", () => {
-    expect(textOf(Page)).toContain("Last updated 18 November 2026");
+    expect(textOf(Page)).toContain(`Last updated ${date}`);
   });
 
   it("numbers its sections and lists them in a contents list", () => {
@@ -133,6 +133,46 @@ describe("the privacy page", () => {
     const heading = screen.getByRole("heading", { name: /who receives/i });
     const list = heading.nextElementSibling as HTMLElement;
     expect(list.textContent).toContain(service);
+  });
+
+  it("lists exactly these recipients, so a new one means a new test", () => {
+    render(<PrivacyPage />);
+    const heading = screen.getByRole("heading", { name: /who receives/i });
+    const list = heading.nextElementSibling as HTMLElement;
+    const names = Array.from(list.querySelectorAll("li > strong")).map(
+      (s) => s.textContent
+    );
+    expect(names).toEqual([
+      "Supabase",
+      "Vercel",
+      "Cloudflare",
+      "Resend",
+      "Google and Microsoft",
+      "TMDB",
+      "YouTube",
+      "The API server",
+    ]);
+  });
+
+  it("says which recipients work for Klyvi and which act on their own", () => {
+    const text = privacy();
+    expect(text).toMatch(
+      /Supabase, Vercel, Cloudflare and Resend work for Klyvi.{0,120}not for their own purposes/i
+    );
+    expect(text).toMatch(
+      /Google, Microsoft, TMDB and YouTube.{0,120}their own privacy policies/i
+    );
+  });
+
+  it("says how data sent to the United States is protected", () => {
+    const text = privacy();
+    expect(text).toMatch(/EU or the UK/);
+    expect(text).toMatch(/Data Privacy Framework/);
+    expect(text).toMatch(/standard contractual clauses/);
+  });
+
+  it("says Resend keeps a record of each email for 30 days", () => {
+    expect(privacy()).toMatch(/Resend keeps a record of each email.{0,40}30 days/i);
   });
 
   it("says YouTube only loads when you press play on a trailer", () => {
