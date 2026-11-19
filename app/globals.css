@@ -446,6 +446,15 @@ html[data-text-size="large"] {
   animation: none !important;
 }
 
+/* The onboarding wall drifts, far slower than the landing marquee. Unlike the
+   marquee it is not an exception: the reduced-motion floor stops it. */
+.wall-drift {
+  animation: klyvi-marquee 160s linear infinite;
+}
+.reduce-motion .wall-drift {
+  animation: none !important;
+}
+
 /* Indeterminate progress. Base UI gives the indicator no width when value is
    null, so the "still reading the file" phase of an import is styled and
    animated here: a short violet fill sweeping across the track. */

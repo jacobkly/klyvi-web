@@ -18,7 +18,7 @@ import { tmdbImage } from "@/lib/tmdb-image";
 /** Unique posters per row, and how many slots each row fills. The wall is
  *  dim and blurred, so a few posters repeated read the same as many. */
 const PER_ROW = 4;
-const SLOTS = 14;
+const SLOTS = 24;
 
 function repeatRow(posters: string[]): string[] {
   if (posters.length === 0) return [];
@@ -67,7 +67,8 @@ export function OnboardingBackdrop() {
           <div
             key={i}
             className={
-              "flex shrink-0 gap-4 " + (i % 2 === 1 ? "-ml-24" : "-ml-8")
+              "wall-drift flex w-max shrink-0 gap-4 " +
+              (i % 2 === 1 ? "-ml-24 [animation-direction:reverse]" : "-ml-8")
             }
           >
             {repeatRow(row).map((poster, j) => (

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ReasonChips } from "./reason-chips";
@@ -66,6 +66,25 @@ describe("ReasonChips", () => {
     expect(screen.getByText("+2")).toBeInTheDocument();
     expect(screen.queryByText("Crime")).not.toBeInTheDocument();
     expect(screen.queryByText("Neo-Noir")).not.toBeInTheDocument();
+  });
+
+  it("opens the other reasons from the +N chip, which a tap can reach", () => {
+    render(<ReasonChips reasons={reasons} max={3} />);
+    const more = screen.getByRole("button", { name: "Show 2 more reasons" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(more);
+
+    expect(screen.getByText("Crime")).toBeInTheDocument();
+    expect(screen.getByText("Neo-Noir")).toBeInTheDocument();
+    expect(screen.queryByText("+2")).toBeNull();
+  });
+
+  it("lets a long reason wrap instead of cutting it off when asked", () => {
+    const name = "Harry Potter and the Prisoner of Azkaban";
+    render(<ReasonChips reasons={[{ kind: "because", id: 673, name }]} wrap />);
+    const text = screen.getByText(`because you liked ${name}`);
+    expect(text).not.toHaveClass("truncate");
   });
 
   it("shows no overflow chip when at or under max", () => {

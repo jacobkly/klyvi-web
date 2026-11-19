@@ -1,3 +1,7 @@
+"use client";
+
+import * as React from "react";
+
 import type { Reason } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -15,21 +19,29 @@ function ReasonChips({
   reasons,
   max = 3,
   label = "Why this was picked",
+  wrap = false,
   className,
 }: {
   reasons: Reason[];
   max?: number;
   /** What the row is, for a screen reader. A pick's reasons by default. */
   label?: string;
+  /** Let a long chip run onto a second line instead of cutting it off, for
+   *  narrow columns such as a poster's width on a phone. */
+  wrap?: boolean;
   className?: string;
 }) {
+  // "+N" opens the rest. A tap can't reach a tooltip, so it's a button.
+  const [open, setOpen] = React.useState(false);
   const named = reasons.filter(
     (r): r is Reason & { name: string } => Boolean(r.name)
   );
   if (named.length === 0) return null;
 
-  const shown = named.slice(0, max);
+  const shown = open ? named : named.slice(0, max);
   const hidden = named.length - shown.length;
+  // Once opened, every chip is readable in full.
+  const wraps = wrap || open;
 
   return (
     <ul
@@ -42,18 +54,32 @@ function ReasonChips({
           <li
             key={`${r.kind}-${r.id}`}
             title={r.kind === "because" ? label : undefined}
-            className="inline-flex h-5 min-w-0 max-w-full items-center rounded-full bg-muted px-2 text-xs font-medium text-violet-text"
+            className={cn(
+              "inline-flex min-w-0 max-w-full items-center rounded-full bg-muted px-2 text-xs font-medium text-violet-text",
+              wraps ? "min-h-5 py-0.5 leading-4" : "h-5"
+            )}
           >
-            <span className="truncate">{label}</span>
+            <span className={wraps ? "break-words" : "truncate"}>{label}</span>
           </li>
         );
       })}
       {hidden > 0 ? (
-        <li
-          aria-label={`${hidden} more`}
-          className="inline-flex h-5 items-center rounded-full bg-muted px-2 text-xs font-medium text-muted-foreground"
-        >
-          +{hidden}
+        <li className="inline-flex">
+          <button
+            type="button"
+            aria-expanded={false}
+            aria-label={`Show ${hidden} more ${hidden === 1 ? "reason" : "reasons"}`}
+            onClick={(e) => {
+              // Chips often sit inside a card link. Opening them shouldn't
+              // follow it.
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(true);
+            }}
+            className="hit-44 relative inline-flex h-5 items-center rounded-full bg-muted px-2 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            +{hidden}
+          </button>
         </li>
       ) : null}
     </ul>

@@ -47,7 +47,7 @@ export function FirstPicksPreview() {
         {picks.map((p) => (
           <div key={p.mediaId}>
             <PosterCard media={p} variant="below" />
-            <ReasonChips reasons={p.reasons} max={1} className="mt-1.5" />
+            <ReasonChips reasons={p.reasons} max={1} wrap className="mt-1.5" />
           </div>
         ))}
       </div>
