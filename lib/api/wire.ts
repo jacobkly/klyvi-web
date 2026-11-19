@@ -352,7 +352,13 @@ export type WireStats = {
   release_years: { year: number; titles: number; hours: number }[] | null;
   watch_years: { year: number; titles: number; hours: number }[] | null;
   genres:
-    | { name: string; count: number; mean_score: number; hours: number }[]
+    | {
+        name: string;
+        count: number;
+        /** Null when none of the genre's titles is scored. */
+        mean_score: number | null;
+        hours: number;
+      }[]
     | null;
   formats: { label: string; pct: number }[] | null;
   countries: { label: string; pct: number }[] | null;

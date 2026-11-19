@@ -69,6 +69,24 @@ describe("ProfileStats (U.18)", () => {
     expect(screen.queryByText(/9\.23/)).toBeNull();
   });
 
+  it("shows a dash, not 0.0, for a genre with nothing scored", () => {
+    data = {
+      entries,
+      taste: [],
+      stats: stats({
+        genres: [
+          { name: "Drama", count: 6, meanScore: 80, hours: 9 },
+          { name: "War & Politics", count: 1, meanScore: null, hours: 0 },
+        ],
+      }),
+    };
+    render(<ProfileStats />);
+    const card = screen.getByText("War & Politics").closest("div.rounded-lg");
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("–")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("0.0")).toBeNull();
+  });
+
   it("holds Watch year back until there are two years (#57)", () => {
     data = { entries, taste: [], stats: stats() };
     render(<ProfileStats />);

@@ -252,7 +252,13 @@ export type UserStats = {
   scoreDistribution: { band: string; titles: number; hours: number }[];
   releaseYears: { year: number; titles: number; hours: number }[];
   watchYears: { year: number; titles: number; hours: number }[];
-  genres: { name: string; count: number; meanScore: number; hours: number }[];
+  /** `meanScore` is null when none of the genre's titles is scored. */
+  genres: {
+    name: string;
+    count: number;
+    meanScore: number | null;
+    hours: number;
+  }[];
   formats: { label: string; pct: number }[];
   countries: { label: string; pct: number }[];
   activity: { date: string; count: number }[];

@@ -362,7 +362,11 @@ export function ProfileStats() {
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   <Metric value={String(g.count)} label="Count" />
                   <Metric
-                    value={rated > 0 ? g.meanScore.toFixed(1) : "–"}
+                    value={
+                      rated > 0 && g.meanScore !== null
+                        ? g.meanScore.toFixed(1)
+                        : "–"
+                    }
                     label="Mean score"
                   />
                   <Metric value={formatHours(g.hours)} label="Watched" />
