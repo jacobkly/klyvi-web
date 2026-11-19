@@ -158,6 +158,32 @@ export type NotificationPage = {
   hasMore: boolean;
 };
 
+/** One stored error group on the admin page. */
+export type ErrorGroup = {
+  id: number;
+  source: "api" | "web";
+  kind: string;
+  message: string;
+  stack: string | null;
+  route: string | null;
+  method: string | null;
+  status: number | null;
+  userId: string | null;
+  count: number;
+  firstSeen: string;
+  lastSeen: string;
+  resolvedAt: string | null;
+};
+
+export type ErrorGroupStatus = "open" | "resolved" | "all";
+
+export type ErrorGroupPage = {
+  errors: ErrorGroup[];
+  /** Every group, whatever the tab. */
+  counts: { open: number; resolved: number };
+  hasMore: boolean;
+};
+
 /** One row of a public Top 100 ranking (GET /v1/rankings/{movies,tv}). */
 export type Ranking = {
   rank: number;

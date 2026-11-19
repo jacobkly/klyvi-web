@@ -16,6 +16,8 @@ import { trailerKey } from "@/lib/trailer";
 import type {
   AppNotification,
   Episode,
+  ErrorGroup,
+  ErrorGroupPage,
   ImportJob,
   ImportStatus,
   Interaction,
@@ -36,6 +38,8 @@ import type {
 } from "@/lib/types";
 import type {
   WireEpisodeRef,
+  WireErrorGroup,
+  WireErrorGroupPage,
   WireImportJob,
   WireInteraction,
   WireMovie,
@@ -440,6 +444,34 @@ export function mapNotificationPage(
   return {
     notifications: (w.notifications ?? []).map(mapNotification),
     unreadCount: w.unread_count,
+    hasMore: w.has_more,
+  };
+}
+
+// ---------- admin ----------
+
+export function mapErrorGroup(w: WireErrorGroup): ErrorGroup {
+  return {
+    id: w.id,
+    source: w.source,
+    kind: w.kind,
+    message: w.message,
+    stack: w.stack,
+    route: w.route,
+    method: w.method,
+    status: w.status,
+    userId: w.user_id,
+    count: w.count,
+    firstSeen: w.first_seen,
+    lastSeen: w.last_seen,
+    resolvedAt: w.resolved_at,
+  };
+}
+
+export function mapErrorGroupPage(w: WireErrorGroupPage): ErrorGroupPage {
+  return {
+    errors: (w.errors ?? []).map(mapErrorGroup),
+    counts: { open: w.counts.open, resolved: w.counts.resolved },
     hasMore: w.has_more,
   };
 }

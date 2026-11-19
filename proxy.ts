@@ -103,5 +103,7 @@ export const config = {
     "/onboarding/:path*",
     "/signin/:path*",
     "/signup/:path*",
+    // Refreshed but not gated: the admin page answers outsiders with its 404.
+    "/admin/:path*",
   ],
 };

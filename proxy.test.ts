@@ -151,6 +151,27 @@ describe("proxy", () => {
   });
 });
 
+// The admin page reads the session on the server, so the proxy refreshes it
+// there. It doesn't gate it: a signed-out visitor gets the same 404 page as
+// anyone else who isn't an admin, not a sign-in screen that shows it exists.
+describe("proxy on /admin", () => {
+  it("lets a signed-out visitor through to the page's own 404", async () => {
+    const res = await visit("/admin");
+
+    expect(getRedirectUrl(res)).toBeNull();
+  });
+
+  it("saves a refreshed session", async () => {
+    session.claims = { sub: "user-1" };
+    session.refreshedCookies = [{ name: "sb-auth-token", value: "fresh" }];
+
+    const res = await visit("/admin?status=all");
+
+    expect(getRedirectUrl(res)).toBeNull();
+    expect(res.cookies.get("sb-auth-token")?.value).toBe("fresh");
+  });
+});
+
 describe("proxy matcher", () => {
   const matches = (path: string) =>
     unstable_doesMiddlewareMatch({ config, url: `${origin}${path}` });
@@ -168,6 +189,7 @@ describe("proxy matcher", () => {
     "/onboarding/rate",
     "/signin",
     "/signup",
+    "/admin",
   ])("runs on %s", (path) => {
     expect(matches(path)).toBe(true);
   });

@@ -429,3 +429,30 @@ export type WireErrorReport = {
   page?: string;
   digest?: string;
 };
+
+/** One stored error group, from GET /v1/admin/errors (admins only). */
+export type WireErrorGroup = {
+  id: number;
+  /** "api" for a 5xx or a panic, "web" for a client report. */
+  source: "api" | "web";
+  kind: string;
+  message: string;
+  stack: string | null;
+  /** The route pattern, or the page path with ids as ":id". */
+  route: string | null;
+  method: string | null;
+  status: number | null;
+  /** Who hit it last, if signed in. */
+  user_id: string | null;
+  count: number;
+  first_seen: string;
+  last_seen: string;
+  resolved_at: string | null;
+};
+
+export type WireErrorGroupPage = {
+  errors: WireErrorGroup[] | null;
+  /** Covers every group, whatever the filter. */
+  counts: { open: number; resolved: number };
+  has_more: boolean;
+};
