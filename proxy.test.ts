@@ -82,6 +82,16 @@ describe("proxy", () => {
     );
   });
 
+  // #100: the query comes back too, so a gated link to a filtered view
+  // lands on that view after sign-in.
+  it("keeps the query in next", async () => {
+    const res = await visit("/library?view=grid&status=watching");
+
+    expect(getRedirectUrl(res)).toBe(
+      `${origin}/signin?next=${encodeURIComponent("/library?view=grid&status=watching")}`
+    );
+  });
+
   // Literals on purpose. Reading the shared list here would let a route fall
   // off it, and lose its gate, with every test still passing.
   it.each([

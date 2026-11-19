@@ -108,8 +108,15 @@ type SearchState =
  * each loading on its own; typing runs a debounced multi search, and the
  * tabs pick a bucket from the one response rather than re-querying.
  */
-export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
-  const [query, setQuery] = React.useState("");
+export function ExploreClient({
+  autofocus,
+  initialQuery = "",
+}: {
+  autofocus?: boolean;
+  /** From `?q=`, so Back, reload and a shared link keep the search (#24). */
+  initialQuery?: string;
+}) {
+  const [query, setQuery] = React.useState(initialQuery);
   const [tab, setTab] = React.useState<ResultTab>("all");
   const [genre, setGenre] = React.useState("all");
   const [decade, setDecade] = React.useState("all");
@@ -134,6 +141,27 @@ export function ExploreClient({ autofocus }: { autofocus?: boolean }) {
   const active = q.length >= 2;
 
   const searchKey = `${retryNonce}:${q}`;
+
+  // The settled query goes in the URL with replaceState: no history entry
+  // per keystroke, but Back from a result returns to it. `focus` is dropped
+  // once there's a query, so a reload doesn't steal focus from the results.
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      const sp = new URLSearchParams(window.location.search);
+      if (active) {
+        sp.set("q", q);
+        sp.delete("focus");
+      } else {
+        sp.delete("q");
+      }
+      const qs = sp.toString();
+      const next = window.location.pathname + (qs ? `?${qs}` : "");
+      if (next !== window.location.pathname + window.location.search) {
+        window.history.replaceState(window.history.state, "", next);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q, active]);
 
   React.useEffect(() => {
     if (!active) return;

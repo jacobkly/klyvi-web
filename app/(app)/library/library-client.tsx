@@ -11,6 +11,7 @@ import {
   updateTracking,
   type PageSink,
 } from "@/lib/api/tracking";
+import type { LibraryParams } from "@/lib/library-params";
 import { MOCK_LIBRARY } from "@/lib/mock-library";
 import type { LibraryEntry, TrackingStatus } from "@/lib/types";
 
@@ -19,7 +20,13 @@ import type { LibraryEntry, TrackingStatus } from "@/lib/types";
  * params keep the six states reachable without the API: simulate swaps in
  * the mock loader and optimistic-only writes.
  */
-export function LibraryClient({ simulate }: { simulate?: string }) {
+export function LibraryClient({
+  simulate,
+  initial,
+}: {
+  simulate?: string;
+  initial?: LibraryParams;
+}) {
   const mock = simulate != null;
 
   const load = React.useCallback((more?: PageSink): Promise<LibraryEntry[]> => {
@@ -78,6 +85,7 @@ export function LibraryClient({ simulate }: { simulate?: string }) {
       onStatusChange={mock ? undefined : onStatusChange}
       onSave={mock ? undefined : onSave}
       onDelete={mock ? undefined : onDelete}
+      initial={initial}
     />
   );
 }

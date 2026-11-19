@@ -26,6 +26,7 @@ import {
   type SortOrder,
 } from "@/lib/library-filter";
 import type { PageSink } from "@/lib/api/tracking";
+import { libraryQuery, type LibraryParams } from "@/lib/library-params";
 import { usePref } from "@/lib/local-prefs";
 import {
   STATUS_LABELS,
@@ -48,6 +49,9 @@ const GROUP_ORDER: TrackingStatus[] = [
   "dropped",
   "planning",
 ];
+
+/** No params: the library's defaults. */
+const NO_PARAMS: LibraryParams = {};
 
 /** One empty list for every not-ready render, so memos keyed on it hold. */
 const NO_ENTRIES: LibraryEntry[] = [];
@@ -77,8 +81,11 @@ function LibraryView({
   onStatusChange,
   onSave,
   onDelete,
+  initial = NO_PARAMS,
 }: {
   load: (more?: PageSink) => Promise<LibraryEntry[]>;
+  /** The place the URL names (#67). Changes are written back to it. */
+  initial?: LibraryParams;
   /** Persist a quick status change. Absent = optimistic-only (mock mode). */
   onStatusChange?: (e: LibraryEntry, next: TrackingStatus) => Promise<void>;
   /** Persist a dialog edit. Absent = optimistic-only (mock mode). */
@@ -88,9 +95,9 @@ function LibraryView({
 }) {
   const [state, setState] = React.useState<LoadState>({ phase: "loading" });
   const [filters, setFilters] = React.useState<LibraryFilters>({
-    status: "all",
-    type: "all",
-    query: "",
+    status: initial.status ?? "all",
+    type: initial.type ?? "all",
+    query: initial.q ?? "",
   });
   // Settings' default list order is the starting sort, used until a pick
   // here. Derived rather than copied into state, so the stored pref still
@@ -99,15 +106,51 @@ function LibraryView({
   const [picked, setPicked] = React.useState<{
     key: LibrarySortKey;
     order: SortOrder;
-  } | null>(null);
+  } | null>(
+    initial.sort
+      ? {
+          key: initial.sort,
+          order: initial.order ?? (initial.sort === "title" ? "asc" : "desc"),
+        }
+      : null
+  );
   const { key: sortKey, order: sortOrder } = picked ?? startingSort(listOrder);
   // Combine films and TV off: Films and TV tabs, and each tab is its own
   // library (counts, statuses, filters), so the Type filter steps aside.
   const [combine] = usePref("combineLists");
-  const [tab, setTab] = React.useState<MediaType>("movie");
-  // Remembered across visits: the density choice is a preference, not a
-  // per-session toggle, so it persists (and syncs) like the theme settings.
-  const [view, setView] = usePref("libraryView");
+  const [tab, setTab] = React.useState<MediaType>(initial.tab ?? "movie");
+  // The URL's view wins. A pick here also becomes the stored preference, so
+  // a bare /library opens on the last view you chose.
+  const [prefView, setPrefView] = usePref("libraryView");
+  const [urlView, setUrlView] = React.useState<LibraryViewMode | null>(
+    initial.view ?? null
+  );
+  const view = urlView ?? prefView;
+  const setView = (v: LibraryViewMode) => {
+    setUrlView(v);
+    setPrefView(v);
+  };
+
+  // Every change is written over the URL with replaceState: no history entry
+  // per click, but Back from a title, reload and a shared link come back here.
+  React.useEffect(() => {
+    const next = libraryQuery(window.location.search, {
+      status: filters.status,
+      type: filters.type,
+      q: filters.query.trim(),
+      sort: picked?.key,
+      order: picked?.order,
+      view: urlView ?? undefined,
+      tab,
+    });
+    if (next !== window.location.search) {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname + next
+      );
+    }
+  }, [filters, picked, urlView, tab]);
   const [editing, setEditing] = React.useState<LibraryEntry | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
 

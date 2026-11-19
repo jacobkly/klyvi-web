@@ -1,3 +1,5 @@
+import { readLibraryParams } from "@/lib/library-params";
+
 import { LibraryClient } from "./library-client";
 
 export const metadata = { title: "Your library · Klyvi" };
@@ -11,8 +13,9 @@ export const metadata = { title: "Your library · Klyvi" };
 export default async function LibraryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ state?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { state } = await searchParams;
-  return <LibraryClient simulate={state} />;
+  const params = await searchParams;
+  const state = Array.isArray(params.state) ? params.state[0] : params.state;
+  return <LibraryClient simulate={state} initial={readLibraryParams(params)} />;
 }

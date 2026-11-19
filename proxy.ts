@@ -60,7 +60,8 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
     url.search = "";
-    url.searchParams.set("next", path);
+    // The whole place, query included, so a filtered view survives sign-in.
+    url.searchParams.set("next", path + request.nextUrl.search);
     return redirect(url, response);
   }
 

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mapTrackingEntry } from "@/lib/api/map";
 import type { PageSink } from "@/lib/api/tracking";
-import { writePref } from "@/lib/local-prefs";
+import { readPref, writePref } from "@/lib/local-prefs";
 import type { WireTrackingEntry } from "@/lib/api/wire";
 
 import { LibraryView } from "./library-view";
@@ -120,6 +120,64 @@ describe("LibraryView list settings", () => {
 
     await userEvent.click(screen.getByRole("tab", { name: "TV" }));
     expect(await completedTitles()).toEqual(["Severance"]);
+  });
+});
+
+// #67: the library's place rides in the URL, so Back from a title, reload
+// and a shared link all land on the same view.
+describe("LibraryView in the URL", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.history.replaceState(null, "", "/library");
+  });
+
+  const rows = [
+    film(10, "Whiplash", { score: 88 }),
+    film(11, "Arrival", { score: 70, status: "watching" }),
+    wire({ id: 12, media_id: 12, title: "Severance", status: "completed", score: 95 }),
+  ];
+  const load = async () => rows.map(mapTrackingEntry);
+
+  it("opens on the place the URL names", async () => {
+    writePref("combineLists", false);
+    render(
+      <LibraryView
+        load={load}
+        initial={{ tab: "season", sort: "title", view: "list" }}
+      />
+    );
+    expect(await screen.findByRole("tab", { name: "TV" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(await screen.findByRole("button", { name: "Edit Severance" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Whiplash" })).toBeNull();
+  });
+
+  it("filters by the URL's status", async () => {
+    render(<LibraryView load={load} initial={{ status: "watching" }} />);
+    expect(await screen.findByRole("button", { name: "Edit Arrival" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Whiplash" })).toBeNull();
+  });
+
+  it("writes a change back to the URL, keeping other params", async () => {
+    window.history.replaceState(null, "", "/library?state=demo");
+    writePref("combineLists", false);
+    render(<LibraryView load={load} />);
+
+    await userEvent.click(await screen.findByRole("tab", { name: "TV" }));
+    await waitFor(() =>
+      expect(window.location.search).toBe("?state=demo&tab=season")
+    );
+  });
+
+  it("keeps a picked view as the default for next time", async () => {
+    render(<LibraryView load={load} />);
+    await screen.findByRole("button", { name: "Edit Arrival" });
+
+    await userEvent.click(screen.getAllByRole("button", { name: "List" })[0]);
+    await waitFor(() => expect(window.location.search).toBe("?view=list"));
+    expect(readPref("libraryView")).toBe("list");
   });
 });
 

@@ -5,8 +5,13 @@ export const metadata = { title: "Explore · Klyvi" };
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ focus?: string }>;
+  searchParams: Promise<{ focus?: string; q?: string | string[] }>;
 }) {
-  const { focus } = await searchParams;
-  return <ExploreClient autofocus={focus === "1"} />;
+  const { focus, q } = await searchParams;
+  return (
+    <ExploreClient
+      autofocus={focus === "1"}
+      initialQuery={(Array.isArray(q) ? q[0] : q) ?? ""}
+    />
+  );
 }

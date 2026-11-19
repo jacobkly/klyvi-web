@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -133,5 +133,38 @@ describe("ExploreClient search", () => {
 
     await userEvent.type(box, "s");
     expect(screen.queryByText("Parasite")).toBeNull();
+  });
+
+  // #24: the query lives in the URL, so Back, reload and a shared link keep
+  // the results.
+  it("fills the box and the results from ?q=", async () => {
+    search.mockResolvedValue(results("Dune"));
+    render(<ExploreClient initialQuery="dune" />);
+
+    expect(
+      screen.getByRole("textbox", { name: "Search films, TV, and people" })
+    ).toHaveValue("dune");
+    expect(await screen.findAllByText("Dune")).not.toHaveLength(0);
+    expect(search).toHaveBeenCalledWith("dune", "multi", expect.anything());
+  });
+
+  it("writes the query to the URL as it settles", async () => {
+    window.history.replaceState(null, "", "/explore?focus=1");
+    search.mockResolvedValue(results("Parasite"));
+    render(<ExploreClient />);
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Search films, TV, and people" }),
+      "parasite"
+    );
+    await screen.findAllByText("Parasite");
+    expect(window.location.pathname + window.location.search).toBe(
+      "/explore?q=parasite"
+    );
+
+    await userEvent.clear(
+      screen.getByRole("textbox", { name: "Search films, TV, and people" })
+    );
+    await waitFor(() => expect(window.location.search).toBe(""));
   });
 });
