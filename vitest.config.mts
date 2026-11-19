@@ -10,6 +10,8 @@ export default defineConfig({
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules", "beta-ui", ".next"],
     css: false,
+    // Tests expect the local fallback, whatever the shell or CI sets.
+    env: { NEXT_PUBLIC_API_URL: "http://localhost:8080" },
   },
   resolve: {
     alias: {

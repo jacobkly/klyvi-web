@@ -22,6 +22,8 @@ const MONEY = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   notation: "compact",
+  // Both bounds, or older ICU (Node 22) prints "$160.0M".
+  minimumFractionDigits: 0,
   maximumFractionDigits: 1,
 });
 
