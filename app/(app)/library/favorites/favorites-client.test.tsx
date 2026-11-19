@@ -40,8 +40,8 @@ describe("FavoritesClient", () => {
     ]);
     render(<FavoritesClient />);
 
-    expect(await screen.findByText("Whiplash")).toBeInTheDocument();
-    expect(screen.getByText("Parasite")).toBeInTheDocument();
+    expect((await screen.findAllByText("Whiplash"))[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Parasite")[0]).toBeInTheDocument();
     // A high score without the flag is not a favorite.
     expect(screen.queryByText("Not Starred")).not.toBeInTheDocument();
 
@@ -50,6 +50,20 @@ describe("FavoritesClient", () => {
       .map((a) => a.textContent ?? "")
       .filter((t) => t.includes("Whiplash") || t.includes("Parasite"));
     expect(titles[0]).toContain("Whiplash");
+  });
+
+  it("shows each favorite's title and your score under its poster", async () => {
+    listTracking.mockResolvedValue([
+      entry({ mediaId: 1, title: "Parasite", score: 95, favorite: true }),
+    ]);
+    render(<FavoritesClient />);
+    const [, title] = await screen.findAllByText("Parasite");
+    expect(title).toBeVisible();
+    expect(screen.getByText(/^Your score/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Favorites" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
   });
 
   it("shows the empty state when nothing is starred", async () => {
@@ -67,7 +81,7 @@ describe("FavoritesClient", () => {
 
     const retry = await screen.findByRole("button", { name: "Try again" });
     retry.click();
-    expect(await screen.findByText("Whiplash")).toBeInTheDocument();
+    expect((await screen.findAllByText("Whiplash"))[0]).toBeInTheDocument();
     expect(listTracking).toHaveBeenCalledTimes(2);
   });
 });

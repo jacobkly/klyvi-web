@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { PosterCard } from "@/components/klyvi/poster-card";
+import { LibraryNav } from "@/components/library/library-nav";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { Button } from "@/components/ui/button";
 import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
@@ -53,6 +54,7 @@ export function FavoritesClient() {
   if (state.kind === "loading") {
     return (
       <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
+        <LibraryNav active="favorites" />
         <h1 className="text-3xl font-semibold tracking-tight">Favorites</h1>
         <div className="mt-8 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -66,6 +68,7 @@ export function FavoritesClient() {
   if (state.kind === "error") {
     return (
       <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 py-8 md:px-6">
+        <LibraryNav active="favorites" />
         <h1 className="text-3xl font-semibold tracking-tight">Favorites</h1>
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <p className="text-[15px] font-semibold text-foreground">
@@ -86,7 +89,8 @@ export function FavoritesClient() {
 
   return (
     <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 py-8 md:px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Favorites</h1>
+      <LibraryNav active="favorites" />
+        <h1 className="text-3xl font-semibold tracking-tight">Favorites</h1>
 
       {favorites.length === 0 ? (
         <div className="flex flex-1 items-center justify-center">
@@ -102,7 +106,12 @@ export function FavoritesClient() {
           <SectionHeader title="Starred" className="mb-4" />
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {favorites.map((e) => (
-              <PosterCard key={e.mediaId} media={e} variant="compact" />
+              <PosterCard
+                key={e.mediaId}
+                media={e}
+                variant="below"
+                score={e.score}
+              />
             ))}
           </div>
         </section>

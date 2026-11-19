@@ -309,3 +309,47 @@ describe("LibraryView paging", () => {
     expect(sink.live()).toBe(false);
   });
 });
+
+describe("LibraryView Surprise me", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    toast.mockReset();
+  });
+
+  it("shows a planned pick as a card to open or start, not the edit dialog", async () => {
+    const rows = [
+      film(20, "Heat", { status: "completed" }),
+      film(21, "Dune", { status: "planning" }),
+    ];
+    const onStatusChange = vi.fn(() => Promise.resolve());
+    const user = userEvent.setup();
+    render(
+      <LibraryView load={async () => rows.map(mapTrackingEntry)} onStatusChange={onStatusChange} />
+    );
+    await screen.findByRole("heading", { name: /Completed/ });
+
+    await user.click(screen.getAllByRole("button", { name: /Surprise me/ })[0]);
+
+    const card = await screen.findByRole("dialog");
+    expect(within(card).getByRole("heading", { name: "Dune" })).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Open" })).toHaveAttribute("href", "/movie/21");
+    expect(within(card).queryByRole("textbox", { name: "Score" })).toBeNull();
+
+    await user.click(within(card).getByRole("button", { name: "Start watching" }));
+    expect(onStatusChange).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Dune" }),
+      "watching"
+    );
+  });
+
+  it("says so when nothing is planned or being watched", async () => {
+    const user = userEvent.setup();
+    render(<LibraryView load={async () => [film(20, "Heat")].map(mapTrackingEntry)} />);
+    await screen.findByRole("heading", { name: /Completed/ });
+
+    await user.click(screen.getAllByRole("button", { name: /Surprise me/ })[0]);
+
+    expect(toast).toHaveBeenCalledWith("Nothing in Planning or Watching to pick from");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});

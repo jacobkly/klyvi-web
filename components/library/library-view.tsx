@@ -19,6 +19,7 @@ import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   filterLibrary,
+  pickSurprise,
   sortLibrary,
   startingSort,
   type LibraryFilters,
@@ -37,6 +38,8 @@ import {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { FilterPanel } from "./filter-panel";
+import { LibraryNav } from "./library-nav";
+import { SurpriseCard } from "./surprise-card";
 import { TrackingDialog, type TrackingEdit } from "./tracking-dialog";
 import { ViewSwitcher, type LibraryViewMode } from "./view-switcher";
 
@@ -152,6 +155,7 @@ function LibraryView({
     }
   }, [filters, picked, urlView, tab]);
   const [editing, setEditing] = React.useState<LibraryEntry | null>(null);
+  const [surprised, setSurprised] = React.useState<LibraryEntry | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
   /** Bumped by the error state's Try again to reload. */
@@ -277,11 +281,34 @@ function LibraryView({
     });
   }
 
-  function surprise() {
-    if (filtered.length === 0) return;
-    const pick = filtered[Math.floor(Math.random() * filtered.length)];
-    setEditing(pick);
+  /** Surprise me draws from this tab, and from the type filter when films
+   *  and TV share one. The status filter doesn't narrow it: the point is
+   *  something you haven't watched yet. */
+  const surprisePool =
+    combine && filters.type !== "all"
+      ? entries.filter((e) => e.mediaType === filters.type)
+      : entries;
+
+  function surprise(avoid?: LibraryEntry) {
+    const pool =
+      avoid && surprisePool.length > 1
+        ? surprisePool.filter((e) => e.mediaId !== avoid.mediaId)
+        : surprisePool;
+    const pick = pickSurprise(pool);
+    if (!pick) {
+      toast("Nothing in Planning or Watching to pick from");
+      return;
+    }
+    setSurprised(pick);
   }
+
+  const surpriseChoices = surprised
+    ? surprisePool.filter((e) =>
+        surprised.status === "planning"
+          ? e.status === "planning"
+          : e.status === "watching"
+      ).length
+    : 0;
 
   // ---------- states ----------
 
@@ -290,7 +317,7 @@ function LibraryView({
       <LibraryFrame counts={counts} filters={filters} onFiltersChange={setFilters}
         sortKey={sortKey} sortOrder={sortOrder}
         onSortChange={(key, order) => setPicked({ key, order })}
-        view={view} onViewChange={setView} onSurprise={surprise}
+        view={view} onViewChange={setView} onSurprise={() => surprise()}
         activeFilterCount={activeFilterCount} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen}
         total={null} split={split}
       >
@@ -328,7 +355,7 @@ function LibraryView({
       <LibraryFrame counts={counts} filters={filters} onFiltersChange={setFilters}
         sortKey={sortKey} sortOrder={sortOrder}
         onSortChange={(key, order) => setPicked({ key, order })}
-        view={view} onViewChange={setView} onSurprise={surprise}
+        view={view} onViewChange={setView} onSurprise={() => surprise()}
         activeFilterCount={activeFilterCount} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen}
         total={0} split={split}
       >
@@ -351,7 +378,7 @@ function LibraryView({
       <LibraryFrame counts={counts} filters={filters} onFiltersChange={setFilters}
         sortKey={sortKey} sortOrder={sortOrder}
         onSortChange={(key, order) => setPicked({ key, order })}
-        view={view} onViewChange={setView} onSurprise={surprise}
+        view={view} onViewChange={setView} onSurprise={() => surprise()}
         activeFilterCount={activeFilterCount} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen}
         total={all.length} split={split}
       >
@@ -428,6 +455,19 @@ function LibraryView({
           onDelete={() => deleteEntry(editing)}
         />
       ) : null}
+      {surprised ? (
+        <SurpriseCard
+          entry={surprised}
+          onClose={() => setSurprised(null)}
+          onStart={() => {
+            changeStatus(surprised, "watching");
+            setSurprised(null);
+          }}
+          onAnother={
+            surpriseChoices > 1 ? () => surprise(surprised) : undefined
+          }
+        />
+      ) : null}
     </>
   );
 }
@@ -475,6 +515,7 @@ function LibraryFrame({
     <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 py-8 md:px-6">
       {/* Wraps rather than overflowing: at 320px the Filters button and the
           view switcher together are wider than the title's remaining room. */}
+      <LibraryNav active="library" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Your library</h1>

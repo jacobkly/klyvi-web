@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   filterLibrary,
+  pickSurprise,
   recentActivity,
   sortLibrary,
   startingSort,
@@ -103,6 +104,26 @@ describe("sortLibrary", () => {
     const before = entries.map((e) => e.mediaId);
     sortLibrary(entries, "title", "asc");
     expect(entries.map((e) => e.mediaId)).toEqual(before);
+  });
+});
+
+describe("pickSurprise", () => {
+  const planned = entry({ mediaId: 1, title: "Dune", status: "planning" });
+  const watching = entry({ mediaId: 2, title: "Severance", status: "watching" });
+  const done = entry({ mediaId: 3, title: "Heat", status: "completed" });
+
+  it("picks from Planning and never from Completed", () => {
+    for (const r of [0, 0.3, 0.6, 0.99]) {
+      expect(pickSurprise([done, planned, watching], () => r)?.title).toBe("Dune");
+    }
+  });
+
+  it("falls back to Watching when nothing is planned", () => {
+    expect(pickSurprise([done, watching], () => 0.5)?.title).toBe("Severance");
+  });
+
+  it("has nothing to pick with neither", () => {
+    expect(pickSurprise([done], () => 0.5)).toBeNull();
   });
 });
 

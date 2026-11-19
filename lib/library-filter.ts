@@ -83,3 +83,19 @@ export function recentActivity(
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, limit);
 }
+
+/**
+ * Surprise me's pick: something you meant to watch, so Planning first, then
+ * Watching. Never a title you've finished or dropped. Null with neither.
+ */
+export function pickSurprise(
+  entries: LibraryEntry[],
+  random: () => number = Math.random
+): LibraryEntry | null {
+  const planned = entries.filter((e) => e.status === "planning");
+  const pool = planned.length
+    ? planned
+    : entries.filter((e) => e.status === "watching");
+  if (pool.length === 0) return null;
+  return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
+}

@@ -64,6 +64,26 @@ describe("UserMenu", () => {
     expect(dots()).toHaveLength(2);
   });
 
+  it("names you at the top and reaches the library's pages in one tap", async () => {
+    const user = userEvent.setup();
+    render(<UserMenu />);
+    await user.click(screen.getByRole("button", { name: "Your account" }));
+
+    expect(await screen.findByText("a@b.com")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Library" })).toHaveAttribute("href", "/library");
+    expect(screen.getByRole("menuitem", { name: "Favorites" })).toHaveAttribute(
+      "href",
+      "/library/favorites"
+    );
+    expect(screen.getByRole("menuitem", { name: "Stats" })).toHaveAttribute(
+      "href",
+      "/profile/stats"
+    );
+    // Terms and Privacy live in the footer.
+    expect(screen.queryByRole("menuitem", { name: "Terms" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Privacy" })).toBeNull();
+  });
+
   it("uses the singular for one", () => {
     notices.unread = 1;
     render(<UserMenu />);

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import {
+  BarChart3,
   Bell,
-  FileText,
+  Heart,
+  Library,
   LogOut,
   Settings,
-  Shield,
   User,
 } from "lucide-react";
 
@@ -25,7 +26,8 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * The avatar dropdown: primary rows, then legal and sign out.
+ * The avatar dropdown: who you are, the library's pages, your account, then
+ * sign out. Terms and Privacy are in the footer, so they don't repeat here.
  * Signed out it collapses to a Sign in button; while the first session
  * check resolves it shows nothing rather than flashing the wrong state.
  */
@@ -79,7 +81,39 @@ function UserMenu() {
           />
         ) : null}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-52">
+      <DropdownMenuContent align="end" className="min-w-60">
+        <div className="flex items-center gap-3 px-2 py-2">
+          <Avatar className="size-9">
+            {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
+            <AvatarFallback className="text-xs">{initial}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            {profile?.username ? (
+              <p className="truncate text-sm font-medium text-foreground">
+                {profile.username}
+              </p>
+            ) : null}
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
+          </div>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem render={<Link href="/library" />}>
+            <Library aria-hidden="true" data-icon="inline-start" />
+            Library
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/library/favorites" />}>
+            <Heart aria-hidden="true" data-icon="inline-start" />
+            Favorites
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/profile/stats" />}>
+            <BarChart3 aria-hidden="true" data-icon="inline-start" />
+            Stats
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem render={<Link href="/profile" />}>
             <User aria-hidden="true" data-icon="inline-start" />
@@ -106,14 +140,6 @@ function UserMenu() {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem render={<Link href="/terms" />}>
-            <FileText aria-hidden="true" data-icon="inline-start" />
-            Terms
-          </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href="/privacy" />}>
-            <Shield aria-hidden="true" data-icon="inline-start" />
-            Privacy
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => void signOut()}>
             <LogOut aria-hidden="true" data-icon="inline-start" />
             Sign out
