@@ -59,6 +59,17 @@ describe("BottomTabBar", () => {
     );
   });
 
+  // #19: under 768 px the top bar's search is hidden, so the tab bar
+  // carries it to every page.
+  it("puts search one tap away on every page", () => {
+    mockUsePathname.mockReturnValue("/movie/550");
+    render(<BottomTabBar />);
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    const search = within(nav).getByRole("link", { name: "Search" });
+    expect(search).toHaveAttribute("href", "/explore?focus=1");
+    expect(search).not.toHaveAttribute("aria-current");
+  });
+
   it("gives every target the 44px touch height", () => {
     render(<BottomTabBar />);
     for (const link of screen.getAllByRole("link")) {
