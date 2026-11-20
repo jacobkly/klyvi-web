@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { Episode } from "@/lib/types";
@@ -17,16 +18,47 @@ function episodes(n: number): Episode[] {
 }
 
 describe("EpisodeList", () => {
-  it("lists every episode with its number, date and runtime", () => {
-    render(<EpisodeList episodes={episodes(10)} next={null} />);
+  it("shows an episode's number, date and runtime", () => {
+    render(<EpisodeList episodes={episodes(3)} next={null} />);
     const list = screen.getByRole("list", { name: "Episodes" });
     const rows = within(list).getAllByRole("listitem");
-    expect(rows).toHaveLength(10);
+    expect(rows).toHaveLength(3);
     expect(within(rows[0]).getByText("Episode 1 title")).toBeInTheDocument();
     expect(within(rows[0]).getByText("E1")).toBeInTheDocument();
     expect(within(rows[0]).getByText("17 Jan 2025")).toBeInTheDocument();
     expect(within(rows[0]).getByText("50m")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Mark returns to Lumon.")).toBeInTheDocument();
+  });
+
+  it("shows four episodes until asked for the rest", async () => {
+    render(<EpisodeList episodes={episodes(22)} next={null} />);
+    const list = screen.getByRole("list", { name: "Episodes" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(list).getByText("E1")).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Show all 22 episodes" }));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(22);
+
+    await user.click(screen.getByRole("button", { name: "Show fewer" }));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
+  });
+
+  it("has no toggle when four or fewer episodes fit", () => {
+    render(<EpisodeList episodes={episodes(4)} next={null} />);
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("keeps the next episode in view while the season airs", () => {
+    render(<EpisodeList episodes={episodes(10)} next={8} />);
+    const rows = screen.getAllByRole("listitem");
+    expect(rows.map((r) => within(r).getByText(/^E\d+$/).textContent)).toEqual([
+      "E5",
+      "E6",
+      "E7",
+      "E8",
+    ]);
+    expect(within(rows[3]).getByText("Next")).toBeInTheDocument();
   });
 
   it("marks the next episode to air", () => {

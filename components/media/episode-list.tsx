@@ -1,13 +1,22 @@
+"use client";
+
+import * as React from "react";
 import Image from "next/image";
 
+import { Button } from "@/components/ui/button";
 import { shortDate } from "@/lib/media-facts";
 import { formatRuntime } from "@/lib/mock-media";
 import { tmdbImage } from "@/lib/tmdb-image";
 import type { Episode } from "@/lib/types";
 
+/** How many episodes show before "Show all". */
+const COLLAPSED = 4;
+
 /**
  * A season's episodes in airing order: still, number, name, date and
  * runtime. While the season airs, the next episode carries a marker.
+ * A long season shows four rows until asked for the rest: the first four,
+ * or the four up to the next episode while it airs.
  */
 export function EpisodeList({
   episodes,
@@ -17,7 +26,14 @@ export function EpisodeList({
   /** The number of this season's next episode to air, if it has one. */
   next: number | null;
 }) {
+  const [expanded, setExpanded] = React.useState(false);
   if (episodes.length === 0) return null;
+
+  const collapsible = episodes.length > COLLAPSED;
+  const nextIndex = episodes.findIndex((e) => e.number === next);
+  const start = Math.max(0, nextIndex - (COLLAPSED - 1));
+  const shown =
+    collapsible && !expanded ? episodes.slice(start, start + COLLAPSED) : episodes;
   return (
     <section aria-labelledby="episodes-heading" className="mb-10">
       <div className="mb-4 flex items-center gap-4">
@@ -30,10 +46,21 @@ export function EpisodeList({
         <div className="h-px flex-1 bg-border" aria-hidden="true" />
       </div>
       <ol aria-label="Episodes" className="flex flex-col gap-4">
-        {episodes.map((e) => (
+        {shown.map((e) => (
           <EpisodeRow key={e.number} episode={e} isNext={e.number === next} />
         ))}
       </ol>
+      {collapsible ? (
+        <Button
+          variant="outline"
+          size="touch"
+          className="mt-4 rounded-full"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? "Show fewer" : `Show all ${episodes.length} episodes`}
+        </Button>
+      ) : null}
     </section>
   );
 }
