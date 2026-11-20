@@ -3,7 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The one section-header treatment for the whole landing page: a quiet
+ * The one section-header treatment for the whole landing page: a violet
  * uppercase eyebrow, a balanced heading, and a supporting line. Every
  * section uses it so the page reads as one voice. `align="split"` puts the
  * heading left and the line right (the stats band); the default centers
@@ -23,7 +23,7 @@ export function LandingHeader({
   className?: string;
 }) {
   const eyebrowEl = (
-    <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+    <p className="text-xs font-medium tracking-[0.14em] text-violet-text uppercase">
       {eyebrow}
     </p>
   );

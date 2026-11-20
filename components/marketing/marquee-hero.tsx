@@ -4,7 +4,6 @@ import { Pause, Play } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
-import { ArtBackdrop } from "@/components/marketing/art-backdrop";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getMovieList } from "@/lib/api/catalog";
 import { TAGLINE_CLAIM } from "@/lib/marketing-claims";
@@ -83,7 +82,6 @@ export function MarqueeHero() {
 
   return (
     <section className="relative flex flex-col items-center overflow-hidden px-4 pt-12 pb-8 text-center sm:pt-28 sm:pb-12">
-      <ArtBackdrop posters={posters} />
       <div className="z-10 flex flex-col items-center">
         <Rise delay={0}>
           <span className="mb-4 inline-block sm:mb-5 rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm">
