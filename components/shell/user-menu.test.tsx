@@ -70,7 +70,8 @@ describe("UserMenu", () => {
     await user.click(screen.getByRole("button", { name: "Your account" }));
 
     expect(await screen.findByText("a@b.com")).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Library" })).toHaveAttribute("href", "/library");
+    // Library is a tab, so the menu doesn't repeat it.
+    expect(screen.queryByRole("menuitem", { name: "Library" })).toBeNull();
     expect(screen.getByRole("menuitem", { name: "Favorites" })).toHaveAttribute(
       "href",
       "/library/favorites"

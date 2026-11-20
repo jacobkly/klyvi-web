@@ -9,6 +9,7 @@ import { UnreadProvider } from "@/components/notifications/unread-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BottomTabBar } from "./bottom-tab-bar";
+import { MobileTopBar } from "./mobile-top-bar";
 import { TopBar } from "./top-bar";
 
 /**
@@ -64,11 +65,12 @@ function AppShell({ children }: { children: ReactNode }) {
             Skip to content
           </a>
           <TopBar onOpenSearch={openSearch} />
+          <MobileTopBar onOpenSearch={openSearch} />
           {/* Footer inside the padded wrapper so it clears the mobile tab bar.
               flex-1 on the content region pushes the footer to the bottom of the
               viewport when a page is short, and lets it sit directly under the
               content when the page is tall enough to scroll. */}
-          <div className="flex flex-1 flex-col pb-20 md:pb-0">
+          <div className="flex flex-1 flex-col pb-(--tab-bar-space) md:pb-0">
             {/* A flex column, not a plain block: a page that wants to centre
                 itself vertically can then be a flex-1 child. Percentage
                 heights are no use here, because this wrapper's own height

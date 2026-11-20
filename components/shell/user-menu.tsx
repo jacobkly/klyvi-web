@@ -5,7 +5,6 @@ import {
   BarChart3,
   Bell,
   Heart,
-  Library,
   LogOut,
   Settings,
   User,
@@ -100,10 +99,6 @@ function UserMenu() {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem render={<Link href="/library" />}>
-            <Library aria-hidden="true" data-icon="inline-start" />
-            Library
-          </DropdownMenuItem>
           <DropdownMenuItem render={<Link href="/library/favorites" />}>
             <Heart aria-hidden="true" data-icon="inline-start" />
             Favorites

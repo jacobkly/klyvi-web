@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUsePathname = vi.fn(() => "/library");
@@ -8,7 +8,6 @@ vi.mock("next/navigation", () => ({
 
 const session = vi.hoisted(() => ({
   user: { email: "a@b.com" } as { email: string } | null,
-  unread: 0,
 }));
 
 vi.mock("@/components/auth/auth-provider", () => ({
@@ -19,15 +18,11 @@ vi.mock("@/components/auth/auth-provider", () => ({
     signOut: vi.fn(),
   }),
 }));
-vi.mock("@/components/notifications/unread-provider", () => ({
-  useUnreadNotices: () => ({ unread: session.unread, setUnread: vi.fn() }),
-}));
 
 import { BottomTabBar } from "./bottom-tab-bar";
 
 beforeEach(() => {
   session.user = { email: "a@b.com" };
-  session.unread = 0;
 });
 
 describe("BottomTabBar", () => {
@@ -59,82 +54,61 @@ describe("BottomTabBar", () => {
     );
   });
 
-  // #19: under 768 px the top bar's search is hidden, so the tab bar
-  // carries it to every page.
-  it("puts search one tap away on every page", () => {
-    mockUsePathname.mockReturnValue("/movie/550");
-    render(<BottomTabBar />);
-    const nav = screen.getByRole("navigation", { name: "Primary" });
-    const search = within(nav).getByRole("link", { name: "Search" });
-    expect(search).toHaveAttribute("href", "/explore?focus=1");
-    expect(search).not.toHaveAttribute("aria-current");
-  });
-
-  it("gives every target the 44px touch height", () => {
+  it("gives every tab the 44px touch height", () => {
     render(<BottomTabBar />);
     for (const link of screen.getAllByRole("link")) {
-      expect(link.className).toContain("min-h-11");
+      expect(link.className).toContain("h-14");
     }
   });
 
   it("is a navigation landmark", () => {
     render(<BottomTabBar />);
-    expect(
-      screen.getByRole("navigation", { name: "Primary" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Primary" })).toBeInTheDocument();
   });
 
-  // Everything behind the avatar, notices included, has no other way in on a
-  // phone, where the top bar is hidden.
-  it("holds the account menu beside the tabs", () => {
+  // Search and the account moved to the phone's top bar.
+  it("holds only the four tabs", () => {
     render(<BottomTabBar />);
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(
-      within(nav).getByRole("button", { name: "Your account" })
-    ).toBeInTheDocument();
+    expect(within(nav).getAllByRole("link").map((l) => l.textContent)).toEqual([
+      "Home",
+      "Find next",
+      "Library",
+      "Explore",
+    ]);
+    expect(within(nav).queryByRole("button")).toBeNull();
   });
 
-  it("gives the account menu a 44px target", () => {
-    render(<BottomTabBar />);
-    expect(screen.getByRole("button", { name: "Your account" }).className).toContain(
-      "hit-44"
-    );
-  });
-
-  it("shows the unread dot on the avatar", () => {
-    session.unread = 2;
-    render(<BottomTabBar />);
-    const trigger = screen.getByRole("button", {
-      name: "Your account, 2 unread notifications",
-    });
-    expect(trigger.querySelector('[data-slot="unread-dot"]')).not.toBeNull();
-  });
-
-  it("offers sign in when signed out", () => {
+  // The loop: Home is the marketing page, which has no bar.
+  it("gives a signed-out visitor Home, Explore and Sign in", () => {
     session.user = null;
-    render(<BottomTabBar />);
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
-      "href",
-      "/signin"
-    );
-  });
-
-  // #102: the tabs a visitor can use, and a way in.
-  it("gives a signed-out visitor Explore, Search, Sign in and Get started", () => {
-    session.user = null;
+    mockUsePathname.mockReturnValue("/explore");
     render(<BottomTabBar />);
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(
-      within(nav)
-        .getAllByRole("link")
-        .map((l) => l.textContent)
-    ).toEqual(["Explore", "Search", "Sign in", "Get started"]);
-    expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute(
-      "href",
-      "/signup"
+    const links = within(nav).getAllByRole("link");
+    expect(links.map((l) => [l.textContent, l.getAttribute("href")])).toEqual([
+      ["Home", "/"],
+      ["Explore", "/explore"],
+      ["Sign in", "/signin"],
+    ]);
+    expect(links[1]).toHaveAttribute("aria-current", "page");
+    expect(links[0]).not.toHaveAttribute("aria-current");
+  });
+
+  it("steps aside while a text field has focus", () => {
+    render(
+      <>
+        <input aria-label="Query" />
+        <input type="checkbox" aria-label="Tick" />
+        <BottomTabBar />
+      </>
     );
-    for (const link of within(nav).getAllByRole("link")) {
-      expect(link.className).toMatch(/min-h-11|hit-44/);
-    }
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    act(() => screen.getByLabelText("Query").focus());
+    expect(nav).toHaveAttribute("data-typing");
+    act(() => screen.getByLabelText("Query").blur());
+    expect(nav).not.toHaveAttribute("data-typing");
+    act(() => screen.getByLabelText("Tick").focus());
+    expect(nav).not.toHaveAttribute("data-typing");
   });
 });

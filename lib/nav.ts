@@ -1,4 +1,4 @@
-import { Compass, House, Library, Sparkles, type LucideIcon } from "lucide-react";
+import { Compass, House, Library, LogIn, Sparkles, type LucideIcon } from "lucide-react";
 
 /**
  * The primary navigation, shared verbatim between the desktop top bar and the
@@ -24,6 +24,17 @@ export const PRIMARY_NAV: NavItem[] = [
  */
 export const SIGNED_OUT_NAV: NavItem[] = [
   { href: "/explore", label: "Explore", icon: Compass },
+];
+
+/**
+ * The phone tab bar signed out: Home is the marketing page (which has no bar,
+ * so it closes the loop), Explore is what a visitor can use, and Sign in is
+ * the way in.
+ */
+export const SIGNED_OUT_TABS: NavItem[] = [
+  { href: "/", label: "Home", icon: House },
+  { href: "/explore", label: "Explore", icon: Compass },
+  { href: "/signin", label: "Sign in", icon: LogIn },
 ];
 
 /** True when the current pathname belongs to this nav item. */

@@ -141,10 +141,12 @@
   --sidebar-ring: oklch(0.705 0.015 286.067);
 }
 
-/* Below md the bottom tab bar is showing (components/shell/bottom-tab-bar). */
+/* Below md the floating tab bar is showing (components/shell/bottom-tab-bar).
+   It is 64px tall and floats 12px up, so content and toasts clear 96px. */
 @media (width < 48rem) {
   :root {
-    --toast-bottom: calc(4rem + env(safe-area-inset-bottom));
+    --tab-bar-space: calc(6rem + env(safe-area-inset-bottom));
+    --toast-bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }
 }
 
