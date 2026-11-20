@@ -6,8 +6,9 @@ import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 import { cn } from "@/lib/utils";
 
 /**
- * A bottom sheet you can drag: up to full height, down to the first snap
- * point, and past it to close. Base UI only reports the offsets as CSS
+ * A bottom sheet you can drag. With snap points it is full height and rests
+ * at the first one. Without them, pass `h-auto` and it fits its content.
+ * Drag it down to close. Base UI only reports the offsets as CSS
  * variables, so the movement lives in the popup's classes here.
  */
 function Drawer(props: DrawerPrimitive.Root.Props) {
@@ -43,8 +44,8 @@ function DrawerContent({
         <DrawerPrimitive.Popup
           data-slot="drawer-content"
           className={cn(
-            "glass pointer-events-auto flex h-[calc(100dvh-env(safe-area-inset-top)-1rem)] w-full max-w-xl flex-col rounded-t-3xl border border-b-0 pb-[env(safe-area-inset-bottom)] outline-none",
-            "translate-y-[calc(var(--drawer-snap-point-offset)+var(--drawer-swipe-movement-y))] transition-transform duration-(--dur-slow) ease-(--ease-enter)",
+            "glass pointer-events-auto flex h-[calc(100dvh-env(safe-area-inset-top)-1rem)] max-h-[calc(100dvh-env(safe-area-inset-top)-1rem)] w-full max-w-xl flex-col rounded-t-3xl border border-b-0 pb-[env(safe-area-inset-bottom)] outline-none",
+            "translate-y-[calc(var(--drawer-snap-point-offset,0px)+var(--drawer-swipe-movement-y,0px))] transition-transform duration-(--dur-slow) ease-(--ease-enter)",
             "data-swiping:duration-0 data-starting-style:translate-y-full data-ending-style:translate-y-full motion-reduce:transition-none",
             className
           )}

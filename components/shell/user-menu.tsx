@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
  * Signed out it collapses to a Sign in button; while the first session
  * check resolves it shows nothing rather than flashing the wrong state.
  */
-function UserMenu({ asLink = false }: { asLink?: boolean }) {
+function UserMenu() {
   const { user, profile, loading, signOut } = useSession();
   const { unread } = useUnreadNotices();
   const avatarSrc = profile?.avatarUrl ?? null;
@@ -78,19 +78,6 @@ function UserMenu({ asLink = false }: { asLink?: boolean }) {
     </>
   );
   const accountLabel = unreadLabel ? `Your account, ${unreadLabel}` : "Your account";
-
-  // Phones: the avatar opens the profile page, which holds the account rows.
-  if (asLink) {
-    return (
-      <Link
-        href="/profile"
-        aria-label={accountLabel}
-        className="hit-44 relative rounded-full outline-none transition-transform duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-95 motion-reduce:active:scale-100"
-      >
-        {face}
-      </Link>
-    );
-  }
 
   return (
     <DropdownMenu>

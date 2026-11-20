@@ -14,6 +14,9 @@ import type { FeedMedia } from "@/lib/types";
  * second browser gets the same choices.
  */
 
+/** Explore's genre, decade and sort, kept between visits. */
+export type ExploreFilters = { genre: string; decade: string; sort: string };
+
 export type Prefs = ThemeSettings & {
   scoringSystem: ScoringSystem;
   listOrder: "updated" | "title" | "score" | "added";
@@ -22,6 +25,7 @@ export type Prefs = ThemeSettings & {
   libraryView: "grid" | "list" | "compact";
   /** Films, TV or both in Find, the last choice, kept the same way. */
   findMedia: FeedMedia;
+  exploreFilters: ExploreFilters;
   /** Which tracking updates create activity feed entries, keyed by status. */
   activityFeed: Record<string, boolean>;
 };
@@ -38,6 +42,7 @@ export const DEFAULT_PREFS: Prefs = {
   combineLists: true,
   libraryView: "grid",
   findMedia: "all",
+  exploreFilters: { genre: "all", decade: "all", sort: "relevance" },
   activityFeed: {},
 };
 

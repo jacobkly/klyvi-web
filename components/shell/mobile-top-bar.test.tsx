@@ -43,11 +43,10 @@ describe("MobileTopBar", () => {
     expect(onOpenSearch).toHaveBeenCalledOnce();
   });
 
-  it("opens your profile page from the avatar instead of a menu", () => {
+  it("leaves the account to the Profile tab", () => {
     render(<MobileTopBar />);
-    const avatar = screen.getByRole("link", { name: "Your account" });
-    expect(avatar).toHaveAttribute("href", "/profile");
-    expect(screen.queryByRole("button", { name: "Your account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Your account/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Your account/ })).toBeNull();
   });
 
   it("offers Get started signed out", () => {

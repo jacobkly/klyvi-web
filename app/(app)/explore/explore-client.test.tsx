@@ -175,3 +175,36 @@ describe("ExploreClient search", () => {
     await waitFor(() => expect(window.location.search).toBe(""));
   });
 });
+
+describe("ExploreClient filters", () => {
+  beforeEach(() => {
+    getMovieList.mockReset().mockResolvedValue([]);
+    getTvList.mockReset().mockResolvedValue([]);
+    getRankings.mockReset().mockResolvedValue([]);
+    window.localStorage.clear();
+  });
+
+  it("remembers the filters and applies the sheet's changes only on Apply", async () => {
+    window.localStorage.setItem(
+      "klyvi:prefs",
+      JSON.stringify({ exploreFilters: { genre: "18", decade: "all", sort: "relevance" } })
+    );
+    const user = userEvent.setup();
+    render(<ExploreClient />);
+
+    await user.click(screen.getByRole("button", { name: "Filters (1)" }));
+    await user.click(await screen.findByRole("button", { name: "Clear" }));
+    // Cleared in the sheet only, so the page (hidden behind it) keeps its filter.
+    expect(screen.getByRole("button", { name: "Filters (1)", hidden: true })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument()
+    );
+    expect(JSON.parse(window.localStorage.getItem("klyvi:prefs") ?? "{}").exploreFilters).toEqual({
+      genre: "all",
+      decade: "all",
+      sort: "relevance",
+    });
+  });
+});

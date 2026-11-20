@@ -26,9 +26,9 @@ beforeEach(() => {
 });
 
 describe("BottomTabBar", () => {
-  it("renders all four primary nav links", () => {
+  it("renders all five phone tabs", () => {
     render(<BottomTabBar />);
-    for (const label of ["Home", "Find next", "Library", "Explore"]) {
+    for (const label of ["Home", "Explore", "Find next", "Library", "Profile"]) {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     }
   });
@@ -43,6 +43,12 @@ describe("BottomTabBar", () => {
     expect(screen.getByRole("link", { name: "Explore" })).not.toHaveAttribute(
       "aria-current"
     );
+  });
+
+  it("keeps Profile lit on the pages you reach from it", () => {
+    mockUsePathname.mockReturnValueOnce("/settings");
+    render(<BottomTabBar />);
+    expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute("aria-current", "page");
   });
 
   it("treats subroutes as active", () => {
@@ -67,14 +73,15 @@ describe("BottomTabBar", () => {
   });
 
   // Search and the account moved to the phone's top bar.
-  it("holds only the four tabs", () => {
+  it("puts Find next in the middle and Profile last", () => {
     render(<BottomTabBar />);
     const nav = screen.getByRole("navigation", { name: "Primary" });
     expect(within(nav).getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Home",
+      "Explore",
       "Find next",
       "Library",
-      "Explore",
+      "Profile",
     ]);
     expect(within(nav).queryByRole("button")).toBeNull();
   });

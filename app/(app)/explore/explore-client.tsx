@@ -13,6 +13,7 @@ import { RankingList } from "@/components/explore/ranking-list";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { DEFAULT_PREFS, usePref, type ExploreFilters } from "@/lib/local-prefs";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -109,6 +110,15 @@ type SearchState =
  * each loading on its own; typing runs a debounced multi search, and the
  * tabs pick a bucket from the one response rather than re-querying.
  */
+type Filters = ExploreFilters;
+const NO_FILTERS: Filters = DEFAULT_PREFS.exploreFilters;
+
+function countFilters(f: Filters): number {
+  return (
+    (f.genre !== "all" ? 1 : 0) + (f.decade !== "all" ? 1 : 0) + (f.sort !== "relevance" ? 1 : 0)
+  );
+}
+
 export function ExploreClient({
   autofocus,
   initialQuery = "",
@@ -119,10 +129,13 @@ export function ExploreClient({
 }) {
   const [query, setQuery] = React.useState(initialQuery);
   const [tab, setTab] = React.useState<ResultTab>("all");
-  const [genre, setGenre] = React.useState("all");
-  const [decade, setDecade] = React.useState("all");
-  const [sort, setSort] = React.useState("relevance");
+  // Remembered with the other preferences, so they follow the account.
+  const [filters, commitFilters] = usePref("exploreFilters");
+  const { genre, decade, sort } = filters;
+  // The phone sheet edits a copy, and Apply filters commits it.
+  const [draft, setDraft] = React.useState<Filters>(NO_FILTERS);
   const [filtersOpen, setFiltersOpen] = React.useState(false);
+
   /** The last search to settle, tagged with the query and attempt it
    *  answered. Idle and searching are derived from it during render. */
   const [settled, setSettled] = React.useState<{
@@ -189,10 +202,7 @@ export function ExploreClient({
       ? settled.state
       : { kind: "searching" };
 
-  const filterCount =
-    (genre !== "all" ? 1 : 0) +
-    (decade !== "all" ? 1 : 0) +
-    (sort !== "relevance" ? 1 : 0);
+  const filterCount = countFilters(filters);
 
   function applyFilters(items: SearchMedia[]): SearchMedia[] {
     let r = items;
@@ -219,9 +229,7 @@ export function ExploreClient({
 
   function clearAll() {
     setQuery("");
-    setGenre("all");
-    setDecade("all");
-    setSort("relevance");
+    commitFilters(NO_FILTERS);
     inputRef.current?.focus();
   }
 
@@ -247,11 +255,11 @@ export function ExploreClient({
 
   // The genre, year and sort controls, shown inline on desktop and in the
   // filter sheet on phones.
-  const filterControls = (
+  const filterControls = (v: Filters, set: (f: Filters) => void, withClear: boolean) => (
     <>
       <Select
-        value={genre}
-        onValueChange={(v) => setGenre(v ?? "all")}
+        value={v.genre}
+        onValueChange={(g) => set({ ...v, genre: g ?? "all" })}
         items={GENRE_ITEMS}
       >
         <SelectTrigger
@@ -270,8 +278,8 @@ export function ExploreClient({
       </Select>
 
       <Select
-        value={decade}
-        onValueChange={(v) => setDecade(v ?? "all")}
+        value={v.decade}
+        onValueChange={(d) => set({ ...v, decade: d ?? "all" })}
         items={DECADES}
       >
         <SelectTrigger
@@ -290,8 +298,8 @@ export function ExploreClient({
       </Select>
 
       <Select
-        value={sort}
-        onValueChange={(v) => setSort(v ?? "relevance")}
+        value={v.sort}
+        onValueChange={(o) => set({ ...v, sort: o ?? "relevance" })}
         items={SORTS}
       >
         <SelectTrigger
@@ -309,16 +317,8 @@ export function ExploreClient({
         </SelectContent>
       </Select>
 
-      {filterCount > 0 ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setGenre("all");
-            setDecade("all");
-            setSort("relevance");
-          }}
-        >
+      {withClear && countFilters(v) > 0 ? (
+        <Button variant="ghost" size="sm" onClick={() => set(NO_FILTERS)}>
           Clear filters
         </Button>
       ) : null}
@@ -359,11 +359,18 @@ export function ExploreClient({
           ) : null}
         </div>
 
-        {/* Phones: the filters live in a sheet you drag up. Desktop: inline.
+        {/* Phones: the filters live in a sheet sized to them, applied in one
+            go. Desktop: inline and live.
             Hidden on the wrapper, since a class passed through Base UI's
             render prop loses to the component's own display rule. */}
         <div className="lg:hidden">
-          <Drawer open={filtersOpen} onOpenChange={setFiltersOpen} snapPoints={[0.5, 1]}>
+          <Drawer
+            open={filtersOpen}
+            onOpenChange={(open) => {
+              if (open) setDraft(filters);
+              setFiltersOpen(open);
+            }}
+          >
             <DrawerTrigger
               render={
                 <Button variant="outline" size="touch" className="gap-2">
@@ -372,23 +379,36 @@ export function ExploreClient({
                 </Button>
               }
             />
-            <DrawerContent initialFocus={false}>
-              {/* Done sits beside the title so it shows at the half snap too. */}
-              <div className="flex shrink-0 items-center justify-between px-5 pb-3">
+            <DrawerContent initialFocus={false} className="h-auto">
+              <div className="flex min-h-11 shrink-0 items-center justify-between px-5 pb-2">
                 <DrawerTitle>Filters</DrawerTitle>
-                <Button size="touch" onClick={() => setFiltersOpen(false)}>
-                  Done
-                </Button>
+                {countFilters(draft) > 0 ? (
+                  <Button variant="ghost" size="touch" onClick={() => setDraft(NO_FILTERS)}>
+                    Clear
+                  </Button>
+                ) : null}
               </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 pb-4 [&_[data-slot=select-trigger]]:w-full">
-                {filterControls}
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 [&_[data-slot=select-trigger]]:w-full">
+                {filterControls(draft, setDraft, false)}
+              </div>
+              <div className="shrink-0 px-5 pt-4 pb-4">
+                <Button
+                  size="touch"
+                  className="w-full"
+                  onClick={() => {
+                    commitFilters(draft);
+                    setFiltersOpen(false);
+                  }}
+                >
+                  Apply filters
+                </Button>
               </div>
             </DrawerContent>
           </Drawer>
         </div>
 
         <div className="hidden shrink-0 flex-wrap items-center gap-2 lg:flex">
-          {filterControls}
+          {filterControls(filters, commitFilters, true)}
         </div>
       </div>
 

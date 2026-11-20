@@ -6,19 +6,19 @@ import { Search } from "lucide-react";
 import { useSession } from "@/components/auth/auth-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { UserMenu } from "./user-menu";
 
 /**
  * The phone's header, below md where the desktop top bar is hidden: the
- * wordmark home, Search, and the account menu (Settings, notices, sign out).
- * Signed out, Get started takes the avatar's place, since Sign in is a tab.
+ * wordmark home and Search, on no bar of its own, and it scrolls away with
+ * the page. The account is the Profile tab. Signed out, Get started sits
+ * here, since Sign in is a tab.
  */
 function MobileTopBar({ onOpenSearch }: { onOpenSearch?: () => void }) {
   const { user, loading } = useSession();
   const signedOut = !loading && !user;
 
   return (
-    <header className="sticky top-0 z-40 h-14 glass border-b md:hidden">
+    <header className="relative z-40 h-14 pt-[env(safe-area-inset-top)] md:hidden">
       <div className="flex h-full items-center gap-2 px-4">
         <Link
           href={signedOut ? "/" : "/home"}
@@ -43,11 +43,7 @@ function MobileTopBar({ onOpenSearch }: { onOpenSearch?: () => void }) {
             >
               Get started
             </Link>
-          ) : (
-            <div className="flex size-11 items-center justify-center">
-              <UserMenu asLink />
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

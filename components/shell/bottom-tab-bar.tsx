@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useSession } from "@/components/auth/auth-provider";
-import { PRIMARY_NAV, SIGNED_OUT_TABS, isActive } from "@/lib/nav";
+import { useUnreadNotices } from "@/components/notifications/unread-provider";
+import { PHONE_TABS, SIGNED_OUT_TABS, isActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 const TAB =
@@ -42,17 +43,18 @@ function useTyping(): boolean {
 
 /**
  * Phone navigation: a pill floating above the bottom edge, hidden at md+
- * where the top bar takes over. Four tabs signed in. Signed out it is Home,
- * Explore and Sign in, and Home leads back to the marketing page, which has
- * no bar, so a visitor can always get home. Search and the account live in
- * the phone's top bar (mobile-top-bar). The bar steps aside while a text
- * field has focus, so the keyboard gets the room.
+ * where the top bar takes over. Signed in it is Home, Explore, Find next,
+ * Library and Profile, and Profile carries the unread dot. Signed out it is
+ * Home, Explore and Sign in, and Home leads back to the marketing page, which
+ * has no bar, so a visitor can always get home. The bar steps aside while a
+ * text field has focus, so the keyboard gets the room.
  */
 function BottomTabBar() {
   const pathname = usePathname();
   const { user, loading } = useSession();
   const typing = useTyping();
-  const nav = !loading && !user ? SIGNED_OUT_TABS : PRIMARY_NAV;
+  const { unread } = useUnreadNotices();
+  const nav = !loading && !user ? SIGNED_OUT_TABS : PHONE_TABS;
 
   return (
     <nav
@@ -63,6 +65,7 @@ function BottomTabBar() {
       <ul className="pointer-events-auto mx-auto flex max-w-md glass rounded-full border p-1">
         {nav.map((item) => {
           const active = isActive(pathname, item.href);
+          const dot = item.href === "/profile" && unread > 0;
           return (
             <li key={item.href} className="min-w-0 flex-1">
               <Link
@@ -75,13 +78,23 @@ function BottomTabBar() {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <item.icon
-                  aria-hidden="true"
-                  className="size-5"
-                  strokeWidth={active ? 2.25 : 2}
-                />
+                <span className="relative">
+                  <item.icon
+                    aria-hidden="true"
+                    className="size-5"
+                    strokeWidth={active ? 2.25 : 2}
+                  />
+                  {dot ? (
+                    <span
+                      aria-hidden="true"
+                      data-slot="unread-dot"
+                      className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-violet-text ring-2 ring-background"
+                    />
+                  ) : null}
+                </span>
                 <span className="max-w-full truncate px-1 text-[11px] font-medium leading-none">
                   {item.label}
+                  {dot ? <span className="sr-only">, {unread} unread</span> : null}
                 </span>
               </Link>
             </li>

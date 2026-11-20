@@ -1,4 +1,12 @@
-import { Compass, House, Library, LogIn, Sparkles, type LucideIcon } from "lucide-react";
+import {
+  CircleUser,
+  Compass,
+  House,
+  Library,
+  LogIn,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 
 /**
  * The primary navigation, shared verbatim between the desktop top bar and the
@@ -17,6 +25,22 @@ export const PRIMARY_NAV: NavItem[] = [
   { href: "/library", label: "Library", icon: Library },
   { href: "/explore", label: "Explore", icon: Compass },
 ];
+
+/**
+ * The phone tab bar signed in: Find next in the middle, where a thumb rests,
+ * and Profile last. Profile holds Settings, Notifications and Sign out, so
+ * the phone needs no account menu at the top.
+ */
+export const PHONE_TABS: NavItem[] = [
+  { href: "/home", label: "Home", icon: House },
+  { href: "/explore", label: "Explore", icon: Compass },
+  { href: "/find", label: "Find next", icon: Sparkles },
+  { href: "/library", label: "Library", icon: Library },
+  { href: "/profile", label: "Profile", icon: CircleUser },
+];
+
+/** Pages the Profile tab stays lit for, since you reach them from it. */
+const PROFILE_PAGES = ["/profile", "/settings", "/notifications"];
 
 /**
  * Signed out, Home, Find next and Library would only bounce to sign-in, so a
@@ -40,5 +64,10 @@ export const SIGNED_OUT_TABS: NavItem[] = [
 /** True when the current pathname belongs to this nav item. */
 export function isActive(pathname: string, href: string): boolean {
   if (href === "/home") return pathname === "/home" || pathname === "/";
+  if (href === "/profile") return PROFILE_PAGES.some((p) => isUnder(pathname, p));
+  return isUnder(pathname, href);
+}
+
+function isUnder(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + "/");
 }

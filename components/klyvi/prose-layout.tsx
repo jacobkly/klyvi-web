@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The 720px reading column for terms, privacy, and other prose pages.
+ * The reading page for terms, privacy, and other prose. Text keeps a
+ * readable measure (about 760px). A page with a contents list widens on large
+ * screens and puts the list in a sticky column beside the text.
  * Content styled through descendant selectors so the legal pages can be plain
  * markup without per-element classes.
  */
@@ -21,8 +23,8 @@ function ProseLayout({
   return (
     <main
       className={cn(
-        "mx-auto w-full max-w-[720px] px-4 py-12 sm:py-16",
-        className
+        "mx-auto w-full max-w-[800px] px-4 py-12 sm:px-6 sm:py-16 lg:has-[[data-slot=prose-contents]]:max-w-6xl",
+        className,
       )}
     >
       <h1 className="text-3xl font-semibold tracking-tight text-foreground">
@@ -41,7 +43,7 @@ function ProseLayout({
           "[&_p]:mb-4",
           "[&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1",
           "[&_a]:text-violet-text [&_a]:underline-offset-4 hover:[&_a]:underline",
-          "[&_strong]:font-semibold [&_strong]:text-foreground"
+          "[&_strong]:font-semibold [&_strong]:text-foreground",
         )}
       >
         {children}
@@ -64,8 +66,12 @@ export type ProseSection = {
  */
 function NumberedSections({ sections }: { sections: ProseSection[] }) {
   return (
-    <>
-      <nav aria-label="Contents" className="mt-8">
+    <div className="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-16">
+      <nav
+        aria-label="Contents"
+        data-slot="prose-contents"
+        className="mt-8 lg:sticky lg:top-24 lg:mt-10 lg:self-start"
+      >
         <p className="mb-2 text-sm font-semibold text-foreground">Contents</p>
         <ol className="text-sm">
           {sections.map((s) => (
@@ -75,16 +81,18 @@ function NumberedSections({ sections }: { sections: ProseSection[] }) {
           ))}
         </ol>
       </nav>
-      {sections.map((s, i) => (
-        <section key={s.id} aria-labelledby={s.id}>
-          <h2 id={s.id}>
-            <span className="font-mono text-muted-foreground">{i + 1}.</span>{" "}
-            {s.title}
-          </h2>
-          {s.body}
-        </section>
-      ))}
-    </>
+      <div className="max-w-[760px]">
+        {sections.map((s, i) => (
+          <section key={s.id} aria-labelledby={s.id}>
+            <h2 id={s.id}>
+              <span className="font-mono text-muted-foreground">{i + 1}.</span>{" "}
+              {s.title}
+            </h2>
+            {s.body}
+          </section>
+        ))}
+      </div>
+    </div>
   );
 }
 
