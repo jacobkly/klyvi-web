@@ -139,7 +139,7 @@ function PosterCard({
         href={href}
         aria-label={variant === "below" ? undefined : accessibleName}
         aria-current={current ? "page" : undefined}
-        className="block rounded-art outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="block rounded-art outline-none transition-transform duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.97] motion-reduce:active:scale-100"
       >
         <div
           className={cn(

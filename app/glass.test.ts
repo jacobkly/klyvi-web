@@ -39,11 +39,20 @@ describe("glass", () => {
     expect(reduced).toContain("backdrop-filter: none");
   });
 
-  it("keeps the fill dense enough for 4.5:1 muted text over white art", () => {
-    // Measured: muted text over the background at 80% on white is 4.32:1,
-    // at 85% it is 5.18:1.
-    const pct = Number(/--glass-bg: color-mix\(in oklab, var\(--background\) (\d+)%/.exec(css)?.[1]);
-    expect(pct).toBeGreaterThanOrEqual(85);
+  it("keeps muted text at 4.5:1 over pure white art", () => {
+    // The worst case: white art, darkened by the backdrop tone, under the
+    // fill. Colours are the measured sRGB of --background and
+    // --muted-foreground.
+    const fill = Number(/--glass-bg: color-mix\(in oklab, var\(--background\) (\d+)%/.exec(css)?.[1]) / 100;
+    const tone = Number(/--glass-tone: ([\d.]+);/.exec(css)?.[1]);
+    const lin = (v: number) => {
+      const c = v / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    const surface = [9, 9, 11].map((c) => fill * c + (1 - fill) * 255 * tone);
+    const ratio = (lum([159, 159, 169]) + 0.05) / (lum(surface) + 0.05);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
   it("casts no shadow, so ring borders survive", () => {

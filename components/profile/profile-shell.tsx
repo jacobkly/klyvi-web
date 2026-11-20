@@ -7,6 +7,7 @@ import * as React from "react";
 import { Settings as SettingsIcon } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
+import { AccountLinks } from "@/components/profile/account-links";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -203,13 +204,16 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
           <Link
             href="/settings"
             className={
-              buttonVariants({ variant: "outline", size: "sm" }) + " gap-2"
+              buttonVariants({ variant: "outline", size: "sm" }) +
+              " hidden gap-2 md:inline-flex"
             }
           >
             <SettingsIcon aria-hidden="true" data-icon="inline-start" />
             Settings
           </Link>
         </div>
+
+        <AccountLinks />
 
         <nav aria-label="Profile" className="mt-6 flex gap-2">
           {TABS.map((t) => {

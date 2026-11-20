@@ -45,7 +45,7 @@ function MobileTopBar({ onOpenSearch }: { onOpenSearch?: () => void }) {
             </Link>
           ) : (
             <div className="flex size-11 items-center justify-center">
-              <UserMenu />
+              <UserMenu asLink />
             </div>
           )}
         </div>

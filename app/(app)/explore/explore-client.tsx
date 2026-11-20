@@ -12,6 +12,7 @@ import { SectionHeader } from "@/components/klyvi/section-header";
 import { RankingList } from "@/components/explore/ranking-list";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -243,6 +244,86 @@ export function ExploreClient({
           : view.people.length
     : 0;
 
+
+  // The genre, year and sort controls, shown inline on desktop and in the
+  // filter sheet on phones.
+  const filterControls = (
+    <>
+      <Select
+        value={genre}
+        onValueChange={(v) => setGenre(v ?? "all")}
+        items={GENRE_ITEMS}
+      >
+        <SelectTrigger
+          aria-label="Genre"
+          className="data-[size=default]:h-11 min-w-36"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {GENRES.map((g) => (
+            <SelectItem key={g.value} value={g.value}>
+              {g.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={decade}
+        onValueChange={(v) => setDecade(v ?? "all")}
+        items={DECADES}
+      >
+        <SelectTrigger
+          aria-label="Year"
+          className="data-[size=default]:h-11 min-w-32"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(DECADES).map(([v, l]) => (
+            <SelectItem key={v} value={v}>
+              {l}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={sort}
+        onValueChange={(v) => setSort(v ?? "relevance")}
+        items={SORTS}
+      >
+        <SelectTrigger
+          aria-label="Sort by"
+          className="data-[size=default]:h-11 min-w-36"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(SORTS).map(([v, l]) => (
+            <SelectItem key={v} value={v}>
+              {l}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {filterCount > 0 ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setGenre("all");
+            setDecade("all");
+            setSort("relevance");
+          }}
+        >
+          Clear filters
+        </Button>
+      ) : null}
+    </>
+  );
   return (
     <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
@@ -278,97 +359,36 @@ export function ExploreClient({
           ) : null}
         </div>
 
-        <Button
-          variant="outline"
-          size="touch"
-          className="gap-2 lg:hidden"
-          onClick={() => setFiltersOpen((v) => !v)}
-          aria-expanded={filtersOpen}
-        >
-          <SlidersHorizontal aria-hidden="true" data-icon="inline-start" />
-          {filterCount > 0 ? `Filters (${filterCount})` : "Filters"}
-        </Button>
+        {/* Phones: the filters live in a sheet you drag up. Desktop: inline.
+            Hidden on the wrapper, since a class passed through Base UI's
+            render prop loses to the component's own display rule. */}
+        <div className="lg:hidden">
+          <Drawer open={filtersOpen} onOpenChange={setFiltersOpen} snapPoints={[0.5, 1]}>
+            <DrawerTrigger
+              render={
+                <Button variant="outline" size="touch" className="gap-2">
+                  <SlidersHorizontal aria-hidden="true" data-icon="inline-start" />
+                  {filterCount > 0 ? `Filters (${filterCount})` : "Filters"}
+                </Button>
+              }
+            />
+            <DrawerContent initialFocus={false}>
+              {/* Done sits beside the title so it shows at the half snap too. */}
+              <div className="flex shrink-0 items-center justify-between px-5 pb-3">
+                <DrawerTitle>Filters</DrawerTitle>
+                <Button size="touch" onClick={() => setFiltersOpen(false)}>
+                  Done
+                </Button>
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 pb-4 [&_[data-slot=select-trigger]]:w-full">
+                {filterControls}
+              </div>
+            </DrawerContent>
+          </Drawer>
+        </div>
 
-        {/* Desktop: filters inline. Mobile: revealed by the toggle. */}
-        <div
-          className={
-            (filtersOpen ? "flex" : "hidden lg:flex") +
-            " w-full flex-wrap items-center gap-2 lg:w-auto lg:shrink-0"
-          }
-        >
-          <Select
-            value={genre}
-            onValueChange={(v) => setGenre(v ?? "all")}
-            items={GENRE_ITEMS}
-          >
-            <SelectTrigger
-              aria-label="Genre"
-              className="data-[size=default]:h-11 min-w-36"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {GENRES.map((g) => (
-                <SelectItem key={g.value} value={g.value}>
-                  {g.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={decade}
-            onValueChange={(v) => setDecade(v ?? "all")}
-            items={DECADES}
-          >
-            <SelectTrigger
-              aria-label="Year"
-              className="data-[size=default]:h-11 min-w-32"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(DECADES).map(([v, l]) => (
-                <SelectItem key={v} value={v}>
-                  {l}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={sort}
-            onValueChange={(v) => setSort(v ?? "relevance")}
-            items={SORTS}
-          >
-            <SelectTrigger
-              aria-label="Sort by"
-              className="data-[size=default]:h-11 min-w-36"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(SORTS).map(([v, l]) => (
-                <SelectItem key={v} value={v}>
-                  {l}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {filterCount > 0 ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setGenre("all");
-                setDecade("all");
-                setSort("relevance");
-              }}
-            >
-              Clear filters
-            </Button>
-          ) : null}
+        <div className="hidden shrink-0 flex-wrap items-center gap-2 lg:flex">
+          {filterControls}
         </div>
       </div>
 

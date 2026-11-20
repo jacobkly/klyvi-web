@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
  * Signed out it collapses to a Sign in button; while the first session
  * check resolves it shows nothing rather than flashing the wrong state.
  */
-function UserMenu() {
+function UserMenu({ asLink = false }: { asLink?: boolean }) {
   const { user, profile, loading, signOut } = useSession();
   const { unread } = useUnreadNotices();
   const avatarSrc = profile?.avatarUrl ?? null;
@@ -62,23 +62,43 @@ function UserMenu() {
       ? `${unread} unread notification${unread === 1 ? "" : "s"}`
       : null;
 
+  const face = (
+    <>
+      <Avatar className="size-8">
+        {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
+        <AvatarFallback className="text-xs">{initial}</AvatarFallback>
+      </Avatar>
+      {unreadLabel ? (
+        <span
+          aria-hidden="true"
+          data-slot="unread-dot"
+          className="absolute top-0 right-0 size-2 rounded-full bg-violet-text ring-2 ring-background"
+        />
+      ) : null}
+    </>
+  );
+  const accountLabel = unreadLabel ? `Your account, ${unreadLabel}` : "Your account";
+
+  // Phones: the avatar opens the profile page, which holds the account rows.
+  if (asLink) {
+    return (
+      <Link
+        href="/profile"
+        aria-label={accountLabel}
+        className="hit-44 relative rounded-full outline-none transition-transform duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-95 motion-reduce:active:scale-100"
+      >
+        {face}
+      </Link>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={unreadLabel ? `Your account, ${unreadLabel}` : "Your account"}
+        aria-label={accountLabel}
         className="hit-44 relative rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
       >
-        <Avatar className="size-8">
-          {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
-          <AvatarFallback className="text-xs">{initial}</AvatarFallback>
-        </Avatar>
-        {unreadLabel ? (
-          <span
-            aria-hidden="true"
-            data-slot="unread-dot"
-            className="absolute top-0 right-0 size-2 rounded-full bg-violet-text ring-2 ring-background"
-          />
-        ) : null}
+        {face}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-60">
         <div className="flex items-center gap-3 px-2 py-2">

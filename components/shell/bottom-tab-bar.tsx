@@ -9,7 +9,7 @@ import { PRIMARY_NAV, SIGNED_OUT_TABS, isActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 const TAB =
-  "flex h-14 w-full flex-col items-center justify-center gap-1 rounded-full outline-none transition-[color,background-color,scale] duration-(--dur-fast) focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-95 motion-reduce:active:scale-100";
+  "flex h-14 w-full flex-col items-center justify-center gap-1 rounded-full outline-none transition-[color,background-color,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-95 motion-reduce:active:scale-100";
 
 /** Fields that bring up a phone's keyboard. */
 function isTextField(el: EventTarget | null): boolean {

@@ -9,12 +9,11 @@ import { PosterCard } from "@/components/klyvi/poster-card";
 import { ScoreValue } from "@/components/klyvi/score-value";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -43,6 +42,9 @@ import { LibraryNav } from "./library-nav";
 import { SurpriseCard } from "./surprise-card";
 import { TrackingDialog, type TrackingEdit } from "./tracking-dialog";
 import { ViewSwitcher, type LibraryViewMode } from "./view-switcher";
+
+/** The filter sheet opens at about half the screen and drags up to full. */
+const FILTER_SNAPS = [0.55, 1];
 
 /** Section order when the library shows all statuses grouped. */
 const GROUP_ORDER: TrackingStatus[] = [
@@ -537,8 +539,12 @@ function LibraryFrame({
               component's own display rule, so `lg:hidden` on the Button itself
               silently does nothing. */}
           <div className="lg:hidden">
-          <Sheet open={sheetOpen} onOpenChange={onSheetOpenChange}>
-            <SheetTrigger
+          <Drawer
+            open={sheetOpen}
+            onOpenChange={onSheetOpenChange}
+            snapPoints={FILTER_SNAPS}
+          >
+            <DrawerTrigger
               render={
                 <Button variant="outline" size="touch" className="gap-2">
                   <SlidersHorizontal aria-hidden="true" data-icon="inline-start" />
@@ -549,27 +555,23 @@ function LibraryFrame({
               }
             />
             {/* No initial focus: focusing the search would raise the phone's
-                keyboard over the filters you opened the sheet for (#66). */}
-            <SheetContent
-              side="bottom"
-              initialFocus={false}
-              className="max-h-[85dvh] overflow-y-auto p-5"
-            >
-              <SheetHeader className="p-0 pb-4">
-                <SheetTitle>Filters</SheetTitle>
-              </SheetHeader>
-              {panel}
-              <Button
-                size="touch"
-                className="mt-5 w-full"
-                onClick={() => onSheetOpenChange(false)}
-              >
-                {shown == null
-                  ? "Done"
-                  : `Show ${shown} result${shown === 1 ? "" : "s"}`}
-              </Button>
-            </SheetContent>
-          </Sheet>
+                keyboard over the filters you opened the sheet for (#66).
+                Drag the handle up for the full list, down to close. */}
+            <DrawerContent initialFocus={false}>
+              {/* The action sits beside the title so it shows at the half snap too. */}
+              <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3">
+                <DrawerTitle>Filters</DrawerTitle>
+                <Button size="touch" onClick={() => onSheetOpenChange(false)}>
+                  {shown == null
+                    ? "Done"
+                    : `Show ${shown} result${shown === 1 ? "" : "s"}`}
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
+                {panel}
+              </div>
+            </DrawerContent>
+          </Drawer>
           </div>
           <ViewSwitcher value={view} onChange={onViewChange} />
         </div>

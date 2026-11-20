@@ -43,19 +43,17 @@ describe("MobileTopBar", () => {
     expect(onOpenSearch).toHaveBeenCalledOnce();
   });
 
-  it("holds the account menu, with Settings inside", async () => {
+  it("opens your profile page from the avatar instead of a menu", () => {
     render(<MobileTopBar />);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Your account" }));
-    expect(await screen.findByRole("menuitem", { name: "Settings" })).toHaveAttribute(
-      "href",
-      "/settings"
-    );
+    const avatar = screen.getByRole("link", { name: "Your account" });
+    expect(avatar).toHaveAttribute("href", "/profile");
+    expect(screen.queryByRole("button", { name: "Your account" })).toBeNull();
   });
 
   it("offers Get started signed out", () => {
     session.user = null;
     render(<MobileTopBar />);
     expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute("href", "/signup");
-    expect(screen.queryByRole("button", { name: "Your account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Your account" })).toBeNull();
   });
 });
