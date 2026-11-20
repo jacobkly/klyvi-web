@@ -286,7 +286,7 @@ export function ClosingCta() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 pt-12 pb-28">
       <Reveal>
-      <div className="relative overflow-hidden glass rounded-lg px-6 py-14 text-center ring-1 ring-foreground/10 sm:py-24">
+      <div className="relative overflow-hidden glass rounded-3xl px-6 py-14 text-center ring-1 ring-foreground/10 sm:py-24">
         {/* Violet only where the app speaks: a faint bloom behind the final
             ask, not a background wash. */}
         <div

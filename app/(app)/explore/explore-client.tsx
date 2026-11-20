@@ -379,7 +379,7 @@ export function ExploreClient({
                 </Button>
               }
             />
-            <DrawerContent initialFocus={false} className="h-auto">
+            <DrawerContent initialFocus={false}>
               <div className="flex min-h-11 shrink-0 items-center justify-between px-5 pb-2">
                 <DrawerTitle>Filters</DrawerTitle>
                 {countFilters(draft) > 0 ? (

@@ -44,7 +44,6 @@ import { TrackingDialog, type TrackingEdit } from "./tracking-dialog";
 import { ViewSwitcher, type LibraryViewMode } from "./view-switcher";
 
 /** The filter sheet opens at about half the screen and drags up to full. */
-const FILTER_SNAPS = [0.55, 1];
 
 /** Section order when the library shows all statuses grouped. */
 const GROUP_ORDER: TrackingStatus[] = [
@@ -542,7 +541,6 @@ function LibraryFrame({
           <Drawer
             open={sheetOpen}
             onOpenChange={onSheetOpenChange}
-            snapPoints={FILTER_SNAPS}
           >
             <DrawerTrigger
               render={

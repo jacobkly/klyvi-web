@@ -5,11 +5,9 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { id: "library", href: "/library", label: "Library" },
   { id: "favorites", href: "/library/favorites", label: "Favorites" },
-  { id: "stats", href: "/profile/stats", label: "Stats" },
 ] as const;
 
-/** The library's own pages, one tap apart. Stats lives in the profile, so
- *  it is a link out rather than a tab of its own. */
+/** The library's own pages, one tap apart. Stats lives on the profile. */
 export function LibraryNav({ active }: { active: "library" | "favorites" }) {
   return (
     <nav aria-label="Library" className="mb-4 flex gap-2">

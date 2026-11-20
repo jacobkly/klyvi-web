@@ -27,6 +27,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-tint-rose: var(--tint-rose);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-amber: var(--tint-amber);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -153,6 +156,9 @@
    shadow: Dark Room's elevation is lightness, and box-shadow would clobber
    ring borders. */
 :root {
+  --tint-rose: oklch(0.55 0.2 10);
+  --tint-sky: oklch(0.55 0.15 235);
+  --tint-amber: oklch(0.6 0.15 65);
   --glass-bg: color-mix(in oklab, var(--background) 65%, transparent);
   --glass-bg-solid: color-mix(in oklab, var(--background) 97%, transparent);
   --glass-border: color-mix(in oklab, var(--foreground) 12%, transparent);
@@ -212,6 +218,11 @@
 }
 
 .dark {
+  /* Icon tints for the account rows on the profile. Light enough for 3:1
+     on the dark card, used at 15% for the tile behind them. */
+  --tint-rose: oklch(0.72 0.17 10);
+  --tint-sky: oklch(0.75 0.13 235);
+  --tint-amber: oklch(0.8 0.15 75);
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);

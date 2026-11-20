@@ -218,6 +218,25 @@ describe("FindClient", () => {
     );
   });
 
+  it("swipes between picks sideways and leaves vertical drags to the page", async () => {
+    await showFeed();
+    const stage = document.querySelector('[data-slot="pick-stage"]') as HTMLElement;
+    const drag = (dx: number, dy: number) => {
+      fireEvent.touchStart(stage, { touches: [{ clientX: 200, clientY: 300 }] });
+      fireEvent.touchMove(stage, { touches: [{ clientX: 200 + dx, clientY: 300 + dy }] });
+      fireEvent.touchEnd(stage);
+    };
+
+    drag(-12, -120);
+    expect(screen.getByRole("heading", { name: "Memories of Murder" })).toBeInTheDocument();
+
+    drag(-120, 8);
+    expect(screen.queryByRole("heading", { name: "Memories of Murder" })).toBeNull();
+
+    drag(120, 0);
+    expect(screen.getByRole("heading", { name: "Memories of Murder" })).toBeInTheDocument();
+  });
+
   it("refills the set from the rest of the feed after an action", async () => {
     render(<FindClient />);
     fireEvent.click(screen.getByRole("button", { name: "3" }));

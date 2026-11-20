@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   EyeOff,
+  Info,
   RotateCcw,
   Sparkles,
 } from "lucide-react";
@@ -32,6 +33,7 @@ import { formatRuntime, formatSeasons } from "@/lib/mock-media";
 import { useReducedMotion } from "@/lib/motion";
 import { watchWindowPhrase } from "@/lib/time-of-day";
 import type { FeedMedia, Scored } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
 
@@ -318,6 +320,55 @@ export function FindClient({ simulate }: { simulate?: string }) {
     removeCurrent();
   }
 
+  // Phones swipe between picks. The card follows the finger sideways, and a
+  // drag past a quarter of its width (or 60px) steps. A mostly vertical drag
+  // is left to the page, so scrolling still works.
+  const swipe = React.useRef<{ x: number; y: number; dx: number; on: boolean } | null>(
+    null
+  );
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const setCardShift = (dx: number, animate: boolean) => {
+    const el = cardRef.current;
+    if (!el) return;
+    el.style.transition =
+      animate && !reduceMotion ? "transform var(--dur-base) var(--ease-enter)" : "none";
+    el.style.transform = dx ? `translateX(${dx}px)` : "";
+  };
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipe.current = { x: t.clientX, y: t.clientY, dx: 0, on: false };
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const s0 = swipe.current;
+    if (!s0) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s0.x;
+    const dy = t.clientY - s0.y;
+    if (!s0.on) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
+        swipe.current = null;
+        return;
+      }
+      if (Math.abs(dx) < 10) return;
+      s0.on = true;
+    }
+    s0.dx = dx;
+    // Resist at either end, where there is nothing to step to.
+    const atEnd =
+      phase.kind === "ready" &&
+      ((dx > 0 && phase.index === 0) || (dx < 0 && phase.index >= phase.picks.length - 1));
+    setCardShift(atEnd ? dx / 4 : dx, false);
+  };
+  const onTouchEnd = () => {
+    const s0 = swipe.current;
+    swipe.current = null;
+    if (!s0?.on) return;
+    const width = cardRef.current?.offsetWidth ?? 320;
+    const far = Math.abs(s0.dx) > Math.min(60, width / 4);
+    setCardShift(0, true);
+    if (far) step(s0.dx < 0 ? 1 : -1);
+  };
+
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (phase.kind !== "ready" || rating) return;
@@ -331,8 +382,8 @@ export function FindClient({ simulate }: { simulate?: string }) {
   // ---------- idle ----------
   if (phase.kind === "idle") {
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-16 md:px-6">
-        <h1 className="hero-rise text-3xl font-semibold tracking-tight sm:text-4xl">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-8 md:px-6 md:py-16">
+        <h1 className="hero-rise text-[28px] leading-tight font-semibold tracking-tight sm:text-4xl">
           What are you in the mood for?
         </h1>
         <p className="hero-rise mt-2 text-sm text-muted-foreground">
@@ -340,7 +391,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
           time.
         </p>
 
-        <div className="mt-8 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2 md:mt-8">
           {MOODS.map((m, i) => (
             <button
               key={m.id}
@@ -367,7 +418,8 @@ export function FindClient({ simulate }: { simulate?: string }) {
           </p>
         ) : null}
 
-        <div className="mt-8 flex flex-wrap items-center gap-3">
+        <div className="glass mt-6 divide-y divide-foreground/10 rounded-2xl md:mt-8">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
           <span className="text-sm text-muted-foreground">Films or TV?</span>
           <ToggleGroup
             value={[media]}
@@ -389,7 +441,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
           </ToggleGroup>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
           <span className="text-sm text-muted-foreground">How many?</span>
           <ToggleGroup
             value={[String(count)]}
@@ -408,11 +460,12 @@ export function FindClient({ simulate }: { simulate?: string }) {
             ))}
           </ToggleGroup>
         </div>
+        </div>
 
         <Button
           size="touch"
           onClick={() => void fetchPicks()}
-          className="mt-6 gap-2 self-start"
+          className="mt-6 w-full gap-2 sm:w-auto sm:self-start"
         >
           <Sparkles aria-hidden="true" data-icon="inline-start" />
           Find something
@@ -503,14 +556,14 @@ export function FindClient({ simulate }: { simulate?: string }) {
   const total = phase.picks.length;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-8 md:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-start px-4 py-4 md:justify-center md:px-6 md:py-8">
       <header ref={topRef} className="scroll-mt-16 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">
           {total === 1
             ? `Your pick for ${timePhrase}`
             : `Your ${total} picks for ${timePhrase}`}
         </h1>
-        <p data-numeric className="mt-1 font-mono text-xs text-muted-foreground">
+        <p data-numeric className="mt-1 hidden font-mono text-xs text-muted-foreground md:block">
           {phase.index + 1} of {total}
         </p>
         {total < phase.size && phase.reserve.length === 0 ? (
@@ -527,7 +580,14 @@ export function FindClient({ simulate }: { simulate?: string }) {
           Stacking rather than a three-column grid on purpose: in a grid the
           side tracks size to their content, so the neighbours refuse to
           shrink and crush the centre column instead of being clipped. */}
-      <div className="mt-6 overflow-hidden">
+      <div
+        data-slot="pick-stage"
+        className="mt-4 touch-pan-y overflow-hidden md:mt-6"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+      >
         <div className="relative mx-auto w-full lg:w-2/3">
           {prev ? (
             <NeighbourPick pick={prev} side="left" onClick={() => step(-1)} />
@@ -536,16 +596,33 @@ export function FindClient({ simulate }: { simulate?: string }) {
             <NeighbourPick pick={next} side="right" onClick={() => step(1)} />
           ) : null}
 
-          <div className="relative z-10">
+          <div ref={cardRef} className="relative z-10">
             <PickHero pick={pick} priority />
+
+            {/* Phones: where you are in the set, and a hint that it swipes. */}
+            <div
+              aria-hidden="true"
+              data-slot="pick-dots"
+              className="mt-3 flex justify-center gap-1.5 md:hidden"
+            >
+              {phase.picks.map((p, i) => (
+                <span
+                  key={p.mediaId}
+                  className={
+                    "h-1.5 rounded-full transition-all duration-(--dur-base) " +
+                    (i === phase.index ? "w-4 bg-violet-text" : "w-1.5 bg-foreground/25")
+                  }
+                />
+              ))}
+            </div>
 
             {/* Fixed height, because this is the only part of the card whose
                 size follows the film. Letting it size to the synopsis moved
                 the buttons and the pager every time the user stepped from a
                 terse film to a wordy one, which made them hard to hit. */}
-            <div className="flex min-h-[15.5rem] flex-col justify-start">
+            <div className="flex min-h-[12rem] flex-col justify-start md:min-h-[15.5rem]">
           {/* Why. The differentiator, given real room rather than a corner. */}
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center md:mt-6">
             {pick.reasons.length > 0 ? (
               <>
                 <h2 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
@@ -569,7 +646,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
               click away on the detail page. Clamped so a long one cannot
               outgrow the reserved space; "More about it" has the rest. */}
           {overview ? (
-            <p className="mx-auto mt-5 line-clamp-5 max-w-[60ch] text-center text-[15px] leading-relaxed text-foreground/90">
+            <p className="mx-auto mt-4 line-clamp-3 max-w-[60ch] md:mt-5 md:line-clamp-5 text-center text-[15px] leading-relaxed text-foreground/90">
               {overview}
             </p>
           ) : null}
@@ -584,14 +661,19 @@ export function FindClient({ simulate }: { simulate?: string }) {
             </div>
 
           {/* Decide. */}
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
-            <Button size="touch" className="gap-2" onClick={() => act("save")}>
+          {/* Phones: the main action full width, the other three as tiles
+              in a row beneath it. Wider screens: one centred row. */}
+          <div className="mt-5 grid grid-cols-3 gap-2 md:mt-7 md:flex md:flex-wrap md:items-center md:justify-center">
+            <Button size="touch" className="col-span-3 gap-2" onClick={() => act("save")}>
               <Bookmark aria-hidden="true" data-icon="inline-start" />
               Add to watchlist
             </Button>
             <Link
               href={mediaHref(pick)}
-              className={buttonVariants({ variant: "outline", size: "touch" })}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "touch" }),
+                "h-auto flex-col gap-1 py-2 text-xs md:h-11 md:flex-row md:gap-2 md:py-0 md:text-sm"
+              )}
               onClick={() => {
                 if (!mock)
                   queueSignal({
@@ -602,12 +684,13 @@ export function FindClient({ simulate }: { simulate?: string }) {
                   });
               }}
             >
+              <Info aria-hidden="true" data-icon="inline-start" className="md:hidden" />
               More about it
             </Link>
             <Button
               variant="ghost"
               size="touch"
-              className="gap-2"
+              className="h-auto flex-col gap-1 py-2 text-xs md:h-11 md:flex-row md:gap-2 md:py-0 md:text-sm"
               onClick={() => act("seen")}
             >
               <Check aria-hidden="true" data-icon="inline-start" />
@@ -616,7 +699,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
             <Button
               variant="ghost"
               size="touch"
-              className="gap-2 text-muted-foreground"
+              className="h-auto flex-col gap-1 py-2 text-xs md:h-11 md:flex-row md:gap-2 md:py-0 md:text-sm text-muted-foreground"
               onClick={() => act("dismiss")}
             >
               <EyeOff aria-hidden="true" data-icon="inline-start" />
@@ -630,7 +713,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
       {/* Moving between picks, centred under the card. Its position never
           depends on the film, which is the point: the pager sits in the
           same place whichever pick is showing. */}
-      <div className="mx-auto mt-8 flex max-w-[44rem] flex-col items-center gap-3 border-t border-border pt-5">
+      <div className="mx-auto mt-5 flex w-full max-w-[44rem] items-center justify-between gap-3 border-t border-border pt-4 md:mt-8 md:flex-col md:justify-center md:pt-5">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"

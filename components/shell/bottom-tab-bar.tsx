@@ -51,7 +51,8 @@ function useTyping(): boolean {
  */
 function BottomTabBar() {
   const pathname = usePathname();
-  const { user, loading } = useSession();
+  const { user, profile, loading } = useSession();
+  const avatarSrc = profile?.avatarUrl ?? null;
   const typing = useTyping();
   const { unread } = useUnreadNotices();
   const nav = !loading && !user ? SIGNED_OUT_TABS : PHONE_TABS;
@@ -79,11 +80,24 @@ function BottomTabBar() {
                 )}
               >
                 <span className="relative">
-                  <item.icon
-                    aria-hidden="true"
-                    className="size-5"
-                    strokeWidth={active ? 2.25 : 2}
-                  />
+                  {item.href === "/profile" && avatarSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarSrc}
+                      alt=""
+                      data-slot="tab-avatar"
+                      className={cn(
+                        "size-6 rounded-full object-cover",
+                        active && "ring-2 ring-violet-text"
+                      )}
+                    />
+                  ) : (
+                    <item.icon
+                      aria-hidden="true"
+                      className="size-5"
+                      strokeWidth={active ? 2.25 : 2}
+                    />
+                  )}
                   {dot ? (
                     <span
                       aria-hidden="true"

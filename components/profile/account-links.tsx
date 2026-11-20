@@ -19,9 +19,9 @@ export function AccountLinks() {
   const { unread } = useUnreadNotices();
 
   const rows = [
-    { href: "/library/favorites", label: "Favorites", icon: Heart },
-    { href: "/settings", label: "Settings", icon: Settings },
-    { href: "/notifications", label: "Notifications", icon: Bell },
+    { href: "/library/favorites", label: "Favorites", icon: Heart, tint: "bg-tint-rose/15 text-tint-rose" },
+    { href: "/settings", label: "Settings", icon: Settings, tint: "bg-tint-sky/15 text-tint-sky" },
+    { href: "/notifications", label: "Notifications", icon: Bell, tint: "bg-tint-amber/15 text-tint-amber" },
   ];
 
   return (
@@ -33,7 +33,9 @@ export function AccountLinks() {
         {rows.map((r) => (
           <li key={r.href}>
             <Link href={r.href} className={ROW}>
-              <r.icon aria-hidden="true" className="size-5 text-muted-foreground" />
+              <span className={`flex size-8 items-center justify-center rounded-full ${r.tint}`}>
+                <r.icon aria-hidden="true" className="size-4" />
+              </span>
               <span className="flex-1">{r.label}</span>
               {r.href === "/notifications" && unread > 0 ? (
                 <span className="rounded-full bg-primary/15 px-2 py-0.5 font-mono text-xs text-violet-text">
@@ -45,8 +47,14 @@ export function AccountLinks() {
           </li>
         ))}
         <li>
-          <button type="button" className={ROW} onClick={() => void signOut()}>
-            <LogOut aria-hidden="true" className="size-5 text-muted-foreground" />
+          <button
+            type="button"
+            className={`${ROW} text-destructive`}
+            onClick={() => void signOut()}
+          >
+            <span className="flex size-8 items-center justify-center rounded-full bg-destructive/15">
+              <LogOut aria-hidden="true" className="size-4" />
+            </span>
             <span className="flex-1">Sign out</span>
           </button>
         </li>
