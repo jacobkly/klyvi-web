@@ -1,4 +1,3 @@
-import { BeamsBackground } from "@/components/marketing/beams-background";
 import { FindNextDemo } from "@/components/marketing/find-next-demo";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarqueeHero } from "@/components/marketing/marquee-hero";
@@ -25,9 +24,6 @@ export const metadata = {
 export default function MarketingPage() {
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* Landing-only atmosphere, fixed behind the content: violet
-          projector beams drifting through the dark. Never inside the app. */}
-      <BeamsBackground />
       <MarketingNav />
       <MarqueeHero />
       <StatsBand />

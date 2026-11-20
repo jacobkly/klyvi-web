@@ -3,23 +3,13 @@
 import Image from "next/image";
 import * as React from "react";
 
+import { RegionPicker } from "@/components/media/region-picker";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getProviders } from "@/lib/api/catalog";
 import { tmdbImage } from "@/lib/tmdb-image";
 import type { WatchProvider, WatchProviders } from "@/lib/types";
-import {
-  initialRegion,
-  regionName,
-  saveRegion,
-} from "@/lib/watch-region";
+import { initialRegion, regionName, saveRegion } from "@/lib/watch-region";
 
 const KINDS: { key: keyof Pick<WatchProviders, "stream" | "free" | "ads" | "rent" | "buy">; label: string }[] = [
   { key: "stream", label: "Stream" },
@@ -105,12 +95,7 @@ export function WhereToWatch({
       )
     : [];
 
-  const regions = data
-    ? Array.from(new Set([...data.regions, data.region])).sort((a, b) =>
-        regionName(a).localeCompare(regionName(b))
-      )
-    : [];
-  const names = Object.fromEntries(regions.map((r) => [r, regionName(r)]));
+  const regions = data ? Array.from(new Set([...data.regions, data.region])) : [];
 
   return (
     <section aria-labelledby={headingId} className="mb-10">
@@ -123,30 +108,14 @@ export function WhereToWatch({
         </h2>
         <div className="h-px flex-1 bg-border" aria-hidden="true" />
         {data && region ? (
-          <Select
+          <RegionPicker
+            regions={regions}
             value={region}
-            onValueChange={(v) => {
-              if (typeof v !== "string" || !v) return;
+            onChange={(v) => {
               saveRegion(v);
               setPicked(v);
             }}
-            items={names}
-          >
-            <SelectTrigger
-              aria-label="Country"
-              size="sm"
-              className="hit-44 relative max-w-48 shrink-0"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {regions.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {names[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         ) : null}
       </div>
 

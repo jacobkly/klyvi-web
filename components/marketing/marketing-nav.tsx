@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * The signed-out nav, wearing the app bar's shell (same height, same
@@ -32,7 +33,8 @@ export function MarketingNav() {
           >
             Sign in
           </Link>
-          <Link href="/signup" className={buttonVariants({ size: "sm" })}>
+          {/* Phones have the hero's full-width Get started instead. */}
+          <Link href="/signup" className={cn(buttonVariants({ size: "sm" }), "hidden sm:inline-flex")}>
             Get started
           </Link>
         </div>

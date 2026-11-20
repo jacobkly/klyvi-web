@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { SectionHeader } from "./section-header";
 
 /**
- * Paged carousel rail. On a phone the row shows 2.4 cards, so the cut card
+ * Paged carousel rail. On a phone the row shows 3.3 cards (the grids are 3
+ * across, so rows and grids share a size), and the cut card
  * says "swipe for more". From sm up it shows a whole number of cards (the
  * rail owns item widths as exact fractions per breakpoint) and the arrows
  * slide one full row at a time, with scroll-snap keeping pages aligned.
@@ -71,7 +72,7 @@ function MediaRail({
           data-can-left={canLeft}
           data-can-right={canRight}
           style={{ maskImage: fade, WebkitMaskImage: fade }}
-          className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [--rail-n:2.4] sm:[--rail-n:4] md:[--rail-n:5] lg:[--rail-n:6] xl:[--rail-n:7]"
+          className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [--rail-n:3.3] sm:[--rail-n:4] md:[--rail-n:5] lg:[--rail-n:6] xl:[--rail-n:7]"
         >
           {React.Children.map(children, (child) =>
             child == null ? null : (

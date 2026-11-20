@@ -24,7 +24,7 @@ import {
 import { BackdropHero } from "@/components/media/backdrop-hero";
 import { CastChips } from "@/components/media/cast-chips";
 import { KeywordCard } from "@/components/media/keyword-card";
-import { MetadataList } from "@/components/media/metadata-list";
+import { FactsPreview, MetadataList } from "@/components/media/metadata-list";
 import { TrailerButton } from "@/components/media/trailer-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -410,6 +410,8 @@ function DetailLayout({
                 </p>
               )}
 
+              <FactsPreview items={metadata} />
+
               <TrailerButton title={title} trailerKey={trailerKey} />
             </div>
           </div>
@@ -418,8 +420,8 @@ function DetailLayout({
               mobile, reference material rather than orientation. */}
           <div className="mt-10 flex flex-col-reverse gap-10 pb-16 lg:flex-row">
             <aside className="w-full shrink-0 lg:w-52">
-              <MetadataList items={metadata} />
-              <div className="mt-8">
+              <MetadataList items={metadata} className="hidden lg:flex" />
+              <div className="lg:mt-8">
                 <KeywordCard keywords={keywords} />
               </div>
             </aside>

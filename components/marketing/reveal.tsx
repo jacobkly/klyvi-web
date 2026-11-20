@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
  * Deliberately framer, not CSS: framer drives opacity/transform in JS, so
  * it plays regardless of the CSS reduced-motion override in globals.css.
  * That is on purpose for this marketing page, which is a disclosed
- * exception to the reduced-motion floor (like the beams and the marquee).
+ * exception to the reduced-motion floor (like the marquee).
  * Turning on Reduce motion in Klyvi's own settings is an explicit ask, so
  * that does stop it: the content renders at rest.
  */

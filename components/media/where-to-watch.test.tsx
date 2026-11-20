@@ -72,6 +72,32 @@ describe("WhereToWatch", () => {
     expect(getProviders).toHaveBeenCalledWith("movies", 1, "US", expect.anything());
   });
 
+  it("finds a country by typing, with yours first and the rest A to Z", async () => {
+    getProviders.mockResolvedValue(offers({ regions: ["GB", "US", "DE", "DZ", "FR", "AT"] }));
+    render(<WhereToWatch kind="movies" tmdbId={1} title="A film" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Country, United Kingdom/ }));
+    const list = await screen.findByRole("listbox", { name: "Countries" });
+    const names = within(list).getAllByRole("option").map((o) => o.textContent);
+    expect(names[0]).toBe("United Kingdom");
+    expect(names.slice(1)).toEqual(["Algeria", "Austria", "France", "Germany", "United States"]);
+    expect(list.className).toContain("max-h-80");
+
+    const field = screen.getByRole("combobox", { name: "Search countries" });
+    fireEvent.change(field, { target: { value: "ger" } });
+    // A name starting with what you typed beats one that only contains it.
+    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Germany",
+      "Algeria",
+    ]);
+    fireEvent.keyDown(field, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(getProviders).toHaveBeenLastCalledWith("movies", 1, "DE", expect.anything())
+    );
+    expect(window.localStorage.getItem("klyvi:watch-region")).toBe("DE");
+  });
+
   it("says so when nothing is on offer in your country, still with the credit", async () => {
     getProviders.mockResolvedValue(
       offers({ stream: [], buy: [], link: null, regions: ["US"] })

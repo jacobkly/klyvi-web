@@ -124,7 +124,7 @@ const STAT_GLYPHS = [
 
 export function StatsBand() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 pt-28 pb-16 sm:pt-32">
+    <section className="mx-auto w-full max-w-6xl px-4 pt-16 pb-16 sm:pt-32">
       <Reveal>
         <LandingHeader
           align="split"
@@ -286,17 +286,11 @@ export function ClosingCta() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 pt-12 pb-28">
       <Reveal>
-      <div className="relative overflow-hidden rounded-lg bg-card px-6 py-20 text-center ring-1 ring-foreground/10 sm:py-24">
-        {/* Violet only where the app speaks: a faint bloom behind the final
-            ask, not a background wash. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 -top-24 h-64 [background:radial-gradient(closest-side,color-mix(in_oklch,var(--primary)_22%,transparent),transparent)]"
-        />
-        <p className="relative text-sm font-medium tracking-[0.14em] text-violet-text uppercase">
+      <div className="relative overflow-hidden rounded-lg bg-card px-6 py-14 text-center ring-1 ring-foreground/10 sm:py-24">
+        <p className="relative text-sm font-medium tracking-[0.14em] text-muted-foreground uppercase">
           Tonight
         </p>
-        <h2 className="relative mx-auto mt-3 max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+        <h2 className="relative mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
           {CLOSING_CLAIM.heading}
         </h2>
         <p className="relative mx-auto mt-4 max-w-xl text-base text-balance text-muted-foreground">

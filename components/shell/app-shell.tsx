@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/klyvi/site-footer";
 import { UnreadProvider } from "@/components/notifications/unread-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { MobileSearch } from "@/components/search/mobile-search";
 import { BottomTabBar } from "./bottom-tab-bar";
 import { MobileTopBar } from "./mobile-top-bar";
 import { TopBar } from "./top-bar";
@@ -17,9 +18,10 @@ import { TopBar } from "./top-bar";
  * tooltip provider, toaster. Content gets bottom padding on mobile so the
  * fixed tab bar never covers it.
  *
- * Search routes to /explore rather than opening a separate palette. One
- * search surface, not two: the palette duplicated Explore's job while being
- * strictly worse at it (no filters, no browsing, no result grid).
+ * On desktop, search routes to /explore rather than opening a palette,
+ * since Explore has the filters and the grid. On phones the top bar's search
+ * opens a full-screen sheet (MobileSearch) that hands off to Explore for
+ * the full results.
  */
 function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -27,6 +29,10 @@ function AppShell({ children }: { children: ReactNode }) {
   const openSearch = React.useCallback(() => {
     router.push("/explore?focus=1");
   }, [router]);
+  // Phones get a full-screen search sheet. The desktop bar and Ctrl+K go
+  // to Explore.
+  const [phoneSearch, setPhoneSearch] = React.useState(false);
+  const openPhoneSearch = React.useCallback(() => setPhoneSearch(true), []);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -65,7 +71,8 @@ function AppShell({ children }: { children: ReactNode }) {
             Skip to content
           </a>
           <TopBar onOpenSearch={openSearch} />
-          <MobileTopBar onOpenSearch={openSearch} />
+          <MobileTopBar onOpenSearch={openPhoneSearch} />
+          <MobileSearch open={phoneSearch} onOpenChange={setPhoneSearch} />
           {/* Footer inside the padded wrapper so it clears the mobile tab bar.
               flex-1 on the content region pushes the footer to the bottom of the
               viewport when a page is short, and lets it sit directly under the

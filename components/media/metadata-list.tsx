@@ -1,4 +1,9 @@
+"use client";
+
+import * as React from "react";
 import { ExternalLink } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import type { Fact } from "@/lib/media-facts";
 import { cn } from "@/lib/utils";
@@ -15,9 +20,7 @@ function MetadataList({
   items: Fact[];
   className?: string;
 }) {
-  const present = items.filter(
-    (i) => (i.value != null && i.value !== "") || (i.links?.length ?? 0) > 0
-  );
+  const present = items.filter(hasValue);
   if (present.length === 0) return null;
 
   return (
@@ -58,4 +61,44 @@ function MetadataList({
   );
 }
 
-export { MetadataList };
+function hasValue(i: Fact): boolean {
+  return (i.value != null && i.value !== "") || (i.links?.length ?? 0) > 0;
+}
+
+/**
+ * The phone's facts, under the summary: the first three, with the rest behind
+ * Show more. From lg up the rail beside the content holds the full list, so
+ * this hides there.
+ */
+function FactsPreview({ items, shown = 3 }: { items: Fact[]; shown?: number }) {
+  const [open, setOpen] = React.useState(false);
+  const listId = React.useId();
+  const present = items.filter(hasValue);
+  if (present.length === 0) return null;
+  const more = present.length > shown;
+
+  return (
+    <div className="mt-4 lg:hidden" data-testid="facts-preview">
+      <div id={listId}>
+        <MetadataList
+          items={open ? present : present.slice(0, shown)}
+          className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3"
+        />
+      </div>
+      {more ? (
+        <Button
+          variant="link"
+          size="xs"
+          className="hit-44 relative mt-1 px-0"
+          aria-expanded={open}
+          aria-controls={listId}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? "Show fewer details" : `Show all ${present.length} details`}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+export { FactsPreview, MetadataList };

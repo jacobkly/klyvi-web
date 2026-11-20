@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -178,12 +178,43 @@ describe("DetailLayout facts", () => {
       ],
     });
 
-    expect(screen.getByText("$160M")).toBeInTheDocument();
-    const imdb = screen.getByRole("link", { name: /IMDb/ });
+    // The rail beside the content (lg up) holds every fact.
+    const rail = within(screen.getByRole("complementary"));
+    expect(rail.getByText("$160M")).toBeInTheDocument();
+    const imdb = rail.getByRole("link", { name: /IMDb/ });
     expect(imdb).toHaveAttribute("href", "https://www.imdb.com/title/tt1375666/");
     expect(imdb).toHaveAttribute("target", "_blank");
     expect(imdb).toHaveAttribute("rel", "noopener noreferrer");
-    expect(screen.getByRole("link", { name: /Official site/ })).toBeInTheDocument();
+    expect(rail.getByRole("link", { name: /Official site/ })).toBeInTheDocument();
+  });
+
+  it("shows three facts under the summary on phones, the rest behind Show all", () => {
+    renderDetail({
+      metadata: [
+        { label: "Original title", value: null },
+        { label: "Runtime", value: "2h 28m" },
+        { label: "Released", value: "16 Jul 2010" },
+        { label: "Status", value: "Released" },
+        { label: "Budget", value: "$160M" },
+      ],
+    });
+
+    const preview = screen.getByTestId("facts-preview");
+    expect(preview.className).toContain("lg:hidden");
+    const p = within(preview);
+    // Empty facts drop out before the first three are picked.
+    expect(p.getByText("2h 28m")).toBeInTheDocument();
+    expect(p.getByText("Released", { selector: "dd" })).toBeInTheDocument();
+    expect(p.queryByText("$160M")).toBeNull();
+
+    const more = p.getByRole("button", { name: "Show all 4 details" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(more);
+    expect(p.getByText("$160M")).toBeInTheDocument();
+    expect(p.getByRole("button", { name: "Show fewer details" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
   });
 
   it("names the director and writers beside the title, not inside the heading", () => {

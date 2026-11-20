@@ -104,7 +104,7 @@ function PosterCard({
   /** In the first screen: load now, ahead of the lazy ones below. */
   eager?: boolean;
   /** The slot's width for the srcset. The default fits rails and grids:
-   *  2.4 to 3 across on a phone, 4 to 5 on a tablet, 180px above that. */
+   *  3 to 3.3 across on a phone, 4 to 5 on a tablet, 180px above that. */
   sizes?: string;
   className?: string;
 }) {

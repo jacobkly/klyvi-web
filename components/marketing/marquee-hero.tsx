@@ -4,11 +4,13 @@ import { Pause, Play } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
+import { ArtBackdrop } from "@/components/marketing/art-backdrop";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getMovieList } from "@/lib/api/catalog";
 import { TAGLINE_CLAIM } from "@/lib/marketing-claims";
 import { MOCK_POOL } from "@/lib/mock-onboarding";
 import { useReducedMotion } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 
 /**
  * The marquee hero: real popular-film posters scrolling under the pitch,
@@ -63,7 +65,7 @@ export function MarqueeHero() {
   const items = [...posters, ...posters].map((poster, index) => (
     <div
       key={`${poster}-${index}`}
-      className="relative mr-4 aspect-[2/3] h-48 shrink-0 overflow-hidden rounded-art ring-1 ring-foreground/10 md:h-60"
+      className="relative mr-3 aspect-[2/3] h-36 shrink-0 sm:mr-4 sm:h-48 overflow-hidden rounded-art ring-1 ring-foreground/10 md:h-60"
       style={{ rotate: `${index % 2 === 0 ? -2 : 3}deg` }}
     >
       {/* Plain img over next/image: fourteen small posters do not need
@@ -80,10 +82,11 @@ export function MarqueeHero() {
   ));
 
   return (
-    <section className="relative flex flex-col items-center overflow-hidden px-4 pt-24 pb-12 text-center sm:pt-28">
+    <section className="relative flex flex-col items-center overflow-hidden px-4 pt-12 pb-8 text-center sm:pt-28 sm:pb-12">
+      <ArtBackdrop posters={posters} />
       <div className="z-10 flex flex-col items-center">
         <Rise delay={0}>
-          <span className="mb-5 inline-block rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm">
+          <span className="mb-4 inline-block sm:mb-5 rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm">
             {TAGLINE_CLAIM}
           </span>
         </Rise>
@@ -95,20 +98,23 @@ export function MarqueeHero() {
         </Rise>
 
         <Rise delay={160}>
-          <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
+          <p className="mt-4 max-w-xl text-base sm:mt-5 text-muted-foreground sm:text-lg">
             Klyvi learns what you actually like and tells you what to watch
             right now, with the reason it picked it.
           </p>
         </Rise>
 
         <Rise delay={240}>
-          <div className="mt-8 flex items-center justify-center gap-4">
-            <Link href="/signup" className={buttonVariants({ size: "touch" })}>
+          <div className="mt-6 flex w-full max-w-xs items-center justify-center gap-4 sm:mt-8 sm:max-w-none">
+            <Link
+              href="/signup"
+              className={cn(buttonVariants({ size: "touch" }), "w-full sm:w-auto")}
+            >
               Get started
             </Link>
             <Link
               href="/signin"
-              className="tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+              className="tap-target hidden items-center text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
             >
               Sign in
             </Link>
@@ -118,7 +124,7 @@ export function MarqueeHero() {
 
       {/* The poster strip, faded at both edges. The mask is functional, not
           decoration: it stops the loop ending in a hard vertical cut. */}
-      <div className="relative mt-24 w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] sm:mt-28">
+      <div className="relative mt-12 w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] sm:mt-28">
         <div
           className="marquee-track flex w-max"
           data-paused={still ? "" : undefined}
