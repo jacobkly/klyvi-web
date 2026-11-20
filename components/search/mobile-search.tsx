@@ -2,13 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, Film, Search, Tv, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Clock, Film, Search, TrendingUp, Tv, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getMovieList } from "@/lib/api/catalog";
 import type { SearchResults } from "@/lib/api/map";
 import { search } from "@/lib/api/search";
+import type { MediaSummary } from "@/lib/types";
 import { mediaHref } from "@/lib/media-href";
 
 const RECENTS_KEY = "klyvi:recent-searches";
@@ -55,13 +57,54 @@ function rows(results: SearchResults) {
   return out.slice(0, MAX_ROWS);
 }
 
+type Kind = "all" | "movie" | "tv";
+const KINDS: { id: Kind; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "movie", label: "Films" },
+  { id: "tv", label: "Series" },
+];
+
+const CHIP =
+  "tap-target rounded-full px-3.5 py-1.5 text-sm font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30";
+
+function Poster({ path, className }: { path: string | null; className: string }) {
+  return (
+    <div className={`shrink-0 overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10 ${className}`}>
+      {path ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`https://image.tmdb.org/t/p/w185${path}`}
+          alt=""
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function KindLine({ m }: { m: { mediaType: string; year: number | null } }) {
+  return (
+    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      {m.mediaType === "tv" ? (
+        <Tv aria-hidden="true" className="size-3" />
+      ) : (
+        <Film aria-hidden="true" className="size-3" />
+      )}
+      <span>{m.mediaType === "tv" ? "Series" : "Film"}</span>
+      {m.year ? <span className="font-mono">{m.year}</span> : null}
+    </p>
+  );
+}
+
 const ROW =
   "flex min-h-11 items-center gap-3 rounded-lg px-2 py-2 outline-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/30";
 
 /**
  * Search on a phone: a full-screen sheet over the page with the field
- * focused and the keyboard up, recents before you type, and results as
- * poster, title and year. It uses Explore's search call, and "See all in
+ * focused and the keyboard up. Before you type: recent searches as chips
+ * and what is trending. After: the best match as a large card, the rest as
+ * poster, title and year, narrowed to films or series with one tap. It uses Explore's search call, and "See all in
  * Explore" hands the query over for filters and the full grid. Desktop keeps
  * Ctrl+K and the top bar going straight to Explore.
  */
@@ -74,6 +117,8 @@ export function MobileSearch({
 }) {
   const [query, setQuery] = React.useState("");
   const [attempt, setAttempt] = React.useState(0);
+  const [kind, setKind] = React.useState<Kind>("all");
+  const [trending, setTrending] = React.useState<MediaSummary[] | null>(null);
   // Read once on the client. The sheet's content only renders once it is
   // open, so the server's empty list never reaches the page.
   const [recents, setRecents] = React.useState<string[]>(() =>
@@ -106,6 +151,17 @@ export function MobileSearch({
     };
   }, [q, key]);
 
+  // Something to tap before typing. Fetched once per mount, and a failure
+  // just leaves the section out.
+  React.useEffect(() => {
+    if (!open || trending) return;
+    const ac = new AbortController();
+    getMovieList("trending", ac.signal)
+      .then((list) => setTrending(list.slice(0, 6)))
+      .catch(() => {});
+    return () => ac.abort();
+  }, [open, trending]);
+
   const remember = (term: string) => {
     const next = [term, ...recents.filter((r) => r.toLowerCase() !== term.toLowerCase())].slice(
       0,
@@ -120,7 +176,16 @@ export function MobileSearch({
     onOpenChange(false);
   };
 
-  const found = state.kind === "ready" ? rows(state.results) : [];
+  const all = state.kind === "ready" ? rows(state.results) : [];
+  const counts = {
+    all: all.length,
+    movie: all.filter((m) => m.mediaType === "movie").length,
+    tv: all.filter((m) => m.mediaType === "tv").length,
+  };
+  // A filter with nothing under it (after a new search) falls back to All.
+  const shown: Kind = counts[kind] > 0 ? kind : "all";
+  const found = shown === "all" ? all : all.filter((m) => m.mediaType === shown);
+  const [top, ...rest] = found;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -172,9 +237,10 @@ export function MobileSearch({
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-2 py-3" aria-live="polite">
           {state.kind === "idle" ? (
-            recents.length > 0 ? (
-              <section aria-labelledby="recent-searches">
-                <div className="flex items-center justify-between px-2">
+            <>
+            {recents.length > 0 ? (
+              <section aria-labelledby="recent-searches" className="px-2">
+                <div className="flex items-center justify-between">
                   <h2 id="recent-searches" className="text-xs font-medium text-muted-foreground">
                     Recent searches
                   </h2>
@@ -190,11 +256,15 @@ export function MobileSearch({
                     Clear
                   </Button>
                 </div>
-                <ul className="mt-1">
+                <ul className="mt-2 flex flex-wrap gap-2">
                   {recents.map((r) => (
-                    <li key={r}>
-                      <button type="button" className={`${ROW} w-full text-left text-sm`} onClick={() => setQuery(r)}>
-                        <Clock aria-hidden="true" className="size-4 text-muted-foreground" />
+                    <li key={r} className="max-w-full">
+                      <button
+                        type="button"
+                        className={`${CHIP} flex max-w-full items-center gap-1.5 bg-card text-foreground ring-1 ring-foreground/10 hover:bg-muted`}
+                        onClick={() => setQuery(r)}
+                      >
+                        <Clock aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
                         <span className="truncate">{r}</span>
                       </button>
                     </li>
@@ -202,10 +272,36 @@ export function MobileSearch({
                 </ul>
               </section>
             ) : (
-              <p className="px-2 py-8 text-center text-sm text-muted-foreground">
+              <p className="px-2 pt-4 pb-2 text-center text-sm text-muted-foreground">
                 Search for a film or a series by its title.
               </p>
-            )
+            )}
+            {trending && trending.length > 0 ? (
+              <section aria-labelledby="trending-now" className="mt-6 px-2">
+                <h2
+                  id="trending-now"
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+                >
+                  <TrendingUp aria-hidden="true" className="size-3.5" />
+                  Trending this week
+                </h2>
+                <ul className="mt-2 grid grid-cols-3 gap-3">
+                  {trending.map((m) => (
+                    <li key={m.tmdbId}>
+                      <Link
+                        href={mediaHref(m)}
+                        onClick={close}
+                        className="block rounded-art outline-none focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-[0.98] motion-reduce:active:scale-100"
+                      >
+                        <Poster path={m.posterPath} className="aspect-[2/3] w-full" />
+                        <p className="mt-1.5 truncate text-xs font-medium text-foreground">{m.title}</p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            </>
           ) : null}
 
           {state.kind === "loading" ? (
@@ -231,7 +327,31 @@ export function MobileSearch({
             </div>
           ) : null}
 
-          {state.kind === "ready" && found.length === 0 ? (
+          {state.kind === "ready" && all.length > 0 ? (
+            <div role="group" aria-label="Show" className="mb-3 flex gap-2 px-2">
+              {KINDS.map((k) => (
+                <button
+                  key={k.id}
+                  type="button"
+                  aria-pressed={shown === k.id}
+                  disabled={counts[k.id] === 0}
+                  onClick={() => setKind(k.id)}
+                  className={`${CHIP} disabled:opacity-50 ${
+                    shown === k.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground ring-1 ring-foreground/10 hover:text-foreground"
+                  }`}
+                >
+                  {k.label}
+                  <span data-numeric className="ml-1.5 font-mono text-xs opacity-70">
+                    {counts[k.id]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {state.kind === "ready" && all.length === 0 ? (
             <p className="px-2 py-8 text-center text-sm text-muted-foreground">
               Nothing matches &ldquo;{q}&rdquo;. Try another spelling or fewer words.
             </p>
@@ -240,31 +360,34 @@ export function MobileSearch({
           {found.length > 0 ? (
             <>
               <ul aria-label="Results">
-                {found.map((m) => (
+                <li key={`${top.mediaType}-${top.tmdbId}`} className="mb-2">
+                  <Link
+                    href={mediaHref(top)}
+                    onClick={close}
+                    className={`${ROW} bg-card p-3 ring-1 ring-foreground/10`}
+                  >
+                    <Poster path={top.posterPath} className="h-24 w-16" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-medium tracking-[0.12em] text-violet-text uppercase">
+                        Top result
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-base font-semibold text-foreground">
+                        {top.title}
+                      </p>
+                      <div className="mt-1">
+                        <KindLine m={top} />
+                      </div>
+                    </div>
+                    <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
+                  </Link>
+                </li>
+                {rest.map((m) => (
                   <li key={`${m.mediaType}-${m.tmdbId}`}>
                     <Link href={mediaHref(m)} className={ROW} onClick={close}>
-                      <div className="h-15 w-10 shrink-0 overflow-hidden rounded-art bg-muted">
-                        {m.posterPath ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={`https://image.tmdb.org/t/p/w92${m.posterPath}`}
-                            alt=""
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : null}
-                      </div>
+                      <Poster path={m.posterPath} className="h-15 w-10" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground">{m.title}</p>
-                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          {m.mediaType === "tv" ? (
-                            <Tv aria-hidden="true" className="size-3" />
-                          ) : (
-                            <Film aria-hidden="true" className="size-3" />
-                          )}
-                          <span>{m.mediaType === "tv" ? "Series" : "Film"}</span>
-                          {m.year ? <span className="font-mono">{m.year}</span> : null}
-                        </p>
+                        <KindLine m={m} />
                       </div>
                     </Link>
                   </li>

@@ -5,8 +5,14 @@ import { MobileSearch } from "./mobile-search";
 
 const search = vi.fn();
 
+const getMovieList = vi.fn();
+
 vi.mock("@/lib/api/search", () => ({
   search: (...a: unknown[]) => search(...a),
+}));
+
+vi.mock("@/lib/api/catalog", () => ({
+  getMovieList: (...a: unknown[]) => getMovieList(...a),
 }));
 
 function results() {
@@ -28,7 +34,33 @@ function field() {
 describe("MobileSearch", () => {
   beforeEach(() => {
     search.mockReset();
+    getMovieList.mockReset().mockResolvedValue([]);
     window.localStorage.clear();
+  });
+
+  it("shows what is trending before you type", async () => {
+    getMovieList.mockResolvedValue([
+      { mediaId: 0, mediaType: "movie", tmdbId: 1, title: "Dune", posterPath: "/d.jpg", year: 2021 },
+    ]);
+    render(<MobileSearch open onOpenChange={() => {}} />);
+    const trending = await screen.findByRole("region", { name: "Trending this week" });
+    expect(within(trending).getByRole("link", { name: "Dune" })).toHaveAttribute("href", "/movie/1");
+  });
+
+  it("leads with the best match and narrows to films or series", async () => {
+    search.mockResolvedValue(results());
+    render(<MobileSearch open onOpenChange={() => {}} />);
+    fireEvent.change(field(), { target: { value: "in" } });
+
+    const list = await screen.findByRole("list", { name: "Results" });
+    expect(within(list).getByText("Top result")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Series/ }));
+    expect(
+      within(screen.getByRole("list", { name: "Results" }))
+        .getAllByRole("link")
+        .map((l) => l.getAttribute("href"))
+    ).toEqual(["/tv/95396"]);
+    expect(screen.getByRole("button", { name: /Series/ })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("opens with the field focused and a hint before any search", async () => {
