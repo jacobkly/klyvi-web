@@ -16,6 +16,7 @@ import {
 
 import { useSession } from "@/components/auth/auth-provider";
 import { NeighbourPick, PickHero } from "@/components/find/pick-stage";
+import { AmbientArt } from "@/components/klyvi/ambient-art";
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { RatingDialog } from "@/components/media/rating-dialog";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
@@ -557,6 +558,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-start px-4 py-4 md:justify-center md:px-6 md:py-8">
+      <AmbientArt path={pick.backdropPath ?? pick.posterPath} />
       <header ref={topRef} className="scroll-mt-16 text-center">
         <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">
           {total === 1

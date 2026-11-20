@@ -37,7 +37,7 @@ export default function RootLayout({
       <head>
         <ThemeBootScript />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="isolate min-h-full flex flex-col">
         <ThemeSync />
         <AuthProvider>{children}</AuthProvider>
       </body>

@@ -21,6 +21,7 @@ import {
   TrackingDialog,
   type TrackingEdit,
 } from "@/components/library/tracking-dialog";
+import { AmbientArt } from "@/components/klyvi/ambient-art";
 import { BackdropHero } from "@/components/media/backdrop-hero";
 import { CastChips } from "@/components/media/cast-chips";
 import { KeywordCard } from "@/components/media/keyword-card";
@@ -298,6 +299,8 @@ function DetailLayout({
 
   return (
     <main className="mx-auto w-full max-w-[1400px]">
+      {/* The title's own art lights the room below the hero too. */}
+      <AmbientArt path={backdropPath} />
       <BackdropHero backdropPath={backdropPath}>
         <div className="px-4 md:px-6">
           {nav}

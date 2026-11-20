@@ -27,7 +27,7 @@ export function AccountLinks() {
   return (
     <nav
       aria-label="Account"
-      className="mt-6 overflow-hidden rounded-lg bg-card ring-1 ring-foreground/10 md:hidden"
+      className="glass mt-6 overflow-hidden rounded-2xl border md:hidden"
     >
       <ul className="divide-y divide-border">
         {rows.map((r) => (
