@@ -67,7 +67,7 @@ export function PosterActions({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={`Quick actions for ${name}`}
-        className="hit-44 absolute top-1 right-1 z-10 grid size-7 place-items-center rounded-full bg-black/70 text-white outline-none backdrop-blur-sm transition-opacity duration-(--dur-base) focus-visible:ring-3 focus-visible:ring-ring/50 data-[popup-open]:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100"
+        className="hit-44 absolute top-1 right-1 z-10 grid size-7 place-items-center rounded-full bg-black/70 text-white outline-none transition-opacity duration-(--dur-base) focus-visible:ring-3 focus-visible:ring-ring/50 data-[popup-open]:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100"
       >
         <MoreHorizontal aria-hidden="true" className="size-4" strokeWidth={2} />
       </DropdownMenuTrigger>

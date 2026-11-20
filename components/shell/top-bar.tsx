@@ -36,7 +36,7 @@ function TopBar({
       className={cn(
         "top-0 z-40 hidden h-14 md:block",
         variant === "solid"
-          ? "sticky border-b border-border bg-background/95 backdrop-blur-sm"
+          ? "glass sticky border-b"
           : "absolute inset-x-0 bg-gradient-to-b from-black/60 to-transparent"
       )}
     >

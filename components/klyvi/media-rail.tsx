@@ -111,7 +111,7 @@ function RailArrow({
       aria-label={`Scroll ${title} ${side}`}
       onClick={onClick}
       className={cn(
-        "fine-only absolute top-[38%] z-10 -translate-y-1/2 bg-background/90 backdrop-blur-sm",
+        "fine-only absolute top-[38%] z-10 -translate-y-1/2 glass border",
         side === "left" ? "-left-3" : "-right-3"
       )}
     >

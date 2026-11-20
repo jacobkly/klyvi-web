@@ -60,7 +60,7 @@ function BottomTabBar() {
       data-typing={typing || undefined}
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.5rem))] data-typing:hidden md:hidden"
     >
-      <ul className="pointer-events-auto mx-auto flex max-w-md rounded-full border border-border bg-card p-1">
+      <ul className="pointer-events-auto mx-auto flex max-w-md glass rounded-full border p-1">
         {nav.map((item) => {
           const active = isActive(pathname, item.href);
           return (

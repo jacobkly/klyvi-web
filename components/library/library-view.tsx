@@ -707,7 +707,7 @@ function EntryCollection({
             className={cn(
               // Smaller on a phone so it stays clear of the season tag in the
               // opposite corner (#65). The tap target stays 44 px all the same.
-              "hit-44 absolute top-1 right-1 size-7 bg-black/60 text-white backdrop-blur-sm md:top-1.5 md:right-1.5 md:size-8",
+              "hit-44 absolute top-1 right-1 size-7 bg-black/60 text-white md:top-1.5 md:right-1.5 md:size-8",
               "opacity-100 transition-opacity md:opacity-0 md:group-hover/cell:opacity-100 md:focus-visible:opacity-100"
             )}
           >

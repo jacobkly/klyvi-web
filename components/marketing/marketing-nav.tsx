@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  */
 export function MarketingNav() {
   return (
-    <header className="sticky top-0 z-40 h-14 border-b border-border/60 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 h-14 glass border-b">
       <div className="mx-auto flex h-full max-w-[1400px] items-center justify-between px-4 md:px-6">
         <Link
           href="/"

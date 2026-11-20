@@ -141,6 +141,60 @@
   --sidebar-ring: oklch(0.705 0.015 286.067);
 }
 
+/* Glass, the floating layer's material (feat/glass trial). Bars, menus,
+   dialogs and toasts float over the content, so they frost what scrolls
+   under them. Content cards stay solid. One place defines it: components use
+   `.glass` and never set their own blur. The dose is these four values.
+   The base is the page's near-black, so even over the brightest poster the
+   blurred mix stays dark enough for muted text at 4.5:1. No shadow: Dark
+   Room's elevation is lightness, and box-shadow would clobber ring borders. */
+:root {
+  --glass-bg: color-mix(in oklab, var(--background) 85%, transparent);
+  --glass-bg-solid: color-mix(in oklab, var(--background) 97%, transparent);
+  --glass-border: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --glass-blur: 20px;
+  /* The fill for surfaces that take a colour variable rather than the class
+     (the toaster): solid unless blur is supported and wanted. */
+  --glass-fill: var(--glass-bg-solid);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  :root {
+    --glass-fill: var(--glass-bg);
+  }
+}
+
+/* Blur costs grow with the radius, and phones have the least to spare. */
+@media (max-width: 767px) {
+  :root {
+    --glass-blur: 12px;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-fill: var(--glass-bg-solid);
+  }
+}
+
+@utility glass {
+  border-color: var(--glass-border);
+  background-color: var(--glass-bg-solid);
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    background-color: var(--glass-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  }
+
+  /* People who ask for less transparency get the solid surface. */
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--glass-bg-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 /* Below md the floating tab bar is showing (components/shell/bottom-tab-bar).
    It is 64px tall and floats 12px up, so content and toasts clear 96px. */
 @media (width < 48rem) {

@@ -84,7 +84,7 @@ export function MarqueeHero() {
     <section className="relative flex flex-col items-center overflow-hidden px-4 pt-12 pb-8 text-center sm:pt-28 sm:pb-12">
       <div className="z-10 flex flex-col items-center">
         <Rise delay={0}>
-          <span className="mb-4 inline-block sm:mb-5 rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm">
+          <span className="mb-4 inline-block sm:mb-5 glass rounded-full border px-4 py-1.5 text-sm font-medium text-muted-foreground">
             {TAGLINE_CLAIM}
           </span>
         </Rise>

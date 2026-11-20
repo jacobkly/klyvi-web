@@ -138,7 +138,7 @@ export function StatsBand() {
       <div className="grid gap-3 sm:grid-cols-3">
         {STAT_CLAIMS.map((s, i) => (
           <Reveal key={s.category} delay={i * 0.08}>
-            <div className="flex min-h-48 flex-col rounded-lg bg-card p-6 ring-1 ring-foreground/10">
+            <div className="flex min-h-48 flex-col glass rounded-lg p-6 ring-1 ring-foreground/10">
               <div className="flex items-start justify-between gap-4">
                 <p className="text-sm text-muted-foreground">{s.category}</p>
                 {STAT_GLYPHS[i]}
@@ -261,7 +261,7 @@ export function FeaturesRow() {
       <div className="grid gap-4 md:grid-cols-3">
         {FEATURES.map((f, i) => (
           <Reveal key={f.title} delay={i * 0.08}>
-            <div className="flex h-full flex-col rounded-lg bg-card p-6 ring-1 ring-foreground/10">
+            <div className="flex h-full flex-col glass rounded-lg p-6 ring-1 ring-foreground/10">
               <p data-numeric className="font-mono text-sm text-violet-text">
                 {f.eyebrow}
               </p>
@@ -286,7 +286,7 @@ export function ClosingCta() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 pt-12 pb-28">
       <Reveal>
-      <div className="relative overflow-hidden rounded-lg bg-card px-6 py-14 text-center ring-1 ring-foreground/10 sm:py-24">
+      <div className="relative overflow-hidden glass rounded-lg px-6 py-14 text-center ring-1 ring-foreground/10 sm:py-24">
         {/* Violet only where the app speaks: a faint bloom behind the final
             ask, not a background wash. */}
         <div

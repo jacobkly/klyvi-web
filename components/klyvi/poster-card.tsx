@@ -173,7 +173,7 @@ function PosterCard({
             <span
               aria-hidden="true"
               data-numeric
-              className="absolute top-1 left-1 rounded-sm bg-black/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-medium text-white backdrop-blur-sm"
+              className="absolute top-1 left-1 rounded-sm bg-black/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-medium text-white"
             >
               S{media.seasonNumber}
             </span>
@@ -207,7 +207,7 @@ function PosterCard({
               ) : null}
             </div>
           ) : hasBadge ? (
-            <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] leading-none font-medium backdrop-blur-sm">
+            <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded-sm bg-black/70 px-1 py-0.5 font-mono text-[10px] leading-none font-medium">
               {status ? <StatusGlyph status={status} /> : null}
               {badgeProgress ? (
                 <span data-numeric className="text-violet-text">

@@ -127,7 +127,7 @@ export function MobileSearch({
       <SheetContent
         side="top"
         showCloseButton={false}
-        className="data-[side=top]:h-dvh data-[side=top]:border-b-0 bg-background"
+        className="[--glass-bg:var(--background)] [--glass-blur:0px] data-[side=top]:h-dvh data-[side=top]:border-b-0"
       >
         <SheetTitle className="sr-only">Search</SheetTitle>
         <div className="flex items-center gap-1 border-b border-border px-2 pt-[env(safe-area-inset-top)]">

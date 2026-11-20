@@ -18,7 +18,7 @@ function MobileTopBar({ onOpenSearch }: { onOpenSearch?: () => void }) {
   const signedOut = !loading && !user;
 
   return (
-    <header className="sticky top-0 z-40 h-14 border-b border-border bg-background/95 backdrop-blur-sm md:hidden">
+    <header className="sticky top-0 z-40 h-14 glass border-b md:hidden">
       <div className="flex h-full items-center gap-2 px-4">
         <Link
           href={signedOut ? "/" : "/home"}
