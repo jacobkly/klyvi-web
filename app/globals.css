@@ -189,6 +189,20 @@
   }
 }
 
+/* GLASS OFF (dev branch). Every glass surface is solid and the artwork glow
+   behind title pages and Find next is hidden, so the layout work can be
+   tried on its own. Delete this block to turn glass on. */
+:root {
+  --glass-bg: var(--glass-bg-solid);
+  --glass-fill: var(--glass-bg-solid);
+  --glass-edge: var(--glass-border);
+  --glass-blur: 0px;
+  --glass-tone: 1;
+}
+[data-slot="ambient-art"] {
+  display: none;
+}
+
 @utility glass {
   border-color: var(--glass-border);
   border-top-color: var(--glass-edge);
