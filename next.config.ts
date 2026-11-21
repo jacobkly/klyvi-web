@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 import { securityHeaders } from "./lib/security-headers";
 
 const nextConfig: NextConfig = {
+  // The left rail keeps the account menu in the bottom-left corner, where
+  // the dev badge sits by default.
+  devIndicators: { position: "bottom-right" },
   headers() {
     return Promise.resolve([
       {
