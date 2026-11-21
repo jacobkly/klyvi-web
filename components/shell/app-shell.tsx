@@ -4,17 +4,21 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import type { ReactNode } from "react";
 
+import { useSession } from "@/components/auth/auth-provider";
 import { SiteFooter } from "@/components/klyvi/site-footer";
 import { UnreadProvider } from "@/components/notifications/unread-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MobileSearch } from "@/components/search/mobile-search";
+import { cn } from "@/lib/utils";
 import { BottomTabBar } from "./bottom-tab-bar";
+import { LeftRail } from "./left-rail";
 import { MobileTopBar } from "./mobile-top-bar";
 import { TopBar } from "./top-bar";
 
 /**
- * Wraps every authenticated screen: top bar at md+, bottom tab bar below,
+ * Wraps every authenticated screen: at md+ a left rail signed in (a top bar
+ * signed out), and a bottom tab bar below md,
  * tooltip provider, toaster. Content gets bottom padding on mobile so the
  * fixed tab bar never covers it.
  *
@@ -25,6 +29,9 @@ import { TopBar } from "./top-bar";
  */
 function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { user, loading } = useSession();
+  // Until the session resolves, assume signed in, as the top bar does.
+  const signedOut = !loading && !user;
 
   const openSearch = React.useCallback(() => {
     router.push("/explore?focus=1");
@@ -70,14 +77,21 @@ function AppShell({ children }: { children: ReactNode }) {
           >
             Skip to content
           </a>
-          <TopBar onOpenSearch={openSearch} />
+          {signedOut ? (
+            <TopBar onOpenSearch={openSearch} />
+          ) : (
+            <LeftRail onOpenSearch={openSearch} />
+          )}
           <MobileTopBar onOpenSearch={openPhoneSearch} />
           <MobileSearch open={phoneSearch} onOpenChange={setPhoneSearch} />
           {/* Footer inside the padded wrapper so it clears the mobile tab bar.
               flex-1 on the content region pushes the footer to the bottom of the
               viewport when a page is short, and lets it sit directly under the
               content when the page is tall enough to scroll. */}
-          <div className="flex flex-1 flex-col pb-(--tab-bar-space) md:pb-0">
+          <div className={cn(
+              "flex flex-1 flex-col pb-(--tab-bar-space) md:pb-0",
+              !signedOut && "md:pl-20"
+            )}>
             {/* A flex column, not a plain block: a page that wants to centre
                 itself vertically can then be a flex-1 child. Percentage
                 heights are no use here, because this wrapper's own height

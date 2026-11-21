@@ -41,4 +41,13 @@ describe("AppShell", () => {
     expect(content).toHaveAttribute("id", "content");
     expect(content).toHaveFocus();
   });
+  it("swaps the desktop top bar for the left rail when signed in", () => {
+    const { container } = render(
+      <AppShell>
+        <h1>Home</h1>
+      </AppShell>
+    );
+    expect(container.querySelector('[data-slot="left-rail"]')).not.toBeNull();
+    expect(container.querySelector("header.sticky")).toBeNull();
+  });
 });

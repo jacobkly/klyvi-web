@@ -30,7 +30,13 @@ import { cn } from "@/lib/utils";
  * Signed out it collapses to a Sign in button; while the first session
  * check resolves it shows nothing rather than flashing the wrong state.
  */
-function UserMenu() {
+function UserMenu({
+  side = "bottom",
+  align = "end",
+}: {
+  side?: "bottom" | "right";
+  align?: "start" | "end";
+} = {}) {
   const { user, profile, loading, signOut } = useSession();
   const { unread } = useUnreadNotices();
   const avatarSrc = profile?.avatarUrl ?? null;
@@ -87,7 +93,7 @@ function UserMenu() {
       >
         {face}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-60">
+      <DropdownMenuContent side={side} align={align} className="min-w-60">
         <div className="flex items-center gap-3 px-2 py-2">
           <Avatar className="size-9">
             {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}

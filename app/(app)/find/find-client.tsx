@@ -116,7 +116,15 @@ type Phase =
  * arrows. Everything on screen, synopsis, runtime, and genres included,
  * comes from one /v1/reco/feed request.
  */
-export function FindClient({ simulate }: { simulate?: string }) {
+export function FindClient({
+  simulate,
+  embedded = false,
+}: {
+  simulate?: string;
+  /** Inside the desktop pop-up: no page landmark and no ambient art. */
+  embedded?: boolean;
+}) {
+  const Main = embedded ? "div" : "main";
   const { user } = useSession();
   const router = useRouter();
   const mock = simulate != null;
@@ -383,7 +391,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
   // ---------- idle ----------
   if (phase.kind === "idle") {
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-8 md:px-6 md:py-16">
+      <Main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-8 md:px-6 md:py-16">
         <h1 className="hero-rise text-[28px] leading-tight font-semibold tracking-tight sm:text-4xl">
           What are you in the mood for?
         </h1>
@@ -471,25 +479,25 @@ export function FindClient({ simulate }: { simulate?: string }) {
           <Sparkles aria-hidden="true" data-icon="inline-start" />
           Find something
         </Button>
-      </main>
+      </Main>
     );
   }
 
   // ---------- loading ----------
   if (phase.kind === "loading") {
     return (
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-4 py-10 md:px-6">
+      <Main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-4 py-10 md:px-6">
         <Skeleton className="aspect-[16/9] w-full rounded-lg" />
         <Skeleton className="mt-6 h-8 w-2/3 rounded-lg" />
         <Skeleton className="mt-3 h-5 w-1/3 rounded-lg" />
-      </main>
+      </Main>
     );
   }
 
   // ---------- error ----------
   if (phase.kind === "error") {
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-24 text-center md:px-6">
+      <Main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-24 text-center md:px-6">
         <p className="text-[15px] font-semibold text-foreground">
           Could not get your recommendations.
         </p>
@@ -499,14 +507,14 @@ export function FindClient({ simulate }: { simulate?: string }) {
         <Button className="mt-5" onClick={() => void fetchPicks()}>
           Try again
         </Button>
-      </main>
+      </Main>
     );
   }
 
   // ---------- exhausted / empty ----------
   if (phase.picks.length === 0) {
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-10 md:px-6">
+      <Main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-10 md:px-6">
         {mood !== "any" ? (
           <EmptyState
             icon={Sparkles}
@@ -535,7 +543,7 @@ export function FindClient({ simulate }: { simulate?: string }) {
             action={{ label: "Go to your library", href: "/library" }}
           />
         )}
-      </main>
+      </Main>
     );
   }
 
@@ -557,8 +565,10 @@ export function FindClient({ simulate }: { simulate?: string }) {
   const total = phase.picks.length;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-start px-4 py-4 md:justify-center md:px-6 md:py-8">
-      <AmbientArt path={pick.backdropPath ?? pick.posterPath} />
+    <Main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-start px-4 py-4 md:justify-center md:px-6 md:py-8">
+      {embedded ? null : (
+        <AmbientArt path={pick.backdropPath ?? pick.posterPath} />
+      )}
       <header ref={topRef} className="scroll-mt-16 text-center">
         <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">
           {total === 1
@@ -771,6 +781,6 @@ export function FindClient({ simulate }: { simulate?: string }) {
           onSubmit={submitRating}
         />
       ) : null}
-    </main>
+    </Main>
   );
 }
