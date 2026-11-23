@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check, EyeOff, Plus } from "lucide-react";
 
+import { ACTION_TILE } from "@/components/find/action-tile";
 import { FadeImage } from "@/components/klyvi/poster-parts";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { Button } from "@/components/ui/button";
@@ -100,21 +101,27 @@ export function HomeHero({
           ) : null}
           <ReasonChips reasons={pick.reasons} max={1} className="mt-3" />
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button size="touch" onClick={() => onAct("save")}>
+          <div className="mt-4 grid grid-cols-2 gap-2 md:flex md:flex-wrap">
+            <Button size="touch" className="col-span-full" onClick={() => onAct("save")}>
               <Plus data-icon="inline-start" aria-hidden="true" strokeWidth={2} />
               Add
             </Button>
             <Button
               size="touch"
               variant="secondary"
+              className={ACTION_TILE}
               onClick={() => onAct("seen")}
             >
-              <Check data-icon="inline-start" aria-hidden="true" strokeWidth={2} />
+              <Check aria-hidden="true" strokeWidth={2} />
               Seen it
             </Button>
-            <Button size="touch" variant="ghost" onClick={() => onAct("dismiss")}>
-              <EyeOff data-icon="inline-start" aria-hidden="true" strokeWidth={2} />
+            <Button
+              size="touch"
+              variant="ghost"
+              className={ACTION_TILE}
+              onClick={() => onAct("dismiss")}
+            >
+              <EyeOff aria-hidden="true" strokeWidth={2} />
               Not for me
             </Button>
           </div>

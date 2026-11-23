@@ -3,6 +3,8 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* A phone with its browser bars showing: under 736px of height. */
+@custom-variant short-phone (@media (width < 48rem) and (height < 46rem));
 
 @theme inline {
   --color-background: var(--background);

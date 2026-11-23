@@ -9,12 +9,14 @@ import {
   ChevronLeft,
   ChevronRight,
   EyeOff,
+  Info,
   RotateCcw,
   Sparkles,
   Undo2,
   type LucideIcon,
 } from "lucide-react";
 
+import { ACTION_TILE } from "@/components/find/action-tile";
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,9 +27,13 @@ import type { FeedMedia, Scored } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
- * Find Next as the desktop pop-up. Two steps in one frame: a body, and a
- * footer bar whose bottom right corner always holds the way forward. The
- * data, the signals and the actions all stay with FindClient.
+ * Find Next's two steps, one design with two layouts. At md+ they fill a
+ * frame (the pop-up, or the page's own panel): a body, and a footer bar whose
+ * bottom right corner always holds the way forward. Phones get no frame. The
+ * same tiles, artwork and poster strip run the width of the screen, the main
+ * button sits above the tab bar, and picks swipe. The data, the signals and
+ * the actions all stay with the owner, so the landing page's demo is this
+ * same screen.
  */
 
 export type MoodOption = {
@@ -38,8 +44,11 @@ export type MoodOption = {
   filmsOnly?: boolean;
 };
 
+/** One labelled choice: a row on phones, part of the footer line at md+. */
+const ROW = "flex items-center justify-between gap-3 px-4 py-2 md:p-0";
+
 const FOOTER =
-  "flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-foreground/10 px-6 py-4";
+  "flex flex-wrap items-center justify-between gap-3 px-4 pt-4 md:border-t lg:gap-x-6 md:border-foreground/10 md:px-6 md:py-4";
 
 type PanelRef = React.Ref<HTMLDivElement>;
 
@@ -72,15 +81,15 @@ export function MoodPanel({
 }) {
   return (
     <div ref={ref} tabIndex={-1} className="outline-none">
-      <div className="p-6 pb-4">
-        <h1 className="pr-12 text-2xl font-semibold tracking-tight">
+      <div className="px-4 pt-2 md:p-6 md:pb-4">
+        <h1 className="text-[22px] leading-tight font-semibold tracking-tight md:pr-12 md:text-2xl">
           What are you in the mood for?
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground short-phone:hidden">
           Pick a shape, or do not. Klyvi will find one thing worth your time.
         </p>
 
-        <div role="group" aria-label="Mood" className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div role="group" aria-label="Mood" className="mt-4 grid grid-cols-2 gap-3 short-phone:gap-2 md:mt-6 md:grid-cols-3">
           {moods.map((m, i) => {
             const on = mood === m.id;
             return (
@@ -93,7 +102,7 @@ export function MoodPanel({
                 disabled={m.filmsOnly === true && media === "tv"}
                 onClick={() => onMood(m.id)}
                 className={cn(
-                  "group/tile hero-rise relative flex flex-col items-start gap-1 rounded-lg p-4 text-left ring-1 outline-none transition-[background-color,box-shadow,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
+                  "group/tile hero-rise relative flex flex-col items-start gap-1 rounded-lg p-3 text-left ring-1 md:p-4 outline-none transition-[background-color,box-shadow,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
                   on
                     ? "bg-primary/15 ring-2 ring-violet-text"
                     : "bg-foreground/5 ring-foreground/10 hover:bg-foreground/10"
@@ -102,14 +111,14 @@ export function MoodPanel({
                 <m.icon
                   aria-hidden="true"
                   className={cn(
-                    "mb-3 size-6 transition-colors duration-(--dur-press)",
+                    "mb-2 size-5 transition-colors duration-(--dur-press) short-phone:mb-1 md:mb-3 md:size-6",
                     on
                       ? "text-violet-text"
                       : "text-muted-foreground group-hover/tile:text-foreground"
                   )}
                 />
                 <span className="text-[15px] font-semibold text-foreground">{m.label}</span>
-                <span aria-hidden="true" className="text-xs text-muted-foreground">
+                <span aria-hidden="true" className="text-xs text-muted-foreground short-phone:hidden">
                   {m.hint}
                 </span>
                 {on ? (
@@ -124,12 +133,15 @@ export function MoodPanel({
             );
           })}
         </div>
-        {/* Always takes its line, so the footer never shifts. */}
-        <p className="mt-3 min-h-4 text-xs text-muted-foreground">{note}</p>
+        {/* Keeps its line, so the footer never shifts. Short phones only give
+            it one when there is something to say. */}
+        <p className="mt-3 min-h-4 short-phone:min-h-0 text-xs text-muted-foreground">{note}</p>
       </div>
 
-      <div className={FOOTER}>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div className={cn(FOOTER, "max-md:contents")}>
+        <div className="max-md:glass mx-4 divide-y divide-foreground/10 rounded-lg max-md:border md:m-0 md:flex md:flex-wrap md:items-center md:gap-x-6 md:gap-y-3 md:divide-y-0">
+          <div className={ROW}>
+          <span className="text-sm text-muted-foreground md:hidden">Films or TV?</span>
           <ToggleGroup
             value={[media]}
             onValueChange={(v: unknown[]) => {
@@ -148,7 +160,8 @@ export function MoodPanel({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-          <div className="flex items-center gap-3">
+          </div>
+          <div className={ROW}>
             <span className="text-sm text-muted-foreground">How many?</span>
             <ToggleGroup
               value={[String(count)]}
@@ -168,17 +181,23 @@ export function MoodPanel({
             </ToggleGroup>
           </div>
         </div>
-        <Button size="touch" className="ml-auto gap-2" onClick={onFind}>
-          <Sparkles aria-hidden="true" data-icon="inline-start" />
-          Find something
-        </Button>
+        <div className="mt-4 flex px-4 md:mt-0 md:ml-auto md:px-0">
+          <Button size="touch" className="flex-1 gap-2" onClick={onFind}>
+            <Sparkles aria-hidden="true" data-icon="inline-start" />
+            Find something
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
+// Phones: the poster beside the title, everything else beneath both. Wider:
+// the poster down the left, and the actions held to the bottom of the right.
 const BODY =
-  "grid gap-6 px-6 pt-4 pb-6 md:grid-cols-[14rem_1fr] md:gap-8 lg:grid-cols-[18rem_1fr]";
+  "grid grid-cols-[7rem_1fr] gap-x-4 gap-y-4 px-4 pt-4 short-phone:gap-y-3 md:grid-cols-[12rem_1fr] md:grid-rows-[auto_1fr_auto] md:gap-x-8 md:gap-y-6 md:px-6 md:pb-6 lg:grid-cols-[14rem_1fr] xl:grid-cols-[18rem_1fr]";
+const POSTER = "row-start-1 aspect-[2/3] self-start overflow-hidden rounded-art md:row-span-3";
+const BELOW = "col-span-2 min-w-0 md:col-span-1 md:col-start-2";
 
 /** The pick's own shape while it loads, so nothing jumps when it lands. */
 export function PickPanelSkeleton({ ref }: { ref?: PanelRef }) {
@@ -191,15 +210,17 @@ export function PickPanelSkeleton({ ref }: { ref?: PanelRef }) {
       aria-label="Finding something"
       className="outline-none"
     >
-      <div className="px-6 pt-6">
+      <div className="px-4 pt-2 md:px-6 md:pt-6">
         <Skeleton className="h-5 w-48 rounded-full" />
       </div>
       <div className={BODY}>
-        <Skeleton className="hidden aspect-[2/3] w-full rounded-art md:block" />
+        <Skeleton className={cn(POSTER, "w-full")} />
         <div>
           <Skeleton className="h-9 w-2/3 rounded-lg" />
-          <Skeleton className="mt-3 h-5 w-32 rounded-lg" />
-          <Skeleton className="mt-6 h-8 w-3/4 rounded-full" />
+          <Skeleton className="mt-3 h-5 w-32 max-w-full rounded-lg" />
+        </div>
+        <div className={BELOW}>
+          <Skeleton className="h-8 w-3/4 rounded-full" />
           <Skeleton className="mt-6 h-24 w-full rounded-lg" />
         </div>
       </div>
@@ -218,13 +239,17 @@ export function PickPanelSkeleton({ ref }: { ref?: PanelRef }) {
 export function PickPanel({
   ref,
   headerRef,
+  cardRef,
+  swipe,
   heading,
+  headingAs: Heading = "h1",
   picks,
   index,
   dir,
   length,
   shrinking,
   ratingsNote,
+  demo = false,
   onGo,
   onSave,
   onMore,
@@ -235,7 +260,11 @@ export function PickPanel({
 }: {
   ref?: PanelRef;
   headerRef?: React.Ref<HTMLElement>;
+  /** What a sideways drag moves, and the handlers that move it. */
+  cardRef?: React.Ref<HTMLDivElement>;
+  swipe?: React.HTMLAttributes<HTMLDivElement>;
   heading: string;
+  headingAs?: "h1" | "p";
   picks: Scored[];
   index: number;
   /** Which way the last step went, so the new pick enters from there. */
@@ -243,13 +272,15 @@ export function PickPanel({
   length: string | null;
   shrinking: boolean;
   ratingsNote: string | null;
+  /** The signed-out demo: nothing links out, and the set never changes. */
+  demo?: boolean;
   onGo: (i: number) => void;
   onSave: () => void;
-  onMore: () => void;
+  onMore?: () => void;
   onSeen: () => void;
   onDismiss: () => void;
-  onNewSet: () => void;
-  onChangeMood: () => void;
+  onNewSet?: () => void;
+  onChangeMood?: () => void;
 }) {
   const pick = picks[index];
   const total = picks.length;
@@ -258,6 +289,21 @@ export function PickPanel({
   const enter = cn(
     "animate-in fade-in-0 duration-(--dur-slow) motion-reduce:animate-none",
     dir === 1 ? "slide-in-from-right-4" : "slide-in-from-left-4"
+  );
+
+  const posterArt = poster ? (
+    <Image
+      src={poster}
+      alt=""
+      fill
+      priority={!demo}
+      sizes="(max-width: 48rem) 112px, 288px"
+      className="object-cover"
+    />
+  ) : (
+    <span className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
+      {pick.title}
+    </span>
   );
 
   return (
@@ -274,19 +320,29 @@ export function PickPanel({
         <div
           key={`art-${pick.mediaId}`}
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 aspect-[16/7] overflow-hidden rounded-t-lg mask-b-from-0% mask-b-to-100% animate-in fade-in-0 duration-(--dur-max) motion-reduce:animate-none"
+          className={cn(
+            "pointer-events-none absolute inset-x-0 top-0 -z-10 aspect-[4/3] overflow-hidden mask-b-from-0% mask-b-to-100% animate-in fade-in-0 duration-(--dur-max) motion-reduce:animate-none md:aspect-[16/7] md:rounded-t-lg",
+            // On a phone's page it runs up behind the top bar to the edge.
+            !demo && "max-md:-top-14"
+          )}
         >
-          <Image src={backdrop} alt="" fill sizes="1024px" className="object-cover opacity-20" />
+          <Image
+            src={backdrop}
+            alt=""
+            fill
+            sizes="(max-width: 48rem) 100vw, 1024px"
+            className="object-cover opacity-30 md:opacity-20"
+          />
         </div>
       ) : null}
 
-      <header ref={headerRef} className="px-6 pt-6 pr-16">
-        <p className="text-sm text-muted-foreground">
-          {heading}
-          <span data-numeric className="ml-3 font-mono text-xs">
+      <header ref={headerRef} className="scroll-mt-16 px-4 pt-2 md:px-6 md:pt-6 md:pr-16">
+        <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground md:justify-start">
+          <Heading>{heading}</Heading>
+          <span data-numeric className="font-mono text-xs">
             {index + 1} of {total}
           </span>
-        </p>
+        </div>
         {shrinking ? (
           <p className="mt-1 text-xs text-muted-foreground">
             Nothing else fits right now, so the set is getting smaller. New set
@@ -295,29 +351,37 @@ export function PickPanel({
         ) : null}
       </header>
 
-      <div className={BODY}>
-        <Link
-          key={`poster-${pick.mediaId}`}
-          href={mediaHref(pick)}
-          aria-label={pick.title}
-          className={cn(
-            "relative hidden aspect-[2/3] self-start overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10 outline-none focus-visible:ring-3 focus-visible:ring-ring/30 md:block",
-            enter
-          )}
-        >
-          {poster ? (
-            <Image src={poster} alt="" fill priority sizes="288px" className="object-cover" />
-          ) : (
-            <span className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
-              {pick.title}
-            </span>
-          )}
-        </Link>
+      <div
+        data-slot="pick-stage"
+        className="touch-pan-y overflow-x-clip"
+        {...swipe}
+      >
+      <div ref={cardRef} className={BODY}>
+        {demo ? (
+          <div
+            key={`poster-${pick.mediaId}`}
+            className={cn(POSTER, "relative bg-muted ring-1 ring-foreground/10", enter)}
+          >
+            {posterArt}
+          </div>
+        ) : (
+          <Link
+            key={`poster-${pick.mediaId}`}
+            href={mediaHref(pick)}
+            aria-label={pick.title}
+            className={cn(
+              POSTER,
+              "relative bg-muted ring-1 ring-foreground/10 outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
+              enter
+            )}
+          >
+            {posterArt}
+          </Link>
+        )}
 
-        <div className="flex min-w-0 flex-col">
           <div aria-live="polite">
             <div key={`info-${pick.mediaId}`} className={enter}>
-              <h2 className="line-clamp-2 text-3xl font-semibold tracking-tight text-balance text-foreground">
+              <h2 className="line-clamp-3 text-2xl font-semibold tracking-tight text-balance text-foreground md:line-clamp-2 md:text-3xl">
                 {pick.title}
               </h2>
               <p
@@ -336,8 +400,10 @@ export function PickPanel({
               {pick.genres.length > 0 ? (
                 <p className="mt-1 text-sm text-muted-foreground">{pick.genres.join(" · ")}</p>
               ) : null}
+            </div>
+          </div>
 
-              <div className="mt-6">
+        <div key={`why-${pick.mediaId}`} className={cn(BELOW, enter)}>
                 {pick.reasons.length > 0 ? (
                   <>
                     <h3 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
@@ -351,72 +417,80 @@ export function PickPanel({
                     starts explaining why it picked things for you specifically.
                   </p>
                 )}
-              </div>
 
               {pick.overview ? (
-                <p className="mt-6 line-clamp-5 max-w-[65ch] text-[15px] leading-relaxed text-foreground/90">
+                <p className="mt-4 line-clamp-4 short-phone:line-clamp-3 max-w-[65ch] text-[15px] md:mt-6 md:line-clamp-5 leading-relaxed text-foreground/90">
                   {pick.overview}
                 </p>
               ) : null}
-            </div>
-          </div>
+        </div>
 
           {/* Outside the keyed block and held to the bottom, so the buttons
               keep their place and their focus from pick to pick. */}
-          <div className="mt-auto flex flex-wrap items-center gap-2 pt-6">
-            <Button size="touch" className="gap-2" onClick={onSave}>
+          <div
+            className={cn(
+              BELOW,
+              "grid gap-2 md:grid-cols-2 lg:flex lg:flex-wrap lg:items-center",
+              demo ? "grid-cols-2" : "grid-cols-3"
+            )}
+          >
+            <Button size="touch" className={cn("col-span-full gap-2", !demo && "md:col-span-1")} onClick={onSave}>
               <Bookmark aria-hidden="true" data-icon="inline-start" />
               Add to watchlist
             </Button>
-            <Link
-              href={mediaHref(pick)}
-              className={buttonVariants({ variant: "outline", size: "touch" })}
-              onClick={onMore}
-            >
-              More about it
-            </Link>
-            <Button variant="ghost" size="touch" className="gap-2" onClick={onSeen}>
-              <Check aria-hidden="true" data-icon="inline-start" />
+            {demo ? null : (
+              <Link
+                href={mediaHref(pick)}
+                className={cn(buttonVariants({ variant: "outline", size: "touch" }), ACTION_TILE)}
+                onClick={onMore}
+              >
+                <Info aria-hidden="true" className="md:hidden" />
+                More about it
+              </Link>
+            )}
+            <Button variant="ghost" size="touch" className={ACTION_TILE} onClick={onSeen}>
+              <Check aria-hidden="true" />
               Seen it
             </Button>
             <Button
               variant="ghost"
               size="touch"
-              className="gap-2 text-muted-foreground"
+              className={cn(ACTION_TILE, "text-muted-foreground")}
               onClick={onDismiss}
             >
-              <EyeOff aria-hidden="true" data-icon="inline-start" />
+              <EyeOff aria-hidden="true" />
               Not interested
             </Button>
           </div>
-        </div>
+      </div>
       </div>
 
       <div className={FOOTER}>
         {/* The whole set at a glance, any of it one click away. */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 max-md:w-full max-md:justify-center">
           <Button
             variant="outline"
             size="icon"
+            className="max-lg:hidden"
             aria-label="Previous pick"
             disabled={index === 0}
             onClick={() => onGo(index - 1)}
           >
             <ChevronLeft aria-hidden="true" className="size-4" strokeWidth={2} />
           </Button>
-          <ul aria-label="Your picks" className="flex items-center gap-2">
+          <ul aria-label="Your picks" className="flex min-w-0 items-center gap-2 max-md:flex-1 max-md:justify-center">
             {picks.map((p, i) => {
               const on = i === index;
               const thumb = tmdbImage(p.posterPath);
               return (
-                <li key={p.mediaId}>
+                <li key={p.mediaId} className="min-w-0 max-md:max-w-12 max-md:flex-1">
                   <button
                     type="button"
                     aria-label={`Pick ${i + 1}: ${p.title}`}
                     aria-current={on ? "true" : undefined}
                     onClick={() => onGo(i)}
                     className={cn(
-                      "relative block aspect-[2/3] w-10 overflow-hidden rounded-art bg-muted outline-none transition-[opacity,scale] duration-(--dur-base) focus-visible:ring-3 focus-visible:ring-ring/30 motion-reduce:transition-none",
+                      "relative block aspect-[2/3] w-full overflow-hidden md:w-10 rounded-art bg-muted outline-none transition-[opacity,scale] duration-(--dur-base) focus-visible:ring-3 focus-visible:ring-ring/30 motion-reduce:transition-none",
                       on
                         ? "scale-110 ring-2 ring-violet-text motion-reduce:scale-100"
                         : "opacity-50 hover:opacity-100"
@@ -435,6 +509,7 @@ export function PickPanel({
           <Button
             variant="outline"
             size="icon"
+            className="max-lg:hidden"
             aria-label="Next pick"
             disabled={index >= total - 1}
             onClick={() => onGo(index + 1)}
@@ -443,18 +518,20 @@ export function PickPanel({
           </Button>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" className="gap-2" onClick={onChangeMood}>
-            <Undo2 aria-hidden="true" data-icon="inline-start" />
-            Change mood
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={onNewSet}>
-            <RotateCcw aria-hidden="true" data-icon="inline-start" />
-            New set
-          </Button>
-        </div>
+        {demo ? null : (
+          <div className="grid grid-cols-2 items-center gap-2 max-md:w-full md:ml-auto md:flex">
+            <Button variant="ghost" className="gap-2" onClick={onChangeMood}>
+              <Undo2 aria-hidden="true" data-icon="inline-start" />
+              Change mood
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={onNewSet}>
+              <RotateCcw aria-hidden="true" data-icon="inline-start" />
+              New set
+            </Button>
+          </div>
+        )}
         {ratingsNote ? (
-          <p data-numeric className="w-full text-xs text-muted-foreground">
+          <p data-numeric className="w-full text-xs text-muted-foreground max-md:text-center">
             {ratingsNote}
           </p>
         ) : null}

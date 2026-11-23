@@ -10,15 +10,11 @@ vi.mock("@/lib/api/catalog", () => ({
 }));
 
 describe("FindNextDemo", () => {
-  it("starts at pick 3 of 5 with both neighbours visible", () => {
+  it("starts at pick 3 of 5 with the whole set in the strip", () => {
     render(<FindNextDemo />);
-    expect(screen.getByText("3 / 5")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /previous pick: /i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /next pick: /i })
-    ).toBeInTheDocument();
+    expect(screen.getByText("3 of 5")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next pick" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Previous pick" })).toBeEnabled();
   });
 
   it("pages with the arrows and disables at the edges", async () => {
@@ -28,7 +24,7 @@ describe("FindNextDemo", () => {
     const prev = screen.getByRole("button", { name: "Previous pick" });
     await user.click(prev);
     await user.click(prev);
-    expect(screen.getByText("1 / 5")).toBeInTheDocument();
+    expect(screen.getByText("1 of 5")).toBeInTheDocument();
     expect(prev).toBeDisabled();
   });
 
@@ -39,7 +35,7 @@ describe("FindNextDemo", () => {
     await user.click(
       screen.getByRole("button", { name: /add to watchlist/i })
     );
-    expect(screen.getByText("4 / 5")).toBeInTheDocument();
+    expect(screen.getByText("4 of 5")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
       /saves it to your watchlist/i
     );

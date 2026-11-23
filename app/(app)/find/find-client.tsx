@@ -1,20 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
-  Bookmark,
-  Check,
-  ChevronLeft,
-  ChevronRight,
   Clapperboard,
   Clock,
   CloudLightning,
-  EyeOff,
   Flame,
-  Info,
-  RotateCcw,
   Shuffle,
   Sparkles,
   Sun,
@@ -22,15 +14,11 @@ import {
 } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
-import { NeighbourPick, PickHero } from "@/components/find/pick-stage";
-import { MoodPanel, PickPanel, PickPanelSkeleton } from "@/components/find/pop-up-views";
+import { MoodPanel, PickPanel, PickPanelSkeleton } from "@/components/find/find-panels";
 import { AmbientArt } from "@/components/klyvi/ambient-art";
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { RatingDialog } from "@/components/media/rating-dialog";
-import { ReasonChips } from "@/components/klyvi/reason-chips";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Button } from "@/components/ui/button";
 import { getFeed } from "@/lib/api/reco";
 import { listInteractions } from "@/lib/api/interactions";
 import { queueSignal } from "@/lib/interactions-batch";
@@ -42,7 +30,6 @@ import { formatRuntime, formatSeasons } from "@/lib/mock-media";
 import { useReducedMotion } from "@/lib/motion";
 import { watchWindowPhrase } from "@/lib/time-of-day";
 import type { FeedMedia, Scored } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
 
@@ -55,7 +42,7 @@ const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
 const MOODS: {
   id: string;
   label: string;
-  /** What the lens reads, in a few words, for the pop-up's tiles. */
+  /** What the lens reads, in a few words, for its tile. */
   hint: string;
   icon: LucideIcon;
   filmsOnly?: boolean;
@@ -139,8 +126,8 @@ type Phase =
 
 /**
  * Find Next, built as a decision surface rather than a list: ONE pick at a
- * time, full-bleed backdrop, reasons prominent, the rest of the set behind
- * arrows. Everything on screen, synopsis, runtime, and genres included,
+ * time, lit by its artwork, reasons prominent, the rest of the set as small
+ * posters. Everything on screen, synopsis, runtime, and genres included,
  * comes from one /v1/reco/feed request.
  */
 export function FindClient({
@@ -148,8 +135,8 @@ export function FindClient({
   embedded = false,
 }: {
   simulate?: string;
-  /** Inside the desktop pop-up: its own layout, and no history entry, since
-   *  the pop-up is not a page and Back should leave the page behind it. */
+  /** Inside the desktop pop-up: no page landmark or frame of its own, and no
+   *  history entry, since Back should leave the page behind it. */
   embedded?: boolean;
 }) {
   const Main = embedded ? "div" : "main";
@@ -169,14 +156,15 @@ export function FindClient({
   const reduceMotion = useReducedMotion();
   const topRef = React.useRef<HTMLElement>(null);
   const [dir, setDir] = React.useState<1 | -1>(1);
-  // Each step of the pop-up replaces the last, focused button included, so
-  // focus moves to the new step rather than dropping out of the dialog.
+  // Each step replaces the last, focused button included, so focus moves to
+  // the new step rather than dropping out of the pop-up or back to the top.
   const panelRef = React.useRef<HTMLDivElement>(null);
   const shownPhase = React.useRef(phase.kind);
   React.useEffect(() => {
     if (shownPhase.current === phase.kind) return;
     shownPhase.current = phase.kind;
-    if (embedded) panelRef.current?.focus({ preventScroll: true });
+    panelRef.current?.focus({ preventScroll: true });
+    if (!embedded) window.scrollTo({ top: 0 });
   }, [embedded, phase.kind]);
   // Counts the picks that have left the set, so each departure brings the
   // next pick into full view.
@@ -271,6 +259,15 @@ export function FindClient({
       sawPick(picks[0]);
     } catch {
       setPhase({ kind: "error" });
+    }
+  }
+
+  /** Back to the moods. The page's picks are a history step, so it is Back. */
+  function changeMood() {
+    if (!embedded && window.history.state?.findStage === "picks") {
+      window.history.back();
+    } else {
+      setPhase({ kind: "idle" });
     }
   }
 
@@ -445,9 +442,19 @@ export function FindClient({
   const moodNote =
     filmsOnlyMood || media === "tv" ? "Under 2 hours picks films only." : null;
 
+  // The page draws the pop-up's frame itself at md+. Phones have none.
+  const frame = (panel: React.ReactElement) =>
+    embedded ? (
+      panel
+    ) : (
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col pb-6 has-[[data-wide]]:max-w-5xl md:justify-center md:px-6 md:py-8">
+        <div className="md:glass md:overflow-hidden md:rounded-lg md:border">{panel}</div>
+      </main>
+    );
+
   // ---------- idle ----------
-  if (phase.kind === "idle" && embedded) {
-    return (
+  if (phase.kind === "idle") {
+    return frame(
       <MoodPanel
         ref={panelRef}
         moods={MOODS}
@@ -463,111 +470,9 @@ export function FindClient({
       />
     );
   }
-  if (phase.kind === "idle") {
-    return (
-      <Main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-8 md:px-6 md:py-16">
-        <h1 className="hero-rise text-[28px] leading-tight font-semibold tracking-tight sm:text-4xl">
-          What are you in the mood for?
-        </h1>
-        <p className="hero-rise mt-2 text-sm text-muted-foreground">
-          Pick a shape, or do not. Klyvi will find one thing worth your
-          time.
-        </p>
-
-        <div className="mt-6 flex flex-wrap gap-2 md:mt-8">
-          {MOODS.map((m, i) => (
-            <button
-              key={m.id}
-              type="button"
-              // Each chip rises a beat after the one before it.
-              style={{ animationDelay: `calc(${i + 1} * var(--dur-press) / 2)` }}
-              onClick={() => setMood(m.id)}
-              aria-pressed={mood === m.id}
-              disabled={m.filmsOnly === true && media === "tv"}
-              className={
-                "hero-rise tap-target rounded-full px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 " +
-                (mood === m.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground ring-1 ring-foreground/10 hover:text-foreground")
-              }
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-        {moodNote ? (
-          <p className="mt-3 text-xs text-muted-foreground">{moodNote}</p>
-        ) : null}
-
-        <div className="glass mt-6 divide-y divide-foreground/10 rounded-2xl md:mt-8">
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <span className="text-sm text-muted-foreground">Films or TV?</span>
-          <ToggleGroup
-            value={[media]}
-            onValueChange={(v: unknown[]) => {
-              // Pressing the chosen item again empties the group. Ignore
-              // that, so one choice is always on.
-              const next = MEDIA.find((o) => o.value === v.at(-1));
-              if (next) chooseMedia(next.value);
-            }}
-            spacing={0}
-            variant="outline"
-            aria-label="Films or TV"
-          >
-            {MEDIA.map((o) => (
-              <ToggleGroupItem key={o.value} value={o.value}>
-                {o.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <span className="text-sm text-muted-foreground">How many?</span>
-          <ToggleGroup
-            value={[String(count)]}
-            onValueChange={(v: unknown[]) => {
-              const n = Number(v.at(-1));
-              if (n === 3 || n === 5 || n === 7) setCount(n);
-            }}
-            spacing={0}
-            variant="outline"
-            aria-label="How many picks"
-          >
-            {[3, 5, 7].map((n) => (
-              <ToggleGroupItem key={n} value={String(n)} className="font-mono">
-                {n}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-        </div>
-
-        <Button
-          size="touch"
-          onClick={() => void fetchPicks()}
-          className="mt-6 w-full gap-2 sm:w-auto sm:self-start"
-        >
-          <Sparkles aria-hidden="true" data-icon="inline-start" />
-          Find something
-        </Button>
-      </Main>
-    );
-  }
 
   // ---------- loading ----------
-  if (phase.kind === "loading" && embedded) {
-    return <PickPanelSkeleton ref={panelRef} />;
-  }
-  if (phase.kind === "loading") {
-    return (
-      <Main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-4 py-10 md:px-6">
-        <Skeleton className="aspect-[16/9] w-full rounded-lg" />
-        <Skeleton className="mt-6 h-8 w-2/3 rounded-lg" />
-        <Skeleton className="mt-3 h-5 w-1/3 rounded-lg" />
-      </Main>
-    );
-  }
+  if (phase.kind === "loading") return frame(<PickPanelSkeleton ref={panelRef} />);
 
   // ---------- error ----------
   if (phase.kind === "error") {
@@ -624,7 +529,6 @@ export function FindClient({
 
   // ---------- the pick ----------
   const pick = phase.picks[phase.index];
-  const { overview, genres } = pick;
   // A show's length is its season count, where a film's is its runtime.
   const length =
     pick.mediaType === "tv"
@@ -634,9 +538,6 @@ export function FindClient({
   // view appears after the user asks for a set, so there is no server pass
   // to disagree with about the hour.
   const timePhrase = watchWindowPhrase();
-  const prev = phase.index > 0 ? phase.picks[phase.index - 1] : null;
-  const next =
-    phase.index < phase.picks.length - 1 ? phase.picks[phase.index + 1] : null;
   const total = phase.picks.length;
   const heading =
     total === 1
@@ -658,12 +559,15 @@ export function FindClient({
     />
   ) : null;
 
-  if (embedded) {
-    return (
-      <>
+  return (
+    <>
+      {embedded ? null : <AmbientArt path={pick.backdropPath ?? pick.posterPath} />}
+      {frame(
         <PickPanel
           ref={panelRef}
           headerRef={topRef}
+          cardRef={cardRef}
+          swipe={{ onTouchStart, onTouchMove, onTouchEnd, onTouchCancel: onTouchEnd }}
           heading={heading}
           picks={phase.picks}
           index={phase.index}
@@ -677,208 +581,10 @@ export function FindClient({
           onSeen={() => act("seen")}
           onDismiss={() => act("dismiss")}
           onNewSet={() => void fetchPicks()}
-          onChangeMood={() => setPhase({ kind: "idle" })}
+          onChangeMood={changeMood}
         />
-        {ratingDialog}
-      </>
-    );
-  }
-
-  return (
-    <Main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-start px-4 py-4 md:justify-center md:px-6 md:py-8">
-      <AmbientArt path={pick.backdropPath ?? pick.posterPath} />
-      <header ref={topRef} className="scroll-mt-16 text-center">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">
-          {heading}
-        </h1>
-        <p data-numeric className="mt-1 hidden font-mono text-xs text-muted-foreground md:block">
-          {phase.index + 1} of {total}
-        </p>
-        {shrinking ? (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Nothing else fits right now, so the set is getting smaller. New set
-            looks again.
-          </p>
-        ) : null}
-      </header>
-
-      {/* The stage. The current pick sits on top at two thirds of the width;
-          each neighbour is the same card, behind it, centred on the same
-          line and pushed out far enough to leave only a sliver overlapping.
-          Stacking rather than a three-column grid on purpose: in a grid the
-          side tracks size to their content, so the neighbours refuse to
-          shrink and crush the centre column instead of being clipped. */}
-      <div
-        data-slot="pick-stage"
-        className="mt-4 touch-pan-y overflow-hidden md:mt-6"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
-      >
-        <div className="relative mx-auto w-full lg:w-2/3">
-          {prev ? (
-            <NeighbourPick pick={prev} side="left" onClick={() => step(-1)} />
-          ) : null}
-          {next ? (
-            <NeighbourPick pick={next} side="right" onClick={() => step(1)} />
-          ) : null}
-
-          <div ref={cardRef} className="relative z-10">
-            <PickHero pick={pick} priority />
-
-            {/* Phones: where you are in the set, and a hint that it swipes. */}
-            <div
-              aria-hidden="true"
-              data-slot="pick-dots"
-              className="mt-3 flex justify-center gap-1.5 md:hidden"
-            >
-              {phase.picks.map((p, i) => (
-                <span
-                  key={p.mediaId}
-                  className={
-                    "h-1.5 rounded-full transition-all duration-(--dur-base) " +
-                    (i === phase.index ? "w-4 bg-violet-text" : "w-1.5 bg-foreground/25")
-                  }
-                />
-              ))}
-            </div>
-
-            {/* Fixed height, because this is the only part of the card whose
-                size follows the film. Letting it size to the synopsis moved
-                the buttons and the pager every time the user stepped from a
-                terse film to a wordy one, which made them hard to hit. */}
-            <div className="flex min-h-[12rem] flex-col justify-start md:min-h-[15.5rem]">
-          {/* Why. The differentiator, given real room rather than a corner. */}
-          <div className="mt-4 text-center md:mt-6">
-            {pick.reasons.length > 0 ? (
-              <>
-                <h2 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
-                  Why this one
-                </h2>
-                <ReasonChips
-                  reasons={pick.reasons}
-                  max={4}
-                  className="mt-2.5 justify-center"
-                />
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                This is a pick people tend to agree on. Rate a few and Klyvi
-                starts explaining why it picked things for you specifically.
-              </p>
-            )}
-          </div>
-
-          {/* What it actually is: the synopsis sits with the reasons, not a
-              click away on the detail page. Clamped so a long one cannot
-              outgrow the reserved space; "More about it" has the rest. */}
-          {overview ? (
-            <p className="mx-auto mt-4 line-clamp-3 max-w-[60ch] md:mt-5 md:line-clamp-5 text-center text-[15px] leading-relaxed text-foreground/90">
-              {overview}
-            </p>
-          ) : null}
-
-          {genres.length > 0 || length != null ? (
-            <p className="mt-3 text-center text-sm text-muted-foreground">
-              {[genres.join(" · "), length]
-                .filter(Boolean)
-                .join("  •  ")}
-            </p>
-          ) : null}
-            </div>
-
-          {/* Decide. */}
-          {/* Phones: the main action full width, the other three as tiles
-              in a row beneath it. Wider screens: one centred row. */}
-          <div className="mt-5 grid grid-cols-3 gap-2 md:mt-7 md:flex md:flex-wrap md:items-center md:justify-center">
-            <Button size="touch" className="col-span-3 gap-2" onClick={() => act("save")}>
-              <Bookmark aria-hidden="true" data-icon="inline-start" />
-              Add to watchlist
-            </Button>
-            <Link
-              href={mediaHref(pick)}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "touch" }),
-                "h-auto flex-col gap-1 py-2 text-xs md:h-11 md:flex-row md:gap-2 md:py-0 md:text-sm"
-              )}
-              onClick={() => openedDetail(pick)}
-            >
-              <Info aria-hidden="true" data-icon="inline-start" className="md:hidden" />
-              More about it
-            </Link>
-            <Button
-              variant="ghost"
-              size="touch"
-              className="h-auto flex-col gap-1 py-2 text-xs md:h-11 md:flex-row md:gap-2 md:py-0 md:text-sm"
-              onClick={() => act("seen")}
-            >
-              <Check aria-hidden="true" data-icon="inline-start" />
-              Seen it
-            </Button>
-            <Button
-              variant="ghost"
-              size="touch"
-              className="h-auto flex-col gap-1 py-2 text-xs md:h-11 md:flex-row md:gap-2 md:py-0 md:text-sm text-muted-foreground"
-              onClick={() => act("dismiss")}
-            >
-              <EyeOff aria-hidden="true" data-icon="inline-start" />
-              Not interested
-            </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Moving between picks, centred under the card. Its position never
-          depends on the film, which is the point: the pager sits in the
-          same place whichever pick is showing. */}
-      <div className="mx-auto mt-5 flex w-full max-w-[44rem] items-center justify-between gap-3 border-t border-border pt-4 md:mt-8 md:flex-col md:justify-center md:pt-5">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Previous pick"
-            disabled={phase.index === 0}
-            onClick={() => step(-1)}
-          >
-            <ChevronLeft aria-hidden="true" className="size-4" strokeWidth={2} />
-          </Button>
-          <span data-numeric className="font-mono text-xs text-muted-foreground">
-            {phase.index + 1} / {total}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Next pick"
-            disabled={phase.index >= total - 1}
-            onClick={() => step(1)}
-          >
-            <ChevronRight aria-hidden="true" className="size-4" strokeWidth={2} />
-          </Button>
-        </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-2"
-          onClick={() => void fetchPicks()}
-        >
-          <RotateCcw aria-hidden="true" data-icon="inline-start" />
-          New set
-        </Button>
-      </div>
-
-      {ratingsNote ? (
-        <p
-          data-numeric
-          className="mx-auto mt-5 max-w-[44rem] text-sm text-muted-foreground"
-        >
-          {ratingsNote}
-        </p>
-      ) : null}
-
+      )}
       {ratingDialog}
-    </Main>
+    </>
   );
 }
