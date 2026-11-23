@@ -170,15 +170,15 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto w-full max-w-[1100px] px-4 md:px-6">
         <div className="-mt-8 flex flex-wrap items-end justify-between gap-4">
           {identityReady ? (
-            <div className="flex items-end gap-4">
+            <div className="flex items-start gap-4">
               <Avatar className="size-24 ring-4 ring-background">
                 {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
                 <AvatarFallback className="text-2xl">
                   {(me?.username?.charAt(0) ?? "K").toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="pb-1">
-                <h1 className="text-2xl font-semibold tracking-tight">
+              <div className="min-w-0 pt-10">
+                <h1 className="text-2xl font-semibold tracking-tight break-words">
                   {me?.username ?? "Your profile"}
                 </h1>
                 <p className="mt-0.5 text-sm text-muted-foreground">
@@ -193,9 +193,9 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           ) : (
-            <div className="flex items-end gap-4">
+            <div className="flex items-start gap-4">
               <Skeleton className="size-24 rounded-full ring-4 ring-background" />
-              <div className="pb-2">
+              <div className="pt-10">
                 <Skeleton className="h-7 w-44 rounded-lg" />
                 <Skeleton className="mt-2 h-4 w-32 rounded-lg" />
               </div>
@@ -203,10 +203,10 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
           )}
           <Link
             href="/settings"
-            className={
-              buttonVariants({ variant: "outline", size: "sm" }) +
-              " hidden gap-2 md:inline-flex"
-            }
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "hidden gap-2 md:inline-flex"
+            )}
           >
             <SettingsIcon aria-hidden="true" data-icon="inline-start" />
             Settings

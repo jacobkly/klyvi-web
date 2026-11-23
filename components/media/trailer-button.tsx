@@ -33,7 +33,7 @@ export function TrailerButton({
       <Button
         variant="outline"
         size="touch"
-        className="mt-4 sm:h-9 sm:px-3"
+        className="mt-4 flex w-fit sm:h-9 sm:px-3"
         onClick={() => setOpen(true)}
       >
         <Play data-icon="inline-start" aria-hidden="true" />

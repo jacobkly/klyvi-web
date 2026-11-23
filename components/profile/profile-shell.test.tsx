@@ -120,6 +120,14 @@ describe("ProfileShell", () => {
     );
   });
 
+  it("hides the header's Settings button on phones, where the account rows have one", async () => {
+    render(<ProfileShell>x</ProfileShell>);
+    const links = await screen.findAllByRole("link", { name: "Settings" });
+    const button = links.find((l) => l.classList.contains("md:inline-flex"));
+    expect(button).toHaveClass("hidden");
+    expect(button).not.toHaveClass("inline-flex");
+  });
+
   it("takes the profile from the session instead of fetching it again", async () => {
     render(
       <ProfileShell>
