@@ -96,6 +96,12 @@ describe("LeftRail", () => {
     expect(within(nav).queryByRole("button", { name: "Find next" })).toBeNull();
   });
 
+  it("docks beside the page as a short pill on ultrawide screens", () => {
+    const nav = renderRail();
+    expect(nav).toHaveClass("ultrawide:left-(--rail-dock)", "ultrawide:bottom-auto");
+    expect(nav).toHaveClass("inset-y-3", "left-3");
+  });
+
   it("hands search to the shell", async () => {
     const user = userEvent.setup();
     const onOpenSearch = vi.fn();

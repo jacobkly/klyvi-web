@@ -57,6 +57,9 @@
   --radius-4xl: var(--radius);
 
   /* Klyvi additions (see docs/planning/03-tokens.md) */
+  /* Wider than 1080p monitors: the page is a column in the middle, and the
+     rail docks beside it instead of the window edge. */
+  --breakpoint-ultrawide: 125rem;
   --radius-art: var(--art-radius);
   --color-violet-text: var(--violet-text);
   --color-theme-violet: var(--theme-violet);
@@ -125,6 +128,9 @@
   --theme-orange: oklch(0.646 0.16 60);
   --theme-pink: oklch(0.656 0.211 354);
   --theme-red: oklch(0.577 0.215 27);
+  /* Where the docked rail sits on ultrawide: half the 1400px page column, plus
+     the 56px rail and a 16px gap, less half of the shell's 80px inset. */
+  --rail-dock: calc(50% - 732px);
   /* Motion */
   --dur-press: 120ms;
   --dur-base: 200ms;

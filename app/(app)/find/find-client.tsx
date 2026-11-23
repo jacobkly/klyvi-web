@@ -8,14 +8,22 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Clapperboard,
+  Clock,
+  CloudLightning,
   EyeOff,
+  Flame,
   Info,
   RotateCcw,
+  Shuffle,
   Sparkles,
+  Sun,
+  type LucideIcon,
 } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
 import { NeighbourPick, PickHero } from "@/components/find/pick-stage";
+import { MoodPanel, PickPanel, PickPanelSkeleton } from "@/components/find/pop-up-views";
 import { AmbientArt } from "@/components/klyvi/ambient-art";
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -47,19 +55,32 @@ const TIER_THRESHOLD = 20; // klyvi/docs/API.md: Tier 2 at >= 20 interactions.
 const MOODS: {
   id: string;
   label: string;
+  /** What the lens reads, in a few words, for the pop-up's tiles. */
+  hint: string;
+  icon: LucideIcon;
   filmsOnly?: boolean;
   fits: (s: Scored) => boolean;
 }[] = [
-  { id: "any", label: "Anything", fits: () => true },
+  {
+    id: "any",
+    label: "Anything",
+    hint: "Your best matches",
+    icon: Shuffle,
+    fits: () => true,
+  },
   {
     id: "short",
     label: "Under 2 hours",
+    hint: "Fits in an evening",
+    icon: Clock,
     filmsOnly: true,
     fits: (s) => s.runtime != null && s.runtime <= 120,
   },
   {
     id: "slow",
     label: "Slow burn",
+    hint: "Quiet drama over action",
+    icon: Flame,
     fits: (s) =>
       s.reasons.some(
         (r) =>
@@ -70,6 +91,8 @@ const MOODS: {
   {
     id: "light",
     label: "Something light",
+    hint: "Comedy, romance, animation",
+    icon: Sun,
     fits: (s) =>
       s.genres.some((g) => ["Comedy", "Romance", "Family", "Animation"].includes(g)) &&
       !s.genres.includes("Horror"),
@@ -77,6 +100,8 @@ const MOODS: {
   {
     id: "heavy",
     label: "Heavy",
+    hint: "Drama, crime, war",
+    icon: CloudLightning,
     fits: (s) =>
       s.genres.some((g) => ["Drama", "War", "Crime", "Thriller"].includes(g)) &&
       !s.genres.includes("Comedy"),
@@ -84,6 +109,8 @@ const MOODS: {
   {
     id: "old",
     label: "Twentieth century",
+    hint: "Made before 2000",
+    icon: Clapperboard,
     fits: (s) => s.year != null && s.year < 2000,
   },
 ];
@@ -121,7 +148,8 @@ export function FindClient({
   embedded = false,
 }: {
   simulate?: string;
-  /** Inside the desktop pop-up: no page landmark and no ambient art. */
+  /** Inside the desktop pop-up: its own layout, and no history entry, since
+   *  the pop-up is not a page and Back should leave the page behind it. */
   embedded?: boolean;
 }) {
   const Main = embedded ? "div" : "main";
@@ -140,6 +168,16 @@ export function FindClient({
   const [rating, setRating] = React.useState<Scored | null>(null);
   const reduceMotion = useReducedMotion();
   const topRef = React.useRef<HTMLElement>(null);
+  const [dir, setDir] = React.useState<1 | -1>(1);
+  // Each step of the pop-up replaces the last, focused button included, so
+  // focus moves to the new step rather than dropping out of the dialog.
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const shownPhase = React.useRef(phase.kind);
+  React.useEffect(() => {
+    if (shownPhase.current === phase.kind) return;
+    shownPhase.current = phase.kind;
+    if (embedded) panelRef.current?.focus({ preventScroll: true });
+  }, [embedded, phase.kind]);
   // Counts the picks that have left the set, so each departure brings the
   // next pick into full view.
   const [departures, setDepartures] = React.useState(0);
@@ -182,6 +220,7 @@ export function FindClient({
   // than leaving Find. The entry keeps the same url, and Next's patched
   // pushState carries its own router state into it.
   React.useEffect(() => {
+    if (embedded) return;
     const onPop = () => {
       if (window.history.state?.findStage !== "picks") {
         setPhase({ kind: "idle" });
@@ -189,10 +228,11 @@ export function FindClient({
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [embedded]);
 
   async function fetchPicks() {
-    if (phase.kind === "idle") {
+    setDir(1);
+    if (phase.kind === "idle" && !embedded) {
       window.history.pushState({ findStage: "picks" }, "");
     }
     setPhase({ kind: "loading" });
@@ -240,12 +280,26 @@ export function FindClient({
     if (next === "tv" && filmsOnlyMood) setMood("any");
   }
 
-  function step(dir: 1 | -1) {
-    if (phase.kind !== "ready") return;
-    const next = phase.index + dir;
+  function goTo(next: number) {
+    if (phase.kind !== "ready" || next === phase.index) return;
     if (next < 0 || next >= phase.picks.length) return;
+    setDir(next > phase.index ? 1 : -1);
     setPhase({ ...phase, index: next });
     sawPick(phase.picks[next]);
+  }
+
+  function step(by: 1 | -1) {
+    if (phase.kind === "ready") goTo(phase.index + by);
+  }
+
+  function openedDetail(p: Scored) {
+    if (mock) return;
+    queueSignal({
+      tmdbId: p.tmdbId,
+      mediaType: p.mediaType,
+      kind: "clicked",
+      source: "feed",
+    });
   }
 
   /** The current pick leaves, and the next one that fits joins the end of
@@ -388,7 +442,27 @@ export function FindClient({
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const moodNote =
+    filmsOnlyMood || media === "tv" ? "Under 2 hours picks films only." : null;
+
   // ---------- idle ----------
+  if (phase.kind === "idle" && embedded) {
+    return (
+      <MoodPanel
+        ref={panelRef}
+        moods={MOODS}
+        mood={mood}
+        onMood={setMood}
+        media={media}
+        mediaOptions={MEDIA}
+        onMedia={chooseMedia}
+        count={count}
+        onCount={setCount}
+        note={moodNote}
+        onFind={() => void fetchPicks()}
+      />
+    );
+  }
   if (phase.kind === "idle") {
     return (
       <Main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-8 md:px-6 md:py-16">
@@ -421,10 +495,8 @@ export function FindClient({
             </button>
           ))}
         </div>
-        {filmsOnlyMood || media === "tv" ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Under 2 hours picks films only.
-          </p>
+        {moodNote ? (
+          <p className="mt-3 text-xs text-muted-foreground">{moodNote}</p>
         ) : null}
 
         <div className="glass mt-6 divide-y divide-foreground/10 rounded-2xl md:mt-8">
@@ -484,6 +556,9 @@ export function FindClient({
   }
 
   // ---------- loading ----------
+  if (phase.kind === "loading" && embedded) {
+    return <PickPanelSkeleton ref={panelRef} />;
+  }
   if (phase.kind === "loading") {
     return (
       <Main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-4 py-10 md:px-6">
@@ -563,22 +638,63 @@ export function FindClient({
   const next =
     phase.index < phase.picks.length - 1 ? phase.picks[phase.index + 1] : null;
   const total = phase.picks.length;
+  const heading =
+    total === 1
+      ? `Your pick for ${timePhrase}`
+      : `Your ${total} picks for ${timePhrase}`;
+  const shrinking = total < phase.size && phase.reserve.length === 0;
+  const ratingsNote =
+    remaining != null && remaining > 0 && interactions !== 0
+      ? `${remaining} more ${remaining === 1 ? "rating" : "ratings"} and Klyvi switches to your full taste profile.`
+      : null;
+  const ratingDialog = rating ? (
+    <RatingDialog
+      title={rating.title}
+      year={rating.year}
+      posterPath={rating.posterPath}
+      open
+      onOpenChange={(o) => !o && setRating(null)}
+      onSubmit={submitRating}
+    />
+  ) : null;
+
+  if (embedded) {
+    return (
+      <>
+        <PickPanel
+          ref={panelRef}
+          headerRef={topRef}
+          heading={heading}
+          picks={phase.picks}
+          index={phase.index}
+          dir={dir}
+          length={length}
+          shrinking={shrinking}
+          ratingsNote={ratingsNote}
+          onGo={goTo}
+          onSave={() => act("save")}
+          onMore={() => openedDetail(pick)}
+          onSeen={() => act("seen")}
+          onDismiss={() => act("dismiss")}
+          onNewSet={() => void fetchPicks()}
+          onChangeMood={() => setPhase({ kind: "idle" })}
+        />
+        {ratingDialog}
+      </>
+    );
+  }
 
   return (
     <Main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-start px-4 py-4 md:justify-center md:px-6 md:py-8">
-      {embedded ? null : (
-        <AmbientArt path={pick.backdropPath ?? pick.posterPath} />
-      )}
+      <AmbientArt path={pick.backdropPath ?? pick.posterPath} />
       <header ref={topRef} className="scroll-mt-16 text-center">
         <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">
-          {total === 1
-            ? `Your pick for ${timePhrase}`
-            : `Your ${total} picks for ${timePhrase}`}
+          {heading}
         </h1>
         <p data-numeric className="mt-1 hidden font-mono text-xs text-muted-foreground md:block">
           {phase.index + 1} of {total}
         </p>
-        {total < phase.size && phase.reserve.length === 0 ? (
+        {shrinking ? (
           <p className="mt-1 text-xs text-muted-foreground">
             Nothing else fits right now, so the set is getting smaller. New set
             looks again.
@@ -686,15 +802,7 @@ export function FindClient({
                 buttonVariants({ variant: "outline", size: "touch" }),
                 "h-auto flex-col gap-1 py-2 text-xs md:h-11 md:flex-row md:gap-2 md:py-0 md:text-sm"
               )}
-              onClick={() => {
-                if (!mock)
-                  queueSignal({
-                    tmdbId: pick.tmdbId,
-                    mediaType: pick.mediaType,
-                    kind: "clicked",
-                    source: "feed",
-                  });
-              }}
+              onClick={() => openedDetail(pick)}
             >
               <Info aria-hidden="true" data-icon="inline-start" className="md:hidden" />
               More about it
@@ -761,26 +869,16 @@ export function FindClient({
         </Button>
       </div>
 
-      {remaining != null && remaining > 0 && interactions !== 0 ? (
+      {ratingsNote ? (
         <p
           data-numeric
           className="mx-auto mt-5 max-w-[44rem] text-sm text-muted-foreground"
         >
-          {remaining} more {remaining === 1 ? "rating" : "ratings"} and Klyvi
-          switches to your full taste profile.
+          {ratingsNote}
         </p>
       ) : null}
 
-      {rating ? (
-        <RatingDialog
-          title={rating.title}
-          year={rating.year}
-          posterPath={rating.posterPath}
-          open
-          onOpenChange={(o) => !o && setRating(null)}
-          onSubmit={submitRating}
-        />
-      ) : null}
+      {ratingDialog}
     </Main>
   );
 }

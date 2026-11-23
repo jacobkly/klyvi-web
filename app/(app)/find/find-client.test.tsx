@@ -500,4 +500,76 @@ describe("FindClient", () => {
       })
     );
   });
+
+  describe("as the desktop pop-up", () => {
+    const pickHeading = (name: string) =>
+      screen.findByRole("heading", { level: 2, name });
+
+    async function showPopUp() {
+      render(<FindClient embedded />);
+      fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+      await pickHeading("Memories of Murder");
+    }
+
+    it("marks the chosen mood and keeps one chosen", () => {
+      render(<FindClient embedded />);
+      const slow = screen.getByRole("button", { name: "Slow burn" });
+      expect(screen.getByRole("button", { name: "Anything" })).toHaveAttribute("aria-pressed", "true");
+      fireEvent.click(slow);
+      expect(slow).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Anything" })).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("turns Under 2 hours off for TV, and says why", () => {
+      render(<FindClient embedded />);
+      fireEvent.click(screen.getByRole("button", { name: "TV" }));
+      expect(screen.getByRole("button", { name: "Under 2 hours" })).toBeDisabled();
+      expect(screen.getByText("Under 2 hours picks films only.")).toBeInTheDocument();
+    });
+
+    it("adds no history entry, so Back still leaves the page behind it", async () => {
+      const pushState = vi.spyOn(window.history, "pushState");
+      await showPopUp();
+      expect(pushState).not.toHaveBeenCalled();
+      pushState.mockRestore();
+    });
+
+    it("moves focus to the pick when it lands", async () => {
+      await showPopUp();
+      expect(document.activeElement).toHaveAttribute("data-slot", "pick-panel");
+    });
+
+    it("jumps to any pick in the set from its poster", async () => {
+      await showPopUp();
+      fireEvent.click(screen.getByRole("button", { name: "Pick 3: Mulholland Drive" }));
+      await pickHeading("Mulholland Drive");
+      expect(screen.getByRole("button", { name: "Pick 3: Mulholland Drive" })).toHaveAttribute("aria-current", "true");
+      expect(queueSignal).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tmdbId: 1018, kind: "impression" })
+      );
+      fireEvent.keyDown(window, { key: "ArrowLeft" });
+      await pickHeading("Parasite");
+    });
+
+    it("records a click when you open More about it", async () => {
+      await showPopUp();
+      fireEvent.click(screen.getByRole("link", { name: "More about it" }));
+      expect(queueSignal).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tmdbId: 11423, kind: "clicked" })
+      );
+    });
+
+    it("goes back to the moods from Change mood", async () => {
+      await showPopUp();
+      fireEvent.click(screen.getByRole("button", { name: "Change mood" }));
+      expect(screen.getByRole("group", { name: "Mood" })).toBeInTheDocument();
+    });
+
+    it("says so when the feed fails", async () => {
+      getFeed.mockRejectedValue(new Error("down"));
+      render(<FindClient embedded />);
+      fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+      expect(await screen.findByText("Could not get your recommendations.")).toBeInTheDocument();
+    });
+  });
 });

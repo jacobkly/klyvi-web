@@ -46,7 +46,8 @@ function useTyping(): boolean {
  * where the top bar takes over. Signed in it is Home, Explore, Find next,
  * Library and Profile, and Profile carries the unread dot. Signed out it is
  * Home, Explore and Sign in, and Home leads back to the marketing page, which
- * has no bar, so a visitor can always get home. The bar steps aside while a
+ * has no bar, so a visitor can always get home. Find next is the one violet
+ * tab, as it is on the desktop rail. The bar steps aside while a
  * text field has focus, so the keyboard gets the room.
  */
 function BottomTabBar() {
@@ -67,6 +68,7 @@ function BottomTabBar() {
         {nav.map((item) => {
           const active = isActive(pathname, item.href);
           const dot = item.href === "/profile" && unread > 0;
+          const find = item.href === "/find";
           return (
             <li key={item.href} className="min-w-0 flex-1">
               <Link
@@ -74,7 +76,13 @@ function BottomTabBar() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   TAB,
-                  active
+                  find
+                    ? cn(
+                        "bg-primary text-primary-foreground hover:bg-primary/90",
+                        active &&
+                          "ring-2 ring-violet-text ring-offset-2 ring-offset-background"
+                      )
+                    : active
                     ? "bg-primary/15 text-violet-text"
                     : "text-muted-foreground hover:text-foreground"
                 )}

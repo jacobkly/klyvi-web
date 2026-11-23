@@ -86,6 +86,19 @@ describe("BottomTabBar", () => {
     expect(within(nav).queryByRole("button")).toBeNull();
   });
 
+  it("fills Find next in violet, and rings it when you are there", () => {
+    mockUsePathname.mockReturnValue("/home");
+    const { rerender } = render(<BottomTabBar />);
+    const find = () => screen.getByRole("link", { name: "Find next" });
+    expect(find()).toHaveClass("bg-primary", "text-primary-foreground");
+    expect(find()).not.toHaveClass("ring-2");
+
+    mockUsePathname.mockReturnValue("/find");
+    rerender(<BottomTabBar />);
+    expect(find()).toHaveAttribute("aria-current", "page");
+    expect(find()).toHaveClass("bg-primary", "ring-2");
+  });
+
   // The loop: Home is the marketing page, which has no bar.
   it("gives a signed-out visitor Home, Explore and Sign in", () => {
     session.user = null;
