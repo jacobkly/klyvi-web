@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -67,6 +67,26 @@ describe("LeftRail", () => {
     await user.click(within(nav).getByRole("button", { name: "Find next" }));
     const dialog = await screen.findByRole("dialog", { name: "Find next" });
     expect(await within(dialog).findByTestId("find")).toHaveTextContent("embedded");
+  });
+
+  it("closes the pop-up when you follow a link to another page", async () => {
+    const user = userEvent.setup();
+    const ui = (
+      <TooltipProvider delay={0}>
+        <LeftRail onOpenSearch={vi.fn()} />
+      </TooltipProvider>
+    );
+    const { rerender } = render(ui);
+    await user.click(screen.getByRole("button", { name: "Find next" }));
+    await screen.findByRole("dialog", { name: "Find next" });
+
+    path.current = "/movie/577922";
+    rerender(
+      <TooltipProvider delay={0}>
+        <LeftRail onOpenSearch={vi.fn()} />
+      </TooltipProvider>
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("is a plain link to the page when you are already on Find next", () => {
