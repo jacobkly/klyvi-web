@@ -124,7 +124,7 @@ const STAT_GLYPHS = [
 
 export function StatsBand() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 pt-16 pb-16 sm:pt-32">
+    <section className="mx-auto w-full max-w-(--page-landing) px-4 pt-16 pb-16 sm:pt-32">
       <Reveal>
         <LandingHeader
           align="split"
@@ -247,7 +247,7 @@ const FEATURES = [
 
 export function FeaturesRow() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-20">
+    <section className="mx-auto w-full max-w-(--page-landing) px-4 py-20">
       <Reveal>
         <LandingHeader
           align="split"
@@ -284,7 +284,7 @@ export function FeaturesRow() {
 
 export function ClosingCta() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 pt-12 pb-28">
+    <section className="mx-auto w-full max-w-(--page-landing) px-4 pt-12 pb-28">
       <Reveal>
       <div className="relative overflow-hidden glass rounded-3xl px-6 py-14 text-center ring-1 ring-foreground/10 sm:py-24">
         {/* Violet only where the app speaks: a faint bloom behind the final

@@ -52,13 +52,12 @@ function Tip({ label, children }: { label: React.ReactNode; children: React.Reac
 }
 
 /**
- * Desktop navigation signed in: a slim pill down the left edge. Klyvi at the
- * top, the pages and search in the middle, the account at the bottom. Find
+ * Desktop navigation signed in: a short pill at the top left, no taller than
+ * what it holds. Klyvi, then the pages and search, then the account. Find
  * next is the one violet control, and it opens as a pop-up over the page
- * you are on, so asking for a pick never loses your place. On ultrawide
- * screens it shrinks to its contents and docks beside the page column, so it
- * is never a window's width away from what you are reading. Phones keep the
- * bottom tab bar.
+ * you are on, so asking for a pick never loses your place. Past 1080p only
+ * its place changes: it leaves the window edge and docks beside the page
+ * column. Phones keep the bottom tab bar.
  */
 function LeftRail({ onOpenSearch }: { onOpenSearch: () => void }) {
   const pathname = usePathname();
@@ -96,7 +95,7 @@ function LeftRail({ onOpenSearch }: { onOpenSearch: () => void }) {
       <nav
         aria-label="Primary"
         data-slot="left-rail"
-        className="glass fixed inset-y-3 left-3 z-40 hidden w-14 flex-col items-center justify-between rounded-full border py-3 ultrawide:top-8 ultrawide:bottom-auto ultrawide:left-(--rail-dock) ultrawide:justify-start ultrawide:gap-6 md:flex"
+        className="glass fixed top-8 left-3 z-40 hidden w-14 flex-col items-center gap-6 rounded-full border py-3 ultrawide:left-(--rail-dock) md:flex [@media(max-height:30rem)]:top-2 [@media(max-height:30rem)]:gap-2"
       >
         <Link
           href="/home"

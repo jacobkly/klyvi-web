@@ -14,9 +14,10 @@ import { cn } from "@/lib/utils";
 /**
  * The marquee hero: real popular-film posters scrolling under the pitch,
  * adapted from the 21st.dev reference and reskinned to Klyvi (art radius,
- * no vendor colors, real Button). Motion is pure CSS, no framer. Reduced
- * motion (the system's or Settings') holds the strip still, and otherwise a
- * button pauses it, since it moves for more than five seconds (WCAG 2.2.2).
+ * no vendor colors, real Button). Motion is pure CSS, no framer. A button
+ * plays and pauses it, since it moves for more than five seconds (WCAG
+ * 2.2.2). Reduced motion (the system's or Settings') starts it still, and
+ * the same button lets someone set it going anyway.
  *
  * The rise is a CSS animation, not `Reveal`, so the server HTML is visible
  * as sent and the hero paints before the page's JavaScript loads. `Reveal`
@@ -34,10 +35,15 @@ function Rise({ delay, children }: { delay: number; children: React.ReactNode })
 
 const TITLE = "Stop scrolling. Start watching.";
 
+// One set has to be wider than the strip, or the loop shows a gap. At 176px a
+// poster on desktop, twelve cover the column at its widest (1440px).
+const SET_SIZE = 12;
+
 export function MarqueeHero() {
   const reduced = useReducedMotion();
-  const [paused, setPaused] = React.useState(false);
-  const still = reduced || paused;
+  // Null until someone uses the button. Their choice then beats the default.
+  const [choice, setChoice] = React.useState<boolean | null>(null);
+  const playing = choice ?? !reduced;
   const [posters, setPosters] = React.useState<string[]>(() =>
     MOCK_POOL.filter((p) => p.posterPath)
       .slice(0, 14)
@@ -61,7 +67,11 @@ export function MarqueeHero() {
   // Two identical sets make translateX(-50%) loop seamlessly. The gap is a
   // per-poster right margin, not a flex gap, so half the track is exactly
   // one set (a container gap would leave a half-gap seam at the wrap).
-  const items = [...posters, ...posters].map((poster, index) => (
+  const set = Array.from(
+    { length: Math.max(posters.length, SET_SIZE) },
+    (_, i) => posters[i % posters.length]
+  );
+  const items = [...set, ...set].map((poster, index) => (
     <div
       key={`${poster}-${index}`}
       className="relative mr-3 aspect-[2/3] h-36 shrink-0 sm:mr-4 sm:h-48 overflow-hidden rounded-art ring-1 ring-foreground/10 md:h-60"
@@ -120,27 +130,27 @@ export function MarqueeHero() {
         </Rise>
       </div>
 
-      {/* The poster strip, faded at both edges. The mask is functional, not
-          decoration: it stops the loop ending in a hard vertical cut. */}
-      <div className="relative mt-12 w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] sm:mt-28">
+      {/* The poster strip, as wide as the sections below and faded at both
+          edges. The mask is functional, not decoration: it stops the loop
+          ending in a hard vertical cut. */}
+      <div className="relative mt-12 w-full max-w-[calc(var(--page-landing)-2rem)] overflow-hidden py-2 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] sm:mt-28">
         <div
           className="marquee-track flex w-max"
-          data-paused={still ? "" : undefined}
+          data-paused={playing ? undefined : ""}
+          data-manual={choice === null ? undefined : ""}
         >
           {items}
         </div>
       </div>
-      {reduced ? null : (
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          className="mt-4 text-muted-foreground"
-          aria-label={paused ? "Play the posters" : "Pause the posters"}
-          onClick={() => setPaused((p) => !p)}
-        >
-          {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
-        </Button>
-      )}
+      <Button
+        variant="ghost"
+        size="icon-touch"
+        className="mt-4 text-muted-foreground"
+        aria-label={playing ? "Pause the posters" : "Play the posters"}
+        onClick={() => setChoice(!playing)}
+      >
+        {playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+      </Button>
     </section>
   );
 }

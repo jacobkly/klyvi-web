@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 export function MarketingNav() {
   return (
     <header className="pointer-events-none sticky top-0 z-40 px-3 pt-3 sm:px-6">
-      <div className="pointer-events-auto glass mx-auto flex h-14 max-w-5xl items-center justify-between rounded-full border pr-2 pl-5">
+      <div className="pointer-events-auto glass mx-auto flex h-14 max-w-[calc(var(--page-landing)-8rem)] items-center justify-between rounded-full border pr-2 pl-5">
         <Link
           href="/"
           className="rounded-full text-[15px] font-semibold tracking-tight text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30"

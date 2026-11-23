@@ -65,7 +65,7 @@ export function SiteFooter({ wide = false }: { wide?: boolean }) {
       <div
         className={cn(
           "mx-auto w-full px-4 py-10 md:px-6",
-          wide ? "max-w-[1400px]" : "max-w-6xl"
+          wide ? "max-w-[1400px]" : "max-w-(--page-landing)"
         )}
       >
         <div className="flex flex-wrap justify-between gap-x-12 gap-y-8">

@@ -84,7 +84,7 @@ export function FindNextDemo() {
   const next = index < picks.length - 1 ? picks[index + 1] : null;
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-16">
+    <section className="mx-auto w-full max-w-(--page-landing) px-4 py-16">
       <Reveal>
         <LandingHeader
           eyebrow="See it live"

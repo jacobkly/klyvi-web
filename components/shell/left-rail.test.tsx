@@ -96,10 +96,11 @@ describe("LeftRail", () => {
     expect(within(nav).queryByRole("button", { name: "Find next" })).toBeNull();
   });
 
-  it("docks beside the page as a short pill on ultrawide screens", () => {
+  it("is a short pill at every width, and docks beside the page past 1080p", () => {
     const nav = renderRail();
-    expect(nav).toHaveClass("ultrawide:left-(--rail-dock)", "ultrawide:bottom-auto");
-    expect(nav).toHaveClass("inset-y-3", "left-3");
+    expect(nav).toHaveClass("top-8", "left-3", "gap-6", "ultrawide:left-(--rail-dock)");
+    expect(nav).not.toHaveClass("inset-y-3");
+    expect(nav).not.toHaveClass("justify-between");
   });
 
   it("hands search to the shell", async () => {

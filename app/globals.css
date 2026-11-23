@@ -59,7 +59,7 @@
   /* Klyvi additions (see docs/planning/03-tokens.md) */
   /* Wider than 1080p monitors: the page is a column in the middle, and the
      rail docks beside it instead of the window edge. */
-  --breakpoint-ultrawide: 125rem;
+  --breakpoint-ultrawide: 120.0625rem;
   --radius-art: var(--art-radius);
   --color-violet-text: var(--violet-text);
   --color-theme-violet: var(--theme-violet);
@@ -131,6 +131,9 @@
   /* Where the docked rail sits on ultrawide: half the 1400px page column, plus
      the 56px rail and a 16px gap, less half of the shell's 80px inset. */
   --rail-dock: calc(50% - 732px);
+  /* The landing page's column: 1152px up to 1080p, then wider with the window
+     so a 2K or 4K monitor isn't mostly margin. */
+  --page-landing: clamp(72rem, 54vw, 90rem);
   /* Motion */
   --dur-press: 120ms;
   --dur-base: 200ms;
@@ -193,20 +196,6 @@
   :root {
     --glass-fill: var(--glass-bg-solid);
   }
-}
-
-/* GLASS OFF (dev branch). Every glass surface is solid and the artwork glow
-   behind title pages and Find next is hidden, so the layout work can be
-   tried on its own. Delete this block to turn glass on. */
-:root {
-  --glass-bg: var(--glass-bg-solid);
-  --glass-fill: var(--glass-bg-solid);
-  --glass-edge: var(--glass-border);
-  --glass-blur: 0px;
-  --glass-tone: 1;
-}
-[data-slot="ambient-art"] {
-  display: none;
 }
 
 @utility glass {
@@ -495,9 +484,10 @@ html[data-text-size="large"] {
 /* Landing hero motion.
 
    The marquee honors reduced motion like everything else: the system
-   setting and Settings' Reduce motion both hold it still. Otherwise it
-   pauses on hover and from its button (data-paused), since it runs for more
-   than five seconds (WCAG 2.2.2). */
+   setting and Settings' Reduce motion both start it still. It pauses on
+   hover and from its button (data-paused), since it runs for more than five
+   seconds (WCAG 2.2.2). Pressing that button (data-manual) is asking for the
+   motion, so it plays from then on whatever the setting. */
 /* The landing hero's entrance. CSS rather than framer so the hero is in the
    server HTML at rest and the rise plays without waiting for JavaScript. The
    reduced-motion floor and .reduce-motion both cut it short, and `both` fill
@@ -534,12 +524,16 @@ html[data-text-size="large"] {
 @media (prefers-reduced-motion: reduce) {
   /* Still, not cut short: the floor above would run one 0.01ms loop and
      leave the strip at its end. This holds it at the start. */
-  .marquee-track {
+  .marquee-track:not([data-manual]) {
     animation: none !important;
   }
 }
-.reduce-motion .marquee-track {
+.reduce-motion .marquee-track:not([data-manual]) {
   animation: none !important;
+}
+.marquee-track[data-manual] {
+  animation-duration: 42s !important;
+  animation-iteration-count: infinite !important;
 }
 
 /* The onboarding wall drifts, far slower than the landing marquee. Unlike the
