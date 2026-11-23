@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
  * A bottom sheet that opens to fit its content (up to the screen's height)
  * and drags only downward, to close. Upward drags are clamped, so it never
  * stops halfway. Base UI only reports the drag as a CSS variable, so the
- * movement lives in the popup's classes here. Base UI only reports the offsets as CSS
- * variables, so the movement lives in the popup's classes here.
+ * movement lives in the popup's classes here. It rises above the phone's
+ * keyboard, so a field in it is never typed into blind.
  */
 function Drawer(props: DrawerPrimitive.Root.Props) {
   return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
@@ -41,7 +41,8 @@ function DrawerContent({
         data-slot="drawer-overlay"
         className="fixed inset-0 z-50 bg-black/50 transition-opacity duration-(--dur-base) data-ending-style:opacity-0 data-starting-style:opacity-0"
       />
-      <DrawerPrimitive.Viewport className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
+      <DrawerPrimitive.VirtualKeyboardProvider>
+      <DrawerPrimitive.Viewport className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center pb-(--drawer-keyboard-inset,0px)">
         <DrawerPrimitive.Popup
           data-slot="drawer-content"
           className={cn(
@@ -61,6 +62,7 @@ function DrawerContent({
           </DrawerPrimitive.Content>
         </DrawerPrimitive.Popup>
       </DrawerPrimitive.Viewport>
+      </DrawerPrimitive.VirtualKeyboardProvider>
     </DrawerPrimitive.Portal>
   );
 }

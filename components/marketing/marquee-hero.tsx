@@ -74,7 +74,7 @@ export function MarqueeHero() {
   const items = [...set, ...set].map((poster, index) => (
     <div
       key={`${poster}-${index}`}
-      className="relative mr-3 aspect-[2/3] h-36 shrink-0 sm:mr-4 sm:h-48 overflow-hidden rounded-art ring-1 ring-foreground/10 md:h-60"
+      className="relative mr-3 aspect-[2/3] h-36 shrink-0 sm:mr-4 sm:h-48 overflow-hidden rounded-art ring-1 ring-foreground/10 md:h-60 ultrawide:h-72"
       style={{ rotate: `${index % 2 === 0 ? -2 : 3}deg` }}
     >
       {/* Plain img over next/image: fourteen small posters do not need
@@ -100,13 +100,13 @@ export function MarqueeHero() {
         </Rise>
 
         <Rise delay={80}>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance text-foreground sm:text-6xl">
+          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance text-foreground sm:text-6xl ultrawide:max-w-5xl ultrawide:text-7xl">
             {TITLE}
           </h1>
         </Rise>
 
         <Rise delay={160}>
-          <p className="mt-4 max-w-xl text-base sm:mt-5 text-muted-foreground sm:text-lg">
+          <p className="mt-4 max-w-xl text-base sm:mt-5 text-muted-foreground sm:text-lg ultrawide:max-w-2xl ultrawide:text-xl">
             Klyvi learns what you actually like and tells you what to watch
             right now, with the reason it picked it.
           </p>

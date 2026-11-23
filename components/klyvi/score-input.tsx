@@ -95,7 +95,8 @@ export function ScoreInput({
       <Label id={labelId} htmlFor={id}>
         {label}
       </Label>
-      <div className="flex items-center gap-3">
+      {/* Dragging the score must not drag the sheet it may sit in. */}
+      <div data-base-ui-swipe-ignore="" className="flex items-center gap-3">
         <Slider
           value={[inRange ?? min]}
           onValueChange={(v) =>

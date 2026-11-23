@@ -48,7 +48,8 @@ function useTyping(): boolean {
  * Home, Explore and Sign in, and Home leads back to the marketing page, which
  * has no bar, so a visitor can always get home. Find next is the one violet
  * tab, as it is on the desktop rail. The bar steps aside while a
- * text field has focus, so the keyboard gets the room.
+ * text field has focus, so the keyboard gets the room, and while a dialog or
+ * a sheet is open (globals.css).
  */
 function BottomTabBar() {
   const pathname = usePathname();
@@ -61,6 +62,7 @@ function BottomTabBar() {
   return (
     <nav
       aria-label="Primary"
+      data-slot="tab-bar"
       data-typing={typing || undefined}
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.5rem))] data-typing:hidden md:hidden"
     >

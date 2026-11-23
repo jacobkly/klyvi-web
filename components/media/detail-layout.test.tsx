@@ -353,13 +353,13 @@ describe("DetailLayout for the visitor (U.21)", () => {
     expect(screen.getByRole("button", { name: /Add to library/ })).toBeInTheDocument();
   });
 
-  it("marks a favourite in the hero (#41)", async () => {
+  it("marks a favorite in the hero (#41)", async () => {
     lookupTracking.mockResolvedValue(tracked({ favorite: true }));
     renderDetail();
-    expect(await screen.findByText("Favourite")).toBeInTheDocument();
+    expect(await screen.findByText("Favorite")).toBeInTheDocument();
   });
 
-  it("keeps a favourite when the status changes", async () => {
+  it("keeps a favorite when the status changes", async () => {
     lookupTracking.mockResolvedValue(tracked({ favorite: true }));
     updateTracking.mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
@@ -371,6 +371,28 @@ describe("DetailLayout for the visitor (U.21)", () => {
       955,
       expect.objectContaining({ status: "paused", favorite: true })
     );
+  });
+
+  it("marks and unmarks a favorite from the page, keeping the rest", async () => {
+    lookupTracking.mockResolvedValue(tracked({ score: 88 }));
+    updateTracking.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderDetail();
+
+    const heart = await screen.findByRole("button", { name: "Favorite" });
+    expect(heart).toHaveAttribute("aria-pressed", "false");
+    await user.click(heart);
+    expect(heart).toHaveAttribute("aria-pressed", "true");
+    expect(updateTracking).toHaveBeenCalledWith(
+      955,
+      expect.objectContaining({ score: 88, favorite: true })
+    );
+  });
+
+  it("has no heart until the title is tracked", async () => {
+    renderDetail();
+    await waitFor(() => expect(lookupTracking).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: "Favorite" })).toBeNull();
   });
 
   it("puts one status control on the page", async () => {

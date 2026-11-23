@@ -156,7 +156,7 @@ function LeftRail({ onOpenSearch }: { onOpenSearch: () => void }) {
       </nav>
 
       <Dialog open={findOpen} onOpenChange={(o) => setOpenAt(o ? pathname : null)}>
-        <DialogContent className="block max-h-[90dvh] overflow-y-auto p-0 transition-[max-width] duration-(--dur-base) sm:max-w-[min(48rem,calc(100%-2rem))] sm:has-[[data-wide]]:max-w-[min(64rem,calc(100%-2rem))]">
+        <DialogContent className="block max-h-[90dvh] overflow-y-auto p-0 transition-[max-width] duration-(--dur-base) sm:max-w-[min(48rem,calc(100%-2rem))] sm:has-[[data-wide]]:max-w-[min(64rem,calc(100%-2rem))] ultrawide:has-[[data-wide]]:max-w-6xl">
           <DialogTitle className="sr-only">Find next</DialogTitle>
           {findOpen ? <FindClient embedded /> : null}
         </DialogContent>

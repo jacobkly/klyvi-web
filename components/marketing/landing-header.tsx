@@ -28,19 +28,19 @@ export function LandingHeader({
     </p>
   );
   const titleEl = (
-    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl ultrawide:text-5xl">
       {title}
     </h2>
   );
   const leadEl = (
-    <p className="text-[15px] leading-relaxed text-muted-foreground">{lead}</p>
+    <p className="text-[15px] leading-relaxed text-muted-foreground ultrawide:text-lg">{lead}</p>
   );
 
   if (align === "split") {
     return (
       <div
         className={cn(
-          "grid items-end gap-6 lg:grid-cols-[1fr_minmax(0,26rem)]",
+          "grid items-end gap-6 lg:grid-cols-[1fr_minmax(0,26rem)] ultrawide:grid-cols-[1fr_minmax(0,32rem)]",
           className
         )}
       >
@@ -54,7 +54,7 @@ export function LandingHeader({
   }
 
   return (
-    <div className={cn("mx-auto max-w-2xl text-center", className)}>
+    <div className={cn("mx-auto max-w-2xl text-center ultrawide:max-w-3xl", className)}>
       {eyebrowEl}
       {titleEl}
       <div className="mt-3">{leadEl}</div>

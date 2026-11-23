@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import * as React from "react";
-import { Star } from "lucide-react";
+import { Heart } from "lucide-react";
 
 import { ScoreInput } from "@/components/klyvi/score-input";
 import { ScoreValue } from "@/components/klyvi/score-value";
@@ -18,14 +18,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
   Select,
   SelectContent,
@@ -95,7 +91,8 @@ function entryKey(e: LibraryEntry) {
  * The tracking edit dialog (04-components.md tier 2): field grid per the
  * AniList reference, labels and helpers verbatim from 06-copy.md, and delete
  * separated from save behind a confirm that names the title. The fields are a
- * plain form, so Enter saves.
+ * plain form, so Enter saves. On phones it slides up from the bottom, with
+ * Save always in reach under the thumb.
  */
 function TrackingDialog({
   entry,
@@ -213,15 +210,66 @@ function TrackingDialog({
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader className="sr-only">
-          <DialogTitle>{displayTitle}</DialogTitle>
-        </DialogHeader>
+    // A form, so Enter in any field saves. Every other button in it is
+    // type="button", so only Save submits.
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      className="max-w-2xl"
+      onSubmit={handleSave}
+      footer={
+        <div className="flex items-center justify-between gap-2 md:border-t md:border-border md:pt-4">
+          {isNew ? (
+            <span aria-hidden="true" className="max-md:hidden" />
+          ) : (
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button variant="destructive" size="sm">
+                  Remove from library
+                </Button>
+              }
+            />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Remove {entry.title} from your library?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Your score, progress, and notes for it will be deleted. This
+                  cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onDelete}
+                  className="bg-destructive/10 text-destructive hover:bg-destructive/20"
+                >
+                  Remove from library
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          )}
 
-        {/* A form, so Enter in any field saves. Every other button in it is
-            type="button", so only Save submits. */}
-        <form noValidate onSubmit={handleSave}>
+          <div className="flex gap-2 max-md:flex-1 max-md:justify-end">
+            <Button
+              variant="outline"
+              className="max-md:hidden"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="max-md:flex-1">
+              Save
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <DialogTitle className="sr-only">{displayTitle}</DialogTitle>
+      <div>
         {/* Left third: what you are editing. Right two-thirds: the edit.
             Seeing the poster while scoring is the whole point, so the
             identity column is not decoration. */}
@@ -325,7 +373,7 @@ function TrackingDialog({
             </Select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="col-span-2 flex flex-col gap-1.5">
             <ScoreInput
               id="td-score"
               value={score}
@@ -395,13 +443,13 @@ function TrackingDialog({
               aria-label="Favorite"
               onClick={() => setFavorite((f) => !f)}
               className={
-                "hit-44 relative inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 " +
+                "hit-44 relative inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm sm:min-h-0 sm:px-3 sm:py-1.5 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 " +
                 (favorite
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:text-foreground")
               }
             >
-              <Star
+              <Heart
                 aria-hidden="true"
                 strokeWidth={2}
                 className={"size-4 " + (favorite ? "fill-current" : "")}
@@ -417,52 +465,8 @@ function TrackingDialog({
             </p>
           </div>
         </div>
-
-        <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
-          {isNew ? (
-            <span aria-hidden="true" />
-          ) : (
-          <AlertDialog>
-            <AlertDialogTrigger
-              render={
-                <Button variant="destructive" size="sm">
-                  Remove from library
-                </Button>
-              }
-            />
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Remove {entry.title} from your library?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  Your score, progress, and notes for it will be deleted. This
-                  cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={onDelete}
-                  className="bg-destructive/10 text-destructive hover:bg-destructive/20"
-                >
-                  Remove from library
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          )}
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Save</Button>
-          </div>
-        </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ResponsiveDialog>
   );
 }
 

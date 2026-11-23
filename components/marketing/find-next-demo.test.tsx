@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -39,6 +39,31 @@ describe("FindNextDemo", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       /saves it to your watchlist/i
     );
+  });
+
+  it("has every button the live screen has, and each says what it does", async () => {
+    const user = userEvent.setup();
+    render(<FindNextDemo />);
+    for (const [name, says] of [
+      ["More about it", /opens the film's page/],
+      ["Change mood", /back to the moods/],
+      ["New set", /a fresh set/],
+    ] as const) {
+      await user.click(screen.getByRole("button", { name }));
+      expect(screen.getByRole("status")).toHaveTextContent(says);
+    }
+    expect(screen.getByText("3 of 5")).toBeInTheDocument();
+  });
+
+  it("steps on a swipe, and stops saying that it swipes", () => {
+    const { container } = render(<FindNextDemo />);
+    expect(screen.getByText("Swipe")).toBeInTheDocument();
+    const stage = container.querySelector('[data-slot="pick-stage"]')!;
+    fireEvent.touchStart(stage, { touches: [{ clientX: 300, clientY: 200 }] });
+    fireEvent.touchMove(stage, { touches: [{ clientX: 150, clientY: 205 }] });
+    fireEvent.touchEnd(stage);
+    expect(screen.getByText("4 of 5")).toBeInTheDocument();
+    expect(screen.queryByText("Swipe")).toBeNull();
   });
 
   it("shows curated reason chips for the current pick", () => {

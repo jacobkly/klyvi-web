@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,6 +47,53 @@ describe("MobileTopBar", () => {
     render(<MobileTopBar />);
     expect(screen.queryByRole("link", { name: /Your account/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Your account/ })).toBeNull();
+  });
+
+  describe("scrolling", () => {
+    function scrollTo(y: number) {
+      Object.defineProperty(window, "scrollY", { value: y, configurable: true });
+      act(() => {
+        window.dispatchEvent(new Event("scroll"));
+      });
+    }
+    beforeEach(() => {
+      Object.defineProperty(document.documentElement, "scrollHeight", {
+        value: 5000,
+        configurable: true,
+      });
+      Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+    });
+
+    it("is bare at the top, leaves going down and comes back as glass going up", () => {
+      render(<MobileTopBar />);
+      const bar = screen.getByRole("banner");
+      expect(bar.className).not.toContain("glass");
+
+      scrollTo(900);
+      expect(bar.className).toContain("-translate-y-full");
+      expect(document.documentElement.dataset.topBar).toBe("hidden");
+
+      scrollTo(880);
+      expect(bar.className).not.toContain("-translate-y-full");
+      expect(bar.className).toContain("glass");
+
+      scrollTo(0);
+      expect(bar.className).not.toContain("glass");
+    });
+
+    it("ignores a few pixels of jitter", () => {
+      render(<MobileTopBar />);
+      scrollTo(900);
+      scrollTo(896);
+      expect(screen.getByRole("banner").className).toContain("-translate-y-full");
+    });
+
+    it("clears its mark on the page when it unmounts", () => {
+      const { unmount } = render(<MobileTopBar />);
+      scrollTo(900);
+      unmount();
+      expect(document.documentElement.dataset.topBar).toBeUndefined();
+    });
   });
 
   it("offers Get started signed out", () => {

@@ -219,12 +219,33 @@
   }
 }
 
+/* Anything that opens over the page has the screen to itself, so the tab bar
+   steps aside until it closes. */
+body:has(
+  :is(
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="drawer-content"],
+    [data-slot="sheet-content"]
+  )[data-open]
+)
+  [data-slot="tab-bar"] {
+  display: none;
+}
+
 /* Below md the floating tab bar is showing (components/shell/bottom-tab-bar).
    It is 64px tall and floats 12px up, so content and toasts clear 96px. */
 @media (width < 48rem) {
   :root {
     --tab-bar-space: calc(6rem + env(safe-area-inset-bottom));
     --toast-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    --top-bar-height: calc(3.5rem + env(safe-area-inset-top));
+    --top-bar: var(--top-bar-height);
+  }
+  /* The phone's top bar is off screen (components/shell/mobile-top-bar), so
+     anything that sticks under it goes up to the edge. */
+  :root[data-top-bar="hidden"] {
+    --top-bar: env(safe-area-inset-top);
   }
 }
 
@@ -439,7 +460,10 @@
   .tap-target {
     min-height: 44px;
   }
-  /* Icon-only controls need width too, not just height. */
+  /* Icon-only controls need width too, not just height, or the circle turns
+     into an oval. Every icon size carries tap-icon. The other selector covers
+     a Button with only an icon in it and no icon size. */
+  .tap-icon,
   [data-slot="button"]:not(:has(> :not(svg))) {
     min-width: 44px;
   }
@@ -481,6 +505,16 @@ html[data-text-size="large"] {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
+}
+
+/* Find Next's "Swipe" on the poster: its arrows drift a few times, then rest. */
+@keyframes klyvi-swipe-hint {
+  50% {
+    transform: translateX(4px);
+  }
+}
+.swipe-hint {
+  animation: klyvi-swipe-hint calc(var(--dur-max) * 3) ease-in-out 4;
 }
 
 /* Landing hero motion.

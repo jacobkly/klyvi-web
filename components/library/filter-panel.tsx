@@ -21,7 +21,7 @@ import {
 import { STATUS_LABELS, type TrackingStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const STATUS_ORDER: (TrackingStatus | "all")[] = [
+export const STATUS_ORDER: (TrackingStatus | "all")[] = [
   "all",
   "watching",
   "planning",

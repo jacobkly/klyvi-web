@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Library as LibraryIcon, Pencil, SlidersHorizontal } from "lucide-react";
+import {
+  ChevronDown,
+  Library as LibraryIcon,
+  Pencil,
+  SlidersHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/klyvi/empty-state";
@@ -37,13 +42,11 @@ import {
   type TrackingStatus,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { FilterPanel } from "./filter-panel";
+import { FilterPanel, STATUS_ORDER } from "./filter-panel";
 import { LibraryNav } from "./library-nav";
 import { SurpriseCard } from "./surprise-card";
 import { TrackingDialog, type TrackingEdit } from "./tracking-dialog";
 import { ViewSwitcher, type LibraryViewMode } from "./view-switcher";
-
-/** The filter sheet opens at about half the screen and drags up to full. */
 
 /** Section order when the library shows all statuses grouped. */
 const GROUP_ORDER: TrackingStatus[] = [
@@ -66,13 +69,6 @@ type LoadState =
   | { phase: "error" }
   | { phase: "ready"; entries: LibraryEntry[] };
 
-/**
- * The golden screen's client orchestrator. Owns the slice state, the three
- * view modes, the tracking dialog, and the optimistic edit loop. Data arrives
- * through `load` so the mock layer swaps for the API client without touching
- * this file. A big library arrives in pages: `load` resolves with the first
- * and hands the rest to its sink as they land.
- */
 /** Adds a later page's rows to the ones on screen. A row already held stays
  *  as it is: the user may have changed it here since the page was read. */
 function appendNew(held: LibraryEntry[], more: LibraryEntry[]): LibraryEntry[] {
@@ -81,6 +77,13 @@ function appendNew(held: LibraryEntry[], more: LibraryEntry[]): LibraryEntry[] {
   return fresh.length > 0 ? [...held, ...fresh] : held;
 }
 
+/**
+ * The golden screen's client orchestrator. Owns the slice state, the three
+ * view modes, the tracking dialog, and the optimistic edit loop. Data arrives
+ * through `load` so the mock layer swaps for the API client without touching
+ * this file. A big library arrives in pages: `load` resolves with the first
+ * and hands the rest to its sink as they land.
+ */
 function LibraryView({
   load,
   onStatusChange,
@@ -160,6 +163,16 @@ function LibraryView({
   const [editing, setEditing] = React.useState<LibraryEntry | null>(null);
   const [surprised, setSurprised] = React.useState<LibraryEntry | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState<ReadonlySet<TrackingStatus>>(
+    () => new Set()
+  );
+  function toggleGroup(s: TrackingStatus) {
+    setCollapsed((held) => {
+      const next = new Set(held);
+      if (!next.delete(s)) next.add(s);
+      return next;
+    });
+  }
 
   /** Bumped by the error state's Try again to reload. */
   const [attempt, setAttempt] = React.useState(0);
@@ -256,6 +269,7 @@ function LibraryView({
               score: edit.score,
               progress: edit.progress,
               notes: edit.notes,
+              favorite: edit.favorite,
             }
           : e
       ),
@@ -419,23 +433,40 @@ function LibraryView({
           GROUP_ORDER.filter((s) => filtered.some((e) => e.status === s)).map(
             (s) => {
               const group = filtered.filter((e) => e.status === s);
+              const shut = collapsed.has(s);
               return (
-                <section key={s} className="mb-8">
-                  <h2 className="mb-3 flex items-baseline gap-2 text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
-                    {STATUS_LABELS[s]}
-                    <span
-                      data-numeric
-                      className="font-mono text-[10px] tracking-normal normal-case"
+                <section key={s} className={shut ? "mb-2" : "mb-8"}>
+                  <h2 className="mb-1">
+                    <button
+                      type="button"
+                      aria-expanded={!shut}
+                      onClick={() => toggleGroup(s)}
+                      className="tap-target -mx-2 flex min-h-9 w-[calc(100%+1rem)] items-center gap-2 rounded-full px-2 text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
                     >
-                      {group.length}
-                    </span>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className={cn(
+                          "size-4 transition-transform duration-(--dur-press)",
+                          shut && "-rotate-90"
+                        )}
+                      />
+                      {STATUS_LABELS[s]}
+                      <span
+                        data-numeric
+                        className="font-mono text-[10px] tracking-normal normal-case"
+                      >
+                        {group.length}
+                      </span>
+                    </button>
                   </h2>
-                  <EntryCollection
-                    entries={group}
-                    view={view}
-                    onEdit={setEditing}
-                    onStatusChange={changeStatus}
-                  />
+                  {shut ? null : (
+                    <EntryCollection
+                      entries={group}
+                      view={view}
+                      onEdit={setEditing}
+                      onStatusChange={changeStatus}
+                    />
+                  )}
                 </section>
               );
             }
@@ -514,6 +545,15 @@ function LibraryFrame({
     />
   );
 
+  // A pick from deep in the list starts the new one at its first row.
+  const listRef = React.useRef<HTMLDivElement>(null);
+  function toListTop() {
+    const list = listRef.current;
+    if (list && list.getBoundingClientRect().top < 0) {
+      list.scrollIntoView?.({ block: "start" });
+    }
+  }
+
   return (
     // flex-1 so the content column has real height to centre an empty state
     // against. A percentage would resolve to zero here: the shell wrapper
@@ -531,48 +571,7 @@ function LibraryFrame({
             </p>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Mobile only: at lg+ the persistent sidebar is right there, so the
-              button is pure redundancy. Hidden on the WRAPPER, not the button:
-              utility classes passed through Base UI's `render` prop lose to the
-              component's own display rule, so `lg:hidden` on the Button itself
-              silently does nothing. */}
-          <div className="lg:hidden">
-          <Drawer
-            open={sheetOpen}
-            onOpenChange={onSheetOpenChange}
-          >
-            <DrawerTrigger
-              render={
-                <Button variant="outline" size="touch" className="gap-2">
-                  <SlidersHorizontal aria-hidden="true" data-icon="inline-start" />
-                  {activeFilterCount > 0
-                    ? `Filters (${activeFilterCount})`
-                    : "Filters"}
-                </Button>
-              }
-            />
-            {/* No initial focus: focusing the search would raise the phone's
-                keyboard over the filters you opened the sheet for (#66).
-                Drag the handle up for the full list, down to close. */}
-            <DrawerContent initialFocus={false}>
-              {/* The action sits beside the title so it shows at the half snap too. */}
-              <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3">
-                <DrawerTitle>Filters</DrawerTitle>
-                <Button size="touch" onClick={() => onSheetOpenChange(false)}>
-                  {shown == null
-                    ? "Done"
-                    : `Show ${shown} result${shown === 1 ? "" : "s"}`}
-                </Button>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
-                {panel}
-              </div>
-            </DrawerContent>
-          </Drawer>
-          </div>
-          <ViewSwitcher value={view} onChange={onViewChange} />
-        </div>
+        <ViewSwitcher value={view} onChange={onViewChange} />
       </div>
 
       {split ? (
@@ -588,12 +587,116 @@ function LibraryFrame({
         </Tabs>
       ) : null}
 
-      <div className="flex flex-1 gap-8">
-        {/* Desktop: persistent sidebar, the long-dwell pattern. */}
-        <aside className="hidden w-60 shrink-0 lg:block">{panel}</aside>
+      {/* Below lg: the statuses and the filters, staying in reach however
+          deep the list goes. At lg the sidebar does this job. */}
+      <div className="sticky top-[calc(var(--top-bar,0px)+0.5rem)] z-30 mb-6 transition-[top] duration-(--dur-base) ease-(--ease-enter) lg:hidden">
+        <div className="glass flex items-center gap-1 rounded-full border p-1">
+          <Drawer open={sheetOpen} onOpenChange={onSheetOpenChange}>
+            <DrawerTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-touch"
+                  aria-label={
+                    activeFilterCount > 0
+                      ? `Filters (${activeFilterCount})`
+                      : "Filters"
+                  }
+                  className={cn(
+                    "shrink-0",
+                    activeFilterCount > 0 && "text-violet-text"
+                  )}
+                >
+                  <SlidersHorizontal aria-hidden="true" />
+                </Button>
+              }
+            />
+            {/* No initial focus: focusing the search would raise the phone's
+                keyboard over the filters you opened the sheet for (#66). */}
+            <DrawerContent initialFocus={false}>
+              <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3">
+                <DrawerTitle>Filters</DrawerTitle>
+                <Button size="touch" onClick={() => onSheetOpenChange(false)}>
+                  {shown == null
+                    ? "Done"
+                    : `Show ${shown} result${shown === 1 ? "" : "s"}`}
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
+                {panel}
+              </div>
+            </DrawerContent>
+          </Drawer>
+          <StatusStrip
+            counts={counts}
+            value={filters.status}
+            onPick={(status) => {
+              onFiltersChange({ ...filters, status });
+              toListTop();
+            }}
+          />
+        </div>
+      </div>
+
+      <div ref={listRef} className="flex flex-1 scroll-mt-32 gap-8">
+        {/* Desktop: persistent sidebar, the long-dwell pattern. It stays put
+            while a long list scrolls, and scrolls itself on a short window. */}
+        <aside className="sticky top-8 -m-1 hidden max-h-[calc(100dvh-4rem)] w-62 shrink-0 self-start overflow-y-auto p-1 lg:block">
+          {panel}
+        </aside>
         <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       </div>
     </main>
+  );
+}
+
+/** The statuses as one swipeable row, with the picked one kept in view. */
+function StatusStrip({
+  counts,
+  value,
+  onPick,
+}: {
+  counts: Record<TrackingStatus | "all", number>;
+  value: TrackingStatus | "all";
+  onPick: (s: TrackingStatus | "all") => void;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const row = ref.current;
+    const chip = row?.querySelector<HTMLElement>("[aria-pressed=true]");
+    if (row && chip) {
+      row.scrollLeft = chip.offsetLeft - (row.clientWidth - chip.clientWidth) / 2;
+    }
+  }, [value]);
+  return (
+    <div
+      ref={ref}
+      role="group"
+      aria-label="Show"
+      className="no-scrollbar relative flex min-w-0 flex-1 gap-1 overflow-x-auto overscroll-x-contain rounded-full"
+    >
+      {STATUS_ORDER.filter((s) => s === "all" || s === value || counts[s] > 0).map(
+        (s) => (
+          <button
+            key={s}
+            type="button"
+            aria-pressed={value === s}
+            onClick={() => onPick(s)}
+            className={cn(
+              "inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:ring-inset",
+              value === s
+                ? "bg-foreground/10 font-medium text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {s === "all" ? "All" : STATUS_LABELS[s]}
+            <span data-numeric className="font-mono text-xs text-muted-foreground">
+              {counts[s]}
+            </span>
+          </button>
+        )
+      )}
+    </div>
   );
 }
 

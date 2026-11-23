@@ -7,12 +7,14 @@ import * as React from "react";
 import { useSession } from "@/components/auth/auth-provider";
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { Button } from "@/components/ui/button";
+import { PopoverTitle } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getNotifications,
   markAllNotificationsRead,
 } from "@/lib/api/notifications";
 import type { AppNotification } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 import { NotificationRow } from "./notification-row";
 import { useUnreadNotices } from "./unread-provider";
@@ -40,9 +42,15 @@ function offLine(premieres: boolean, releases: boolean): string | null {
 /**
  * The notice list. Opening it marks everything read and clears the dot on the
  * account menu. A failed write leaves the dot in place and the next visit tries
- * again, so there is nothing to tell the reader about it.
+ * again, so there is nothing to tell the reader about it. `compact` is the
+ * account menu's pop-up, the full size is the page phones open.
  */
-export function NotificationsClient() {
+export function NotificationsClient({
+  compact = false,
+}: {
+  /** Inside a Popover, whose title this then provides. */
+  compact?: boolean;
+}) {
   const { profile } = useSession();
   const { setUnread } = useUnreadNotices();
   const [state, setState] = React.useState<State>({ kind: "loading" });
@@ -113,7 +121,13 @@ export function NotificationsClient() {
 
   return (
     <>
-      <h1 className="text-3xl font-semibold tracking-tight">Notifications</h1>
+      {compact ? (
+        <PopoverTitle className="text-lg font-semibold tracking-tight">
+          Notifications
+        </PopoverTitle>
+      ) : (
+        <h1 className="text-3xl font-semibold tracking-tight">Notifications</h1>
+      )}
       {state.kind === "ready" && state.newCount > 0 ? (
         <p data-numeric className="mt-1 font-mono text-xs text-muted-foreground">
           {state.newCount} new
@@ -133,8 +147,8 @@ export function NotificationsClient() {
       ) : null}
 
       {state.kind === "loading" ? (
-        <ol aria-label="Loading notifications" className="mt-6 flex flex-col gap-2">
-          {Array.from({ length: 6 }, (_, i) => (
+        <ol aria-label="Loading notifications" className={cn("flex flex-col gap-2", compact ? "mt-4" : "mt-6")}>
+          {Array.from({ length: compact ? 3 : 6 }, (_, i) => (
             <li key={i}>
               <Skeleton className="h-[96px] rounded-lg" />
             </li>
@@ -168,7 +182,7 @@ export function NotificationsClient() {
 
       {state.kind === "ready" && state.items.length > 0 ? (
         <>
-          <ul className="mt-6 flex flex-col gap-2">
+          <ul className={cn("flex flex-col gap-2", compact ? "mt-4" : "mt-6")}>
             {state.items.map((notice) => (
               <NotificationRow key={notice.id} notice={notice} />
             ))}

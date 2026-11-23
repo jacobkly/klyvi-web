@@ -5,14 +5,8 @@ import * as React from "react";
 
 import { ScoreInput } from "@/components/klyvi/score-input";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { usePref } from "@/lib/local-prefs";
 import { parseScoreInput, scoreInputText } from "@/lib/score";
 import { tmdbImage } from "@/lib/tmdb-image";
@@ -48,8 +42,31 @@ export function RatingDialog({
   const poster = tmdbImage(posterPath);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      className="max-w-sm"
+      footer={
+        <div className="flex flex-col gap-2">
+          <Button
+            size="touch"
+            className="w-full"
+            disabled={parsed.score == null}
+            onClick={() => onSubmit(parsed.score)}
+          >
+            Save rating
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-muted-foreground"
+            onClick={() => onSubmit(null)}
+          >
+            Just mark it seen
+          </Button>
+        </div>
+      }
+    >
         <DialogHeader>
           <DialogTitle>How was it?</DialogTitle>
           <DialogDescription>
@@ -74,26 +91,6 @@ export function RatingDialog({
             />
           </div>
         </div>
-
-        <DialogFooter className="flex-col gap-2 sm:flex-col">
-          <Button
-            size="touch"
-            className="w-full"
-            disabled={parsed.score == null}
-            onClick={() => onSubmit(parsed.score)}
-          >
-            Save rating
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full text-muted-foreground"
-            onClick={() => onSubmit(null)}
-          >
-            Just mark it seen
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

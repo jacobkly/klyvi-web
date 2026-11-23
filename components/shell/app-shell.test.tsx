@@ -48,6 +48,6 @@ describe("AppShell", () => {
       </AppShell>
     );
     expect(container.querySelector('[data-slot="left-rail"]')).not.toBeNull();
-    expect(container.querySelector("header.sticky")).toBeNull();
+    expect(container.querySelector("header.sticky:not(.md\\:hidden)")).toBeNull();
   });
 });

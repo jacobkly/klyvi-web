@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import * as React from "react";
 import {
   BarChart3,
   Bell,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
+import { NotificationsClient } from "@/components/notifications/notifications-client";
 import { useUnreadNotices } from "@/components/notifications/unread-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
@@ -22,11 +24,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 /**
  * The avatar dropdown: who you are, the library's pages, your account, then
  * sign out. Terms and Privacy are in the footer, so they don't repeat here.
+ * Notifications opens in place: the menu closes and a pop-up takes its spot.
  * Signed out it collapses to a Sign in button; while the first session
  * check resolves it shows nothing rather than flashing the wrong state.
  */
@@ -39,6 +43,8 @@ function UserMenu({
 } = {}) {
   const { user, profile, loading, signOut } = useSession();
   const { unread } = useUnreadNotices();
+  const [noticesOpen, setNoticesOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const avatarSrc = profile?.avatarUrl ?? null;
 
   if (loading) {
@@ -86,8 +92,10 @@ function UserMenu({
   const accountLabel = unreadLabel ? `Your account, ${unreadLabel}` : "Your account";
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger
+        ref={triggerRef}
         aria-label={accountLabel}
         className="hit-44 relative rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
       >
@@ -131,7 +139,7 @@ function UserMenu({
             <Settings aria-hidden="true" data-icon="inline-start" />
             Settings
           </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href="/notifications" />}>
+          <DropdownMenuItem onClick={() => setNoticesOpen(true)}>
             <Bell aria-hidden="true" data-icon="inline-start" />
             Notifications
             {unreadLabel ? (
@@ -155,6 +163,22 @@ function UserMenu({
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+    <Popover open={noticesOpen} onOpenChange={setNoticesOpen}>
+      <PopoverContent
+        anchor={triggerRef}
+        side={side}
+        align={align}
+        sideOffset={12}
+        className="max-h-[min(32rem,var(--available-height))] w-96 gap-0 overflow-y-auto overscroll-contain"
+        // Following a notice, or the link to Settings, is done with the pop-up.
+        onClick={(event) => {
+          if ((event.target as Element).closest("a")) setNoticesOpen(false);
+        }}
+      >
+        <NotificationsClient compact />
+      </PopoverContent>
+    </Popover>
+    </>
   );
 }
 

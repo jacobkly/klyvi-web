@@ -190,7 +190,7 @@ function DetailLayout({
 
   /**
    * A pick from the menu saves at once, keeping the score, notes and
-   * favourite. Completing a season counts every episode. The editor opens
+   * favorite. Completing a season counts every episode. The editor opens
    * only from the score button.
    */
   function changeStatus(next: TrackingStatus) {
@@ -206,6 +206,11 @@ function DetailLayout({
       notes,
       favorite,
     });
+  }
+
+  function toggleFavorite() {
+    if (!status) return;
+    saveEdit({ status, score, progress, notes, favorite: !favorite });
   }
 
   function saveEdit(edit: TrackingEdit) {
@@ -274,25 +279,40 @@ function DetailLayout({
       Sign in to track
     </Button>
   ) : (
-    <div className="flex gap-2 sm:flex-col">
+    <div className="flex flex-wrap gap-2 sm:flex-col">
       <StatusControl
         status={status}
         onChange={changeStatus}
         options={out ? ["planning"] : undefined}
         size="touch"
-        className="min-w-0 flex-1 sm:w-full sm:flex-none"
+        className="min-w-0 grow basis-36 sm:w-full sm:flex-none"
       />
       {status ? (
-        <Button
-          variant="outline"
-          size="touch"
-          className="min-w-0 flex-1 sm:w-full sm:flex-none"
-          onClick={() => setEditing(true)}
-        >
-          {score != null
-            ? `Your score: ${formatScore(score, scoringSystem)}`
-            : "Add a score"}
-        </Button>
+        <div className="flex grow gap-2 sm:flex-none">
+          <Button
+            variant="outline"
+            size="touch"
+            className="grow px-3"
+            onClick={() => setEditing(true)}
+          >
+            {score != null
+              ? `Your score: ${formatScore(score, scoringSystem)}`
+              : "Add a score"}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-touch"
+            aria-label="Favorite"
+            aria-pressed={favorite}
+            className={favorite ? "text-violet-text hover:text-violet-text" : undefined}
+            onClick={toggleFavorite}
+          >
+            <Heart
+              aria-hidden="true"
+              className={favorite ? "size-5 fill-current" : "size-5"}
+            />
+          </Button>
+        </div>
       ) : null}
     </div>
   );
@@ -351,7 +371,7 @@ function DetailLayout({
                   {favorite ? (
                     <span className="inline-flex items-center gap-1">
                       <Heart aria-hidden="true" className="size-3.5 fill-current" />
-                      Favourite
+                      Favorite
                     </span>
                   ) : null}
                 </div>
@@ -493,11 +513,12 @@ function DetailLayout({
           }}
           onSave={saveEdit}
           onDelete={() => {
-            const prev = { status, score, progress, notes, mediaId };
+            const prev = { status, score, progress, notes, favorite, mediaId };
             setStatus(null);
             setScore(null);
             setProgress(null);
             setNotes(null);
+            setFavorite(false);
             setEditing(false);
             toast("Removed from your library");
             if (prev.mediaId != null) {
@@ -513,6 +534,7 @@ function DetailLayout({
                   setScore(prev.score);
                   setProgress(prev.progress);
                   setNotes(prev.notes);
+                  setFavorite(prev.favorite);
                   toast("Could not update that. Try again");
                 });
             }

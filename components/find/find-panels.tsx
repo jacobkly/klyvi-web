@@ -10,6 +10,7 @@ import {
   ChevronRight,
   EyeOff,
   Info,
+  MoveHorizontal,
   RotateCcw,
   Sparkles,
   Undo2,
@@ -48,7 +49,7 @@ export type MoodOption = {
 const ROW = "flex items-center justify-between gap-3 px-4 py-2 md:p-0";
 
 const FOOTER =
-  "flex flex-wrap items-center justify-between gap-3 px-4 pt-4 md:border-t lg:gap-x-6 md:border-foreground/10 md:px-6 md:py-4";
+  "flex flex-wrap items-center justify-between gap-3 px-4 pt-4 md:border-t lg:gap-x-6 md:border-foreground/10 md:px-6 md:py-4 @min-[66rem]:px-8";
 
 type PanelRef = React.Ref<HTMLDivElement>;
 
@@ -194,8 +195,10 @@ export function MoodPanel({
 
 // Phones: the poster beside the title, everything else beneath both. Wider:
 // the poster down the left, and the actions held to the bottom of the right.
+// Past 1080p the frame is wider than that needs (the @ steps, measured on the
+// panel itself), so the poster, the type and the strip of picks grow.
 const BODY =
-  "grid grid-cols-[7rem_1fr] gap-x-4 gap-y-4 px-4 pt-4 short-phone:gap-y-3 md:grid-cols-[12rem_1fr] md:grid-rows-[auto_1fr_auto] md:gap-x-8 md:gap-y-6 md:px-6 md:pb-6 lg:grid-cols-[14rem_1fr] xl:grid-cols-[18rem_1fr]";
+  "grid grid-cols-[7rem_1fr] gap-x-4 gap-y-4 px-4 pt-4 short-phone:gap-y-3 md:grid-cols-[12rem_1fr] md:grid-rows-[auto_1fr_auto] md:gap-x-8 md:gap-y-6 md:px-6 md:pb-6 lg:grid-cols-[14rem_1fr] xl:grid-cols-[18rem_1fr] @min-[66rem]:grid-cols-[22rem_1fr] @min-[66rem]:gap-x-12 @min-[66rem]:px-8 @min-[80rem]:grid-cols-[26rem_1fr]";
 const POSTER = "row-start-1 aspect-[2/3] self-start overflow-hidden rounded-art md:row-span-3";
 const BELOW = "col-span-2 min-w-0 md:col-span-1 md:col-start-2";
 
@@ -208,9 +211,9 @@ export function PickPanelSkeleton({ ref }: { ref?: PanelRef }) {
       data-wide
       role="status"
       aria-label="Finding something"
-      className="outline-none"
+      className="@container outline-none"
     >
-      <div className="px-4 pt-2 md:px-6 md:pt-6">
+      <div className="px-4 pt-2 md:px-6 md:pt-6 @min-[66rem]:px-8">
         <Skeleton className="h-5 w-48 rounded-full" />
       </div>
       <div className={BODY}>
@@ -241,6 +244,7 @@ export function PickPanel({
   headerRef,
   cardRef,
   swipe,
+  swipeHint = false,
   heading,
   headingAs: Heading = "h1",
   picks,
@@ -263,6 +267,8 @@ export function PickPanel({
   /** What a sideways drag moves, and the handlers that move it. */
   cardRef?: React.Ref<HTMLDivElement>;
   swipe?: React.HTMLAttributes<HTMLDivElement>;
+  /** Say on the poster that it swipes, phones only. */
+  swipeHint?: boolean;
   heading: string;
   headingAs?: "h1" | "p";
   picks: Scored[];
@@ -272,15 +278,15 @@ export function PickPanel({
   length: string | null;
   shrinking: boolean;
   ratingsNote: string | null;
-  /** The signed-out demo: nothing links out, and the set never changes. */
+  /** The signed-out demo: the same screen, with nothing linking out. */
   demo?: boolean;
   onGo: (i: number) => void;
   onSave: () => void;
-  onMore?: () => void;
+  onMore: () => void;
   onSeen: () => void;
   onDismiss: () => void;
-  onNewSet?: () => void;
-  onChangeMood?: () => void;
+  onNewSet: () => void;
+  onChangeMood: () => void;
 }) {
   const pick = picks[index];
   const total = picks.length;
@@ -297,7 +303,7 @@ export function PickPanel({
       alt=""
       fill
       priority={!demo}
-      sizes="(max-width: 48rem) 112px, 288px"
+      sizes="(max-width: 48rem) 112px, (max-width: 120rem) 288px, 416px"
       className="object-cover"
     />
   ) : (
@@ -305,6 +311,16 @@ export function PickPanel({
       {pick.title}
     </span>
   );
+  const posterHint =
+    swipeHint && total > 1 ? (
+      <span
+        aria-hidden="true"
+        className="glass pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-center gap-1.5 rounded-full border py-1 text-xs font-medium text-foreground md:hidden"
+      >
+        <MoveHorizontal className="swipe-hint size-3.5" strokeWidth={2} />
+        Swipe
+      </span>
+    ) : null;
 
   return (
     <div
@@ -312,7 +328,7 @@ export function PickPanel({
       tabIndex={-1}
       data-wide
       data-slot="pick-panel"
-      className="relative isolate outline-none"
+      className="@container relative isolate outline-none"
     >
       {/* The artwork lights the frame from behind, faded out before the text
           needs the contrast. */}
@@ -330,13 +346,13 @@ export function PickPanel({
             src={backdrop}
             alt=""
             fill
-            sizes="(max-width: 48rem) 100vw, 1024px"
+            sizes="(max-width: 48rem) 100vw, (max-width: 120rem) 1024px, 1440px"
             className="object-cover opacity-30 md:opacity-20"
           />
         </div>
       ) : null}
 
-      <header ref={headerRef} className="scroll-mt-16 px-4 pt-2 md:px-6 md:pt-6 md:pr-16">
+      <header ref={headerRef} className="scroll-mt-16 px-4 pt-2 md:px-6 md:pt-6 md:pr-16 @min-[66rem]:pl-8">
         <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground md:justify-start">
           <Heading>{heading}</Heading>
           <span data-numeric className="font-mono text-xs">
@@ -363,6 +379,7 @@ export function PickPanel({
             className={cn(POSTER, "relative bg-muted ring-1 ring-foreground/10", enter)}
           >
             {posterArt}
+            {posterHint}
           </div>
         ) : (
           <Link
@@ -376,17 +393,18 @@ export function PickPanel({
             )}
           >
             {posterArt}
+            {posterHint}
           </Link>
         )}
 
           <div aria-live="polite">
             <div key={`info-${pick.mediaId}`} className={enter}>
-              <h2 className="line-clamp-3 text-2xl font-semibold tracking-tight text-balance text-foreground md:line-clamp-2 md:text-3xl">
+              <h2 className="line-clamp-3 text-2xl font-semibold tracking-tight text-balance text-foreground md:line-clamp-2 md:text-3xl @min-[66rem]:text-4xl @min-[80rem]:text-5xl">
                 {pick.title}
               </h2>
               <p
                 data-numeric
-                className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-sm text-muted-foreground"
+                className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-sm text-muted-foreground @min-[66rem]:mt-3 @min-[66rem]:text-base"
               >
                 {pick.year != null ? <span>{pick.year}</span> : null}
                 {pick.voteAverage != null ? (
@@ -398,19 +416,22 @@ export function PickPanel({
                 {length ? <span>{length}</span> : null}
               </p>
               {pick.genres.length > 0 ? (
-                <p className="mt-1 text-sm text-muted-foreground">{pick.genres.join(" · ")}</p>
+                <p className="mt-1 text-sm text-muted-foreground @min-[66rem]:text-base">{pick.genres.join(" · ")}</p>
               ) : null}
             </div>
           </div>
 
-        <div key={`why-${pick.mediaId}`} className={cn(BELOW, enter)}>
+        <div
+          key={`why-${pick.mediaId}`}
+          className={cn(BELOW, enter)}
+        >
                 {pick.reasons.length > 0 ? (
-                  <>
+                  <div>
                     <h3 className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
                       Why this one
                     </h3>
-                    <ReasonChips reasons={pick.reasons} max={4} className="mt-2" />
-                  </>
+                    <ReasonChips reasons={pick.reasons} max={4} className="mt-2 @min-[66rem]:mt-3" />
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     This is a pick people tend to agree on. Rate a few and Klyvi
@@ -419,7 +440,7 @@ export function PickPanel({
                 )}
 
               {pick.overview ? (
-                <p className="mt-4 line-clamp-4 short-phone:line-clamp-3 max-w-[65ch] text-[15px] md:mt-6 md:line-clamp-5 leading-relaxed text-foreground/90">
+                <p className="mt-4 line-clamp-4 short-phone:line-clamp-3 max-w-[65ch] text-[15px] md:mt-6 md:line-clamp-5 leading-relaxed text-foreground/90 @min-[66rem]:line-clamp-8 @min-[66rem]:text-base @min-[66rem]:leading-relaxed @min-[80rem]:mt-8 @min-[80rem]:text-xl @min-[80rem]:leading-relaxed">
                   {pick.overview}
                 </p>
               ) : null}
@@ -430,15 +451,19 @@ export function PickPanel({
           <div
             className={cn(
               BELOW,
-              "grid gap-2 md:grid-cols-2 lg:flex lg:flex-wrap lg:items-center",
-              demo ? "grid-cols-2" : "grid-cols-3"
+              "grid grid-cols-3 gap-2 md:grid-cols-2 lg:flex lg:flex-wrap lg:items-center"
             )}
           >
-            <Button size="touch" className={cn("col-span-full gap-2", !demo && "md:col-span-1")} onClick={onSave}>
+            <Button size="touch" className="col-span-full gap-2 md:col-span-1" onClick={onSave}>
               <Bookmark aria-hidden="true" data-icon="inline-start" />
               Add to watchlist
             </Button>
-            {demo ? null : (
+            {demo ? (
+              <Button variant="outline" size="touch" className={ACTION_TILE} onClick={onMore}>
+                <Info aria-hidden="true" className="md:hidden" />
+                More about it
+              </Button>
+            ) : (
               <Link
                 href={mediaHref(pick)}
                 className={cn(buttonVariants({ variant: "outline", size: "touch" }), ACTION_TILE)}
@@ -490,14 +515,14 @@ export function PickPanel({
                     aria-current={on ? "true" : undefined}
                     onClick={() => onGo(i)}
                     className={cn(
-                      "relative block aspect-[2/3] w-full overflow-hidden md:w-10 rounded-art bg-muted outline-none transition-[opacity,scale] duration-(--dur-base) focus-visible:ring-3 focus-visible:ring-ring/30 motion-reduce:transition-none",
+                      "relative block aspect-[2/3] w-full overflow-hidden md:w-10 @min-[66rem]:w-12 rounded-art bg-muted outline-none transition-[opacity,scale] duration-(--dur-base) focus-visible:ring-3 focus-visible:ring-ring/30 motion-reduce:transition-none",
                       on
                         ? "scale-110 ring-2 ring-violet-text motion-reduce:scale-100"
                         : "opacity-50 hover:opacity-100"
                     )}
                   >
                     {thumb ? (
-                      <Image src={thumb} alt="" fill sizes="44px" className="object-cover" />
+                      <Image src={thumb} alt="" fill sizes="48px" className="object-cover" />
                     ) : (
                       <span className="font-mono text-xs text-muted-foreground">{i + 1}</span>
                     )}
@@ -518,18 +543,16 @@ export function PickPanel({
           </Button>
         </div>
 
-        {demo ? null : (
-          <div className="grid grid-cols-2 items-center gap-2 max-md:w-full md:ml-auto md:flex">
-            <Button variant="ghost" className="gap-2" onClick={onChangeMood}>
-              <Undo2 aria-hidden="true" data-icon="inline-start" />
-              Change mood
-            </Button>
-            <Button variant="outline" className="gap-2" onClick={onNewSet}>
-              <RotateCcw aria-hidden="true" data-icon="inline-start" />
-              New set
-            </Button>
-          </div>
-        )}
+        <div className="grid grid-cols-2 items-center gap-2 max-md:w-full md:ml-auto md:flex">
+          <Button variant="ghost" className="gap-2" onClick={onChangeMood}>
+            <Undo2 aria-hidden="true" data-icon="inline-start" />
+            Change mood
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={onNewSet}>
+            <RotateCcw aria-hidden="true" data-icon="inline-start" />
+            New set
+          </Button>
+        </div>
         {ratingsNote ? (
           <p data-numeric className="w-full text-xs text-muted-foreground max-md:text-center">
             {ratingsNote}

@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { PickPanel } from "@/components/find/find-panels";
+import { useCardSwipe } from "@/components/find/use-card-swipe";
 import { LandingHeader } from "@/components/marketing/landing-header";
 import { Reveal } from "@/components/marketing/reveal";
 import { getMovie } from "@/lib/api/catalog";
@@ -13,9 +14,12 @@ import type { Scored } from "@/lib/types";
 /**
  * The actual Find Next presentation, driving five hardcoded films so a
  * visitor can feel the product before signing up. Renders the same PickPanel
- * the live screen uses. The only differences are the data source and that
- * nothing writes or links anywhere. Backdrops hydrate from the public catalog
- * when it answers, and the posters carry it when it does not.
+ * the live screen uses, swipe included. The only differences are the data
+ * source and that nothing writes or links anywhere: each button says what it
+ * does in the app instead. Past 1080p the frame takes the whole landing
+ * column, and the panel lays itself out for the room. Backdrops and the full
+ * story hydrate from the public catalog when it answers, and the posters and
+ * short versions carry it when it does not.
  */
 export function FindNextDemo() {
   const [picks, setPicks] = React.useState<Scored[]>(DEMO_PICKS);
@@ -23,7 +27,7 @@ export function FindNextDemo() {
   const [dir, setDir] = React.useState<1 | -1>(1);
   const [hint, setHint] = React.useState<string | null>(null);
 
-  // Best-effort backdrop hydration from the public catalog. One pass,
+  // Best-effort hydration from the public catalog. One pass,
   // silent failure: the demo must work with the API completely absent.
   React.useEffect(() => {
     let cancelled = false;
@@ -32,11 +36,12 @@ export function FindNextDemo() {
         getMovie(p.tmdbId).then((d) => ({
           tmdbId: p.tmdbId,
           backdropPath: d?.backdropPath ?? null,
+          overview: d?.overview || null,
         }))
       )
     ).then((results) => {
       if (cancelled) return;
-      const backdrops = new Map(
+      const found = new Map(
         results
           .filter(
             (
@@ -44,14 +49,16 @@ export function FindNextDemo() {
             ): r is PromiseFulfilledResult<{
               tmdbId: number;
               backdropPath: string | null;
+              overview: string | null;
             }> => r.status === "fulfilled"
           )
-          .map((r) => [r.value.tmdbId, r.value.backdropPath])
+          .map((r) => [r.value.tmdbId, r.value])
       );
       setPicks((cur) =>
         cur.map((p) => ({
           ...p,
-          backdropPath: p.backdropPath ?? backdrops.get(p.tmdbId) ?? null,
+          backdropPath: p.backdropPath ?? found.get(p.tmdbId)?.backdropPath ?? null,
+          overview: found.get(p.tmdbId)?.overview ?? p.overview,
         }))
       );
     });
@@ -74,6 +81,17 @@ export function FindNextDemo() {
     }
   }
 
+  const [swiped, setSwiped] = React.useState(false);
+  const { cardRef, swipe } = useCardSwipe({
+    canPrev: index > 0,
+    canNext: index < picks.length - 1,
+    onStep: (by) => {
+      setSwiped(true);
+      const next = index + by;
+      if (next >= 0 && next < picks.length) goTo(next);
+    },
+  });
+
   const pick = picks[index];
 
   return (
@@ -86,9 +104,12 @@ export function FindNextDemo() {
         />
       </Reveal>
 
-      <div className="glass mx-auto mt-10 max-w-5xl overflow-hidden rounded-lg border py-4 md:py-0">
+      <div className="glass mx-auto mt-10 max-w-5xl ultrawide:mt-16 ultrawide:max-w-none overflow-hidden rounded-lg border py-4 md:py-0">
         <PickPanel
           demo
+          cardRef={cardRef}
+          swipe={swipe}
+          swipeHint={!swiped}
           headingAs="p"
           heading={`Your ${picks.length} picks for tonight`}
           picks={picks}
@@ -99,6 +120,9 @@ export function FindNextDemo() {
           ratingsNote={null}
           onGo={goTo}
           onSave={() => act("In the app, this saves it to your watchlist.")}
+          onMore={() => setHint("In the app, this opens the film's page.")}
+          onNewSet={() => setHint("In the app, this brings a fresh set.")}
+          onChangeMood={() => setHint("In the app, this goes back to the moods.")}
           onSeen={() => act("In the app, this asks how it was and rates it.")}
           onDismiss={() => act("In the app, this hides it and sharpens your profile.")}
         />

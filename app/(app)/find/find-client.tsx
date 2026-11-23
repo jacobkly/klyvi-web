@@ -15,6 +15,7 @@ import {
 
 import { useSession } from "@/components/auth/auth-provider";
 import { MoodPanel, PickPanel, PickPanelSkeleton } from "@/components/find/find-panels";
+import { useCardSwipe } from "@/components/find/use-card-swipe";
 import { AmbientArt } from "@/components/klyvi/ambient-art";
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { RatingDialog } from "@/components/media/rating-dialog";
@@ -380,54 +381,15 @@ export function FindClient({
     removeCurrent();
   }
 
-  // Phones swipe between picks. The card follows the finger sideways, and a
-  // drag past a quarter of its width (or 60px) steps. A mostly vertical drag
-  // is left to the page, so scrolling still works.
-  const swipe = React.useRef<{ x: number; y: number; dx: number; on: boolean } | null>(
-    null
-  );
-  const cardRef = React.useRef<HTMLDivElement>(null);
-  const setCardShift = (dx: number, animate: boolean) => {
-    const el = cardRef.current;
-    if (!el) return;
-    el.style.transition =
-      animate && !reduceMotion ? "transform var(--dur-base) var(--ease-enter)" : "none";
-    el.style.transform = dx ? `translateX(${dx}px)` : "";
-  };
-  const onTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    swipe.current = { x: t.clientX, y: t.clientY, dx: 0, on: false };
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    const s0 = swipe.current;
-    if (!s0) return;
-    const t = e.touches[0];
-    const dx = t.clientX - s0.x;
-    const dy = t.clientY - s0.y;
-    if (!s0.on) {
-      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
-        swipe.current = null;
-        return;
-      }
-      if (Math.abs(dx) < 10) return;
-      s0.on = true;
-    }
-    s0.dx = dx;
-    // Resist at either end, where there is nothing to step to.
-    const atEnd =
-      phase.kind === "ready" &&
-      ((dx > 0 && phase.index === 0) || (dx < 0 && phase.index >= phase.picks.length - 1));
-    setCardShift(atEnd ? dx / 4 : dx, false);
-  };
-  const onTouchEnd = () => {
-    const s0 = swipe.current;
-    swipe.current = null;
-    if (!s0?.on) return;
-    const width = cardRef.current?.offsetWidth ?? 320;
-    const far = Math.abs(s0.dx) > Math.min(60, width / 4);
-    setCardShift(0, true);
-    if (far) step(s0.dx < 0 ? 1 : -1);
-  };
+  const [swiped, setSwiped] = usePref("swipedPicks");
+  const { cardRef, swipe } = useCardSwipe({
+    canPrev: phase.kind === "ready" && phase.index > 0,
+    canNext: phase.kind === "ready" && phase.index < phase.picks.length - 1,
+    onStep: (by) => {
+      if (!swiped) setSwiped(true);
+      step(by);
+    },
+  });
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -447,7 +409,7 @@ export function FindClient({
     embedded ? (
       panel
     ) : (
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col pb-6 has-[[data-wide]]:max-w-5xl md:justify-center md:px-6 md:py-8">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col pb-6 has-[[data-wide]]:max-w-5xl ultrawide:has-[[data-wide]]:max-w-6xl md:justify-center md:px-6 md:py-8">
         <div className="md:glass md:overflow-hidden md:rounded-lg md:border">{panel}</div>
       </main>
     );
@@ -567,7 +529,8 @@ export function FindClient({
           ref={panelRef}
           headerRef={topRef}
           cardRef={cardRef}
-          swipe={{ onTouchStart, onTouchMove, onTouchEnd, onTouchCancel: onTouchEnd }}
+          swipe={swipe}
+          swipeHint={!swiped}
           heading={heading}
           picks={phase.picks}
           index={phase.index}

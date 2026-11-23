@@ -18,8 +18,9 @@ export type HeroAction = "save" | "seen" | "dismiss";
 /**
  * The pick for tonight, full width over its backdrop: the title, the
  * strongest reason, and the three things you can do about it. The other top
- * picks sit beside it as posters (below it on phones), and choosing one
- * brings it in.
+ * picks sit beside it as posters, and choosing one brings it in. Below lg
+ * the backdrop has the top of the card to itself and the words start where it
+ * fades out, so nothing covers the picture.
  *
  * The backdrop is keyed on the pick, so a change fades the new one in over
  * the page colour (FadeImage), which reduced motion cuts to a swap.
@@ -54,7 +55,7 @@ export function HomeHero({
       aria-label="Tonight's pick"
       className="relative isolate overflow-hidden rounded-lg bg-card ring-1 ring-foreground/10"
     >
-      <div className="absolute inset-0 -z-10">
+      <div className="absolute inset-x-0 top-0 -z-10 h-64 sm:h-96 lg:h-full">
         {art ? (
           <FadeImage
             key={pick.mediaId}
@@ -69,15 +70,11 @@ export function HomeHero({
             )}
           />
         ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-card from-5% via-card/60 via-35% to-transparent to-70% lg:from-background lg:from-0% lg:via-background/70 lg:via-50% lg:to-background/10 lg:to-100%" />
         <div className="absolute inset-0 hidden bg-gradient-to-r from-background/80 via-background/30 to-transparent lg:block" />
-        {/* Below lg the text sits over the top of the backdrop, where the
-            gradient is thinnest, so an even scrim keeps it readable on a
-            bright image in either theme. */}
-        <div className="absolute inset-0 bg-background/60 lg:hidden" />
       </div>
 
-      <div className="flex min-h-80 flex-col justify-end gap-6 p-4 sm:min-h-[22rem] sm:p-6 lg:flex-row lg:items-end lg:justify-between lg:p-8">
+      <div className="flex flex-col justify-end gap-6 p-4 pt-48 sm:p-6 sm:pt-72 lg:min-h-[22rem] lg:flex-row lg:items-end lg:justify-between lg:p-8">
         <div className="min-w-0 max-w-2xl">
           <p className="text-xs font-medium tracking-[0.12em] text-foreground/80 uppercase">
             Tonight&apos;s pick
@@ -101,9 +98,13 @@ export function HomeHero({
           ) : null}
           <ReasonChips reasons={pick.reasons} max={1} className="mt-3" />
 
-          <div className="mt-4 grid grid-cols-2 gap-2 md:flex md:flex-wrap">
-            <Button size="touch" className="col-span-full" onClick={() => onAct("save")}>
-              <Plus data-icon="inline-start" aria-hidden="true" strokeWidth={2} />
+          <div className="mt-4 grid grid-cols-3 gap-2 md:flex md:flex-wrap">
+            <Button
+              size="touch"
+              className={cn(ACTION_TILE, "max-md:bg-primary")}
+              onClick={() => onAct("save")}
+            >
+              <Plus aria-hidden="true" strokeWidth={2} />
               Add
             </Button>
             <Button

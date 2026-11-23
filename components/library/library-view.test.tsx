@@ -399,3 +399,40 @@ describe("LibraryView filter sheet (#66)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
+
+describe("LibraryView reach", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.history.replaceState(null, "", "/library");
+  });
+  const rows = [
+    film(1, "Alpha", { status: "completed" }),
+    film(2, "Beta", { status: "planning" }),
+  ];
+
+  it("opens on everything, and folds a group away and back", async () => {
+    const user = userEvent.setup();
+    render(<LibraryView load={async () => rows.map(mapTrackingEntry)} />);
+    const heading = await screen.findByRole("heading", { name: /Completed/ });
+    expect(screen.getByRole("heading", { name: /Planning/ })).toBeInTheDocument();
+
+    const fold = within(heading).getByRole("button");
+    expect(fold).toHaveAttribute("aria-expanded", "true");
+    await user.click(fold);
+    expect(fold).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryAllByText("Alpha")).toHaveLength(0);
+    expect(screen.queryAllByText("Beta").length).toBeGreaterThan(0);
+    await user.click(fold);
+    expect(screen.queryAllByText("Alpha").length).toBeGreaterThan(0);
+  });
+
+  it("switches status from the phone's strip", async () => {
+    const user = userEvent.setup();
+    render(<LibraryView load={async () => rows.map(mapTrackingEntry)} />);
+    await screen.findByRole("heading", { name: /Completed/ });
+    const strip = screen.getByRole("group", { name: "Show" });
+    await user.click(within(strip).getByRole("button", { name: /Planning/ }));
+    expect(screen.queryAllByText("Alpha")).toHaveLength(0);
+    expect(screen.queryAllByText("Beta").length).toBeGreaterThan(0);
+  });
+});

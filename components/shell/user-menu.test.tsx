@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +13,14 @@ vi.mock("@/components/auth/auth-provider", () => ({
     loading: false,
     signOut: vi.fn(),
   }),
+}));
+vi.mock("@/lib/api/notifications", () => ({
+  getNotifications: vi.fn(async () => ({
+    notifications: [],
+    unreadCount: 0,
+    hasMore: false,
+  })),
+  markAllNotificationsRead: vi.fn(async () => 0),
 }));
 vi.mock("@/components/notifications/unread-provider", () => ({
   useUnreadNotices: () => ({ unread: notices.unread, setUnread: vi.fn() }),
@@ -60,8 +68,25 @@ describe("UserMenu", () => {
     );
     expect(
       await screen.findByRole("menuitem", { name: /Notifications.*2 unread/ })
-    ).toHaveAttribute("href", "/notifications");
+    ).toBeInTheDocument();
     expect(dots()).toHaveLength(2);
+  });
+
+  it("opens notifications in place, and closes the menu", async () => {
+    const user = userEvent.setup();
+    render(<UserMenu />);
+    await user.click(screen.getByRole("button", { name: "Your account" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Notifications" })
+    );
+
+    expect(
+      await screen.findByRole("dialog", { name: "Notifications" })
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Nothing yet")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("menuitem", { name: "Settings" })).toBeNull()
+    );
   });
 
   it("names you at the top and reaches the library's pages in one tap", async () => {

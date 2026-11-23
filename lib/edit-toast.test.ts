@@ -4,6 +4,16 @@ import { editToast } from "./edit-toast";
 
 const before = { status: "completed" as const, score: 70 };
 
+it("names a favorite change when nothing else changed", () => {
+  const at = { status: "completed" as const, score: 80 };
+  expect(
+    editToast({ ...at, favorite: false }, { ...at, favorite: true }, "hundred")
+  ).toBe("Added to favorites");
+  expect(
+    editToast({ ...at, favorite: true }, { ...at, favorite: false }, "hundred")
+  ).toBe("Removed from favorites");
+});
+
 describe("editToast", () => {
   it("names the new status when the status changed", () => {
     expect(editToast(before, { status: "dropped", score: 70 }, "hundred")).toBe(

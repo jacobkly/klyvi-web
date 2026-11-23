@@ -4,12 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { mediaHref } from "@/lib/media-href";
 import { tmdbImage } from "@/lib/tmdb-image";
 import type { LibraryEntry } from "@/lib/types";
@@ -35,8 +31,11 @@ export function SurpriseCard({
   const planned = entry.status === "planning";
   const href = mediaHref(entry);
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+    <ResponsiveDialog
+      open
+      onOpenChange={(open) => !open && onClose()}
+      className="sm:max-w-sm"
+    >
         <div className="flex gap-4">
           <div className="relative aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-art bg-muted ring-1 ring-foreground/10">
             {entry.posterPath ? (
@@ -84,7 +83,6 @@ export function SurpriseCard({
             Pick another
           </Button>
         ) : null}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

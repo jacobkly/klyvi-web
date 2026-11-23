@@ -55,7 +55,9 @@ const SIGNED_OUT: Column[] = [
 /**
  * The shared site footer: brand block plus three link columns, used by the
  * marketing page and every signed-in screen. `wide` matches the app
- * container (1400px); default matches the marketing column.
+ * container (1400px); default matches the marketing column. On phones the app
+ * has a tab bar, so its footer drops what the tabs already reach and keeps one
+ * quiet row of links over the TMDB notice.
  */
 export function SiteFooter({ wide = false }: { wide?: boolean }) {
   const { user } = useSession();
@@ -65,32 +67,51 @@ export function SiteFooter({ wide = false }: { wide?: boolean }) {
       <div
         className={cn(
           "mx-auto w-full px-4 py-10 md:px-6",
-          wide ? "max-w-[1400px]" : "max-w-(--page-landing)"
+          wide ? "max-w-[1400px] max-md:py-6" : "max-w-(--page-landing)"
         )}
       >
         <div className="flex flex-wrap justify-between gap-x-12 gap-y-8">
-          <div className="max-w-xs">
+          <div className={cn("max-w-xs", wide && "max-md:hidden")}>
             <p className="text-[15px] font-semibold tracking-tight">Klyvi</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Find what to watch right now.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-x-16 gap-y-8">
+          <div
+            className={cn(
+              "flex flex-wrap gap-x-16 gap-y-8",
+              wide && "max-md:gap-x-4 max-md:gap-y-1"
+            )}
+          >
             {columns.map((col) => (
               <nav
                 key={col.heading}
                 aria-label={col.heading}
-                className="flex flex-col gap-1.5"
+                className={cn(
+                  "flex flex-col gap-1.5",
+                  wide &&
+                    (col.heading === "Product"
+                      ? "max-md:hidden"
+                      : "max-md:contents")
+                )}
               >
-                <p className="mb-1 text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground">
+                <p
+                  className={cn(
+                    "mb-1 text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground",
+                    wide && "max-md:hidden"
+                  )}
+                >
                   {col.heading}
                 </p>
                 {col.links.map(([label, href]) => (
                   <Link
                     key={href}
                     href={href}
-                    className="tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+                    className={cn(
+                      "tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground",
+                      wide && "max-md:text-xs"
+                    )}
                   >
                     {label}
                   </Link>
@@ -100,7 +121,12 @@ export function SiteFooter({ wide = false }: { wide?: boolean }) {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div
+          className={cn(
+            "mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4",
+            wide && "max-md:mt-4 max-md:gap-1"
+          )}
+        >
           <a
             href="https://www.themoviedb.org"
             aria-label="TMDB"

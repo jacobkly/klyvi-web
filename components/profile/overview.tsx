@@ -92,6 +92,11 @@ export function ProfileOverview() {
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
     .slice(0, 8);
 
+  const favorites = entries
+    .filter((e) => e.favorite)
+    .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+    .slice(0, 8);
+
   const activity = recentActivity(entries, activityFeed, 8);
 
   // The genre overview is a preview of Stats, so it waits for the same
@@ -165,6 +170,31 @@ export function ProfileOverview() {
                 </div>
               ))}
             </div>
+          </section>
+        ) : null}
+
+        {entries.length > 0 ? (
+          <section className="mt-10">
+            <SectionHeader
+              title="Favorites"
+              action={
+                favorites.length > 0
+                  ? { label: "View all", href: "/library/favorites" }
+                  : undefined
+              }
+              className="mb-4"
+            />
+            {favorites.length > 0 ? (
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                {favorites.map((e) => (
+                  <PosterCard key={e.mediaId} media={e} variant="compact" />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Tap the heart on a title you track and it shows up here.
+              </p>
+            )}
           </section>
         ) : null}
 

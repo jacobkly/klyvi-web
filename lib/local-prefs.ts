@@ -26,6 +26,8 @@ export type Prefs = ThemeSettings & {
   /** Films, TV or both in Find, the last choice, kept the same way. */
   findMedia: FeedMedia;
   exploreFilters: ExploreFilters;
+  /** Has swiped between picks, so Find stops saying it can be done. */
+  swipedPicks: boolean;
   /** Which tracking updates create activity feed entries, keyed by status. */
   activityFeed: Record<string, boolean>;
 };
@@ -43,6 +45,7 @@ export const DEFAULT_PREFS: Prefs = {
   libraryView: "grid",
   findMedia: "all",
   exploreFilters: { genre: "all", decade: "all", sort: "relevance" },
+  swipedPicks: false,
   activityFeed: {},
 };
 

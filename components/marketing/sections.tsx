@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { ReasonChips } from "@/components/klyvi/reason-chips";
 import { LandingHeader } from "@/components/marketing/landing-header";
@@ -10,6 +10,7 @@ import {
   REASSURANCE_CLAIMS,
   STAT_CLAIMS,
 } from "@/lib/marketing-claims";
+import { cn } from "@/lib/utils";
 
 /**
  * The static landing sections: stats band, features row, closing CTA.
@@ -135,22 +136,22 @@ export function StatsBand() {
         />
       </Reveal>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 ultrawide:gap-4">
         {STAT_CLAIMS.map((s, i) => (
           <Reveal key={s.category} delay={i * 0.08}>
-            <div className="flex min-h-48 flex-col glass rounded-lg p-6 ring-1 ring-foreground/10">
+            <div className="flex min-h-48 flex-col glass rounded-lg p-6 ultrawide:min-h-64 ultrawide:p-8 ring-1 ring-foreground/10">
               <div className="flex items-start justify-between gap-4">
-                <p className="text-sm text-muted-foreground">{s.category}</p>
+                <p className="text-sm text-muted-foreground ultrawide:text-base">{s.category}</p>
                 {STAT_GLYPHS[i]}
               </div>
               <div className="mt-auto">
                 <p
                   data-numeric
-                  className="font-mono text-4xl tracking-tight text-foreground sm:text-5xl"
+                  className="font-mono text-4xl tracking-tight text-foreground sm:text-5xl ultrawide:text-6xl"
                 >
                   {s.value}
                 </p>
-                <p className="mt-1.5 text-sm text-muted-foreground">{s.line}</p>
+                <p className="mt-1.5 text-sm text-muted-foreground ultrawide:mt-2 ultrawide:text-base">{s.line}</p>
               </div>
             </div>
           </Reveal>
@@ -261,18 +262,20 @@ export function FeaturesRow() {
       <div className="grid gap-4 md:grid-cols-3">
         {FEATURES.map((f, i) => (
           <Reveal key={f.title} delay={i * 0.08}>
-            <div className="flex h-full flex-col glass rounded-lg p-6 ring-1 ring-foreground/10">
+            <div className="flex h-full flex-col glass rounded-lg p-6 ultrawide:p-8 ring-1 ring-foreground/10">
               <p data-numeric className="font-mono text-sm text-violet-text">
                 {f.eyebrow}
               </p>
-              <h3 className="mt-3 text-lg font-semibold tracking-tight">
+              <h3 className="mt-3 text-lg font-semibold tracking-tight ultrawide:text-2xl">
                 {f.title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground ultrawide:mt-3 ultrawide:text-base ultrawide:leading-relaxed">
                 {f.body}
               </p>
-              <div className="mt-6 rounded-lg bg-background/50 p-4 ring-1 ring-foreground/10">
-                {f.vignette}
+              <div className="mt-auto pt-6 ultrawide:pt-8">
+                <div className="rounded-lg bg-background/50 p-4 ring-1 ring-foreground/10 ultrawide:p-6">
+                  {f.vignette}
+                </div>
               </div>
             </div>
           </Reveal>
@@ -282,50 +285,73 @@ export function FeaturesRow() {
   );
 }
 
+/**
+ * The last ask. Centred up to 1080p. Wider, the line and the buttons share
+ * the box side by side, so a big screen gets a full card rather than a short
+ * column in the middle of an empty one.
+ */
 export function ClosingCta() {
   return (
     <section className="mx-auto w-full max-w-(--page-landing) px-4 pt-12 pb-28">
       <Reveal>
-      <div className="relative overflow-hidden glass rounded-3xl px-6 py-14 text-center ring-1 ring-foreground/10 sm:py-24">
-        {/* Violet only where the app speaks: a faint bloom behind the final
-            ask, not a background wash. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 -top-24 h-64 [background:radial-gradient(closest-side,color-mix(in_oklch,var(--primary)_22%,transparent),transparent)]"
-        />
-        <p className="relative text-sm font-medium tracking-[0.14em] text-violet-text uppercase">
-          Tonight
-        </p>
-        <h2 className="relative mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
-          {CLOSING_CLAIM.heading}
-        </h2>
-        <p className="relative mx-auto mt-4 max-w-xl text-base text-balance text-muted-foreground">
-          {CLOSING_CLAIM.line}
-        </p>
-        <div className="relative mt-8 flex items-center justify-center gap-4">
-          <Link href="/signup" className={buttonVariants({ size: "touch" })}>
-            Get started
-          </Link>
-          <Link
-            href="/signin"
-            className="tap-target inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-          >
-            I have an account
-          </Link>
+        <div className="relative overflow-hidden glass rounded-3xl px-6 py-14 text-center ring-1 ring-foreground/10 sm:py-24 ultrawide:grid ultrawide:grid-cols-[1fr_24rem] ultrawide:items-center ultrawide:gap-16 ultrawide:px-16 ultrawide:py-28 ultrawide:text-left">
+          {/* Violet only where the app speaks: a faint bloom behind the final
+              ask, not a background wash. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 -top-24 h-64 [background:radial-gradient(closest-side,color-mix(in_oklch,var(--primary)_22%,transparent),transparent)]"
+          />
+          <div className="relative">
+            <p className="text-sm font-medium tracking-[0.14em] text-violet-text uppercase">
+              Tonight
+            </p>
+            <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl ultrawide:mx-0 ultrawide:text-7xl">
+              {CLOSING_CLAIM.heading}
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-base text-balance text-muted-foreground ultrawide:mx-0 ultrawide:mt-6 ultrawide:text-xl">
+              {CLOSING_CLAIM.line}
+            </p>
+          </div>
+          <div className="relative mt-8 ultrawide:mt-0">
+            <div className="flex items-center justify-center gap-4 ultrawide:flex-col ultrawide:items-stretch ultrawide:gap-2">
+              <Link
+                href="/signup"
+                className={cn(
+                  buttonVariants({ size: "touch" }),
+                  "ultrawide:h-14 ultrawide:text-base"
+                )}
+              >
+                Get started
+              </Link>
+              <Link
+                href="/signin"
+                className="tap-target inline-flex items-center justify-center text-sm text-muted-foreground hover:text-foreground ultrawide:h-11 ultrawide:text-base"
+              >
+                I have an account
+              </Link>
+            </div>
+            <ul className="mx-auto mt-8 flex max-w-lg flex-wrap items-center justify-center gap-x-2 gap-y-2 text-xs text-muted-foreground ultrawide:mt-6 ultrawide:grid ultrawide:grid-cols-2 ultrawide:gap-x-4 ultrawide:gap-y-3 ultrawide:border-t ultrawide:border-foreground/10 ultrawide:pt-6 ultrawide:text-sm">
+              {REASSURANCE_CLAIMS.map((item, i) => (
+                <li key={item} className="flex items-center gap-2">
+                  {i > 0 ? (
+                    <span
+                      aria-hidden="true"
+                      className="text-muted-foreground/40 ultrawide:hidden"
+                    >
+                      ·
+                    </span>
+                  ) : null}
+                  <Check
+                    aria-hidden="true"
+                    strokeWidth={2}
+                    className="hidden size-4 shrink-0 ultrawide:block"
+                  />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <ul className="relative mx-auto mt-8 flex max-w-lg flex-wrap items-center justify-center gap-x-2 gap-y-2 text-xs text-muted-foreground">
-          {REASSURANCE_CLAIMS.map((item, i) => (
-            <li key={item} className="flex items-center gap-2">
-              {i > 0 ? (
-                <span aria-hidden="true" className="text-muted-foreground/40">
-                  ·
-                </span>
-              ) : null}
-              {item}
-            </li>
-          ))}
-        </ul>
-      </div>
       </Reveal>
     </section>
   );

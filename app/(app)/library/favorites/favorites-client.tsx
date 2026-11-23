@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Star } from "lucide-react";
+import { Heart } from "lucide-react";
 
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { LibraryNav } from "@/components/library/library-nav";
-import { SectionHeader } from "@/components/klyvi/section-header";
 import { Button } from "@/components/ui/button";
 import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { listTracking } from "@/lib/api/tracking";
@@ -18,7 +17,7 @@ type State =
   | { kind: "ready"; favorites: LibraryEntry[] };
 
 /**
- * Favorites: the entries the user has starred, from the tracking list's
+ * Favorites: the entries the user has marked, from the tracking list's
  * `favorite` flag. Sorted highest-rated first, unrated last.
  */
 export function FavoritesClient() {
@@ -95,15 +94,14 @@ export function FavoritesClient() {
       {favorites.length === 0 ? (
         <div className="flex flex-1 items-center justify-center">
           <EmptyState
-            icon={Star}
+            icon={Heart}
             title="No favorites yet"
-            body="Star a film or season from its page and it lands here."
+            body="Tap the heart on a film or season you track and it lands here."
             action={{ label: "Find something to watch", href: "/find" }}
           />
         </div>
       ) : (
         <section className="mt-8">
-          <SectionHeader title="Starred" className="mb-4" />
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {favorites.map((e) => (
               <PosterCard
