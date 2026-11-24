@@ -26,21 +26,24 @@ import { BackdropHero } from "@/components/media/backdrop-hero";
 import { CastChips } from "@/components/media/cast-chips";
 import { KeywordCard } from "@/components/media/keyword-card";
 import { FactsPreview, MetadataList } from "@/components/media/metadata-list";
+import { RatingDialog } from "@/components/media/rating-dialog";
 import { TrailerButton } from "@/components/media/trailer-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Fact } from "@/lib/media-facts";
 import type { CastMember, CrewGroup, Keyword } from "@/lib/mock-media";
-import type {
-  LibraryEntry,
-  TrackableSummary,
-  TrackingStatus,
+import {
+  STATUS_VERBS,
+  type LibraryEntry,
+  type TrackableSummary,
+  type TrackingStatus,
 } from "@/lib/types";
 import { editToast } from "@/lib/edit-toast";
 import { usePref } from "@/lib/local-prefs";
 import { outLabel } from "@/lib/release";
 import { formatScore } from "@/lib/score";
 import { tmdbImage } from "@/lib/tmdb-image";
+import { toastWithUndo } from "@/lib/undo-toast";
 
 /**
  * The shared cinematic detail layout for movies, series, and seasons
@@ -132,14 +135,29 @@ function DetailLayout({
   const [progress, setProgress] = React.useState<number | null>(null);
   const [notes, setNotes] = React.useState<string | null>(null);
   const [favorite, setFavorite] = React.useState(false);
-  /** Internal media_id, learned from the tracking lookup or the first POST.
-   *  PATCH and DELETE address this, so writes queue behind knowing it. */
-  const [mediaId, setMediaId] = React.useState<number | null>(null);
+  /** The entry as the server last had it, and the internal media_id that
+   *  PATCH and DELETE address. Writes run one at a time and read this when
+   *  their turn comes, so a removal right after an add has an id to remove,
+   *  and a failed write has something true to fall back to. */
+  const saved = React.useRef<{ mediaId: number; edit: TrackingEdit } | null>(null);
+  const queue = React.useRef<Promise<unknown>>(Promise.resolve());
+  const latest = React.useRef(0);
   const [editing, setEditing] = React.useState(false);
+  /** The completed entry the rating pop-up is asking about. */
+  const [rating, setRating] = React.useState<TrackingEdit | null>(null);
   const [scoringSystem] = usePref("scoringSystem");
   const [overviewOpen, setOverviewOpen] = React.useState(false);
   const [crewOpen, setCrewOpen] = React.useState(false);
   const out = outLabel(releaseDate);
+
+  /** Shows an entry, or no entry at all. */
+  const show = React.useCallback((edit: TrackingEdit | null) => {
+    setStatus(edit?.status ?? null);
+    setScore(edit?.score ?? null);
+    setProgress(edit?.progress ?? null);
+    setNotes(edit?.notes ?? null);
+    setFavorite(edit?.favorite ?? false);
+  }, []);
 
   // Hydrate any existing entry so the control reflects reality on load. One
   // lookup for this title, not the whole library. Signed out (or API down)
@@ -155,30 +173,31 @@ function DetailLayout({
       .then((mine) => {
         if (cancelled) return;
         if (mine) {
-          setMediaId(mine.mediaId);
-          setStatus(mine.status);
-          setScore(mine.score);
-          setProgress(mine.progress);
-          setNotes(mine.notes);
-          setFavorite(mine.favorite);
+          const { mediaId, status, score, progress, notes, favorite } = mine;
+          const edit = { status, score, progress, notes, favorite };
+          saved.current = { mediaId, edit };
+          show(edit);
         }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [trackable, user, media.tmdbId, media.mediaType, media.seasonNumber]);
+  }, [trackable, user, media.tmdbId, media.mediaType, media.seasonNumber, show]);
+
+  const current: TrackingEdit = {
+    status: status ?? "planning",
+    score,
+    progress,
+    notes,
+    favorite,
+  };
 
   /** The entry the dialog edits. */
   const entry: LibraryEntry = {
     ...media,
-    mediaId: mediaId ?? 0,
-    status: status ?? "planning",
-    score,
-    progress,
+    ...current,
     progressTotal: episodeCount ?? null,
-    notes,
-    favorite,
     updatedAt: "",
   };
 
@@ -190,8 +209,9 @@ function DetailLayout({
 
   /**
    * A pick from the menu saves at once, keeping the score, notes and
-   * favorite. Completing a season counts every episode. The editor opens
-   * only from the score button.
+   * favorite. Completing a season counts every episode, and completing
+   * anything unrated asks how it was. The editor opens only from the score
+   * button.
    */
   function changeStatus(next: TrackingStatus) {
     if (!user) {
@@ -199,72 +219,103 @@ function DetailLayout({
       return;
     }
     const total = media.mediaType === "season" ? episodeCount : null;
-    saveEdit({
+    const edit = {
+      ...current,
       status: next,
-      score,
       progress: next === "completed" && total ? total : progress,
-      notes,
-      favorite,
-    });
+    };
+    if (next === "completed" && score == null) {
+      // Saved quietly: the toast would sit on the pop-up's Save button.
+      setRating(edit);
+      persist(edit).catch(() => toast("Could not update that. Try again"));
+    } else {
+      saveEdit(edit);
+    }
+  }
+
+  function skipRating() {
+    setRating(null);
+    if (status === "completed") toast(STATUS_VERBS.completed);
   }
 
   function toggleFavorite() {
     if (!status) return;
-    saveEdit({ status, score, progress, notes, favorite: !favorite });
+    saveEdit({ ...current, favorite: !favorite });
   }
 
   function saveEdit(edit: TrackingEdit) {
-    const prev = { status, score, progress, notes, favorite };
-    setStatus(edit.status);
-    setScore(edit.score);
-    setProgress(edit.progress);
-    setNotes(edit.notes);
-    setFavorite(edit.favorite);
-    toast(editToast(prev, edit, scoringSystem));
-
-    const write =
-      mediaId != null
-        ? updateTracking(mediaId, {
-            status: edit.status,
-            score: edit.score,
-            episodeProgress: edit.progress,
-            notes: edit.notes,
-            favorite: edit.favorite,
-          })
-        : addTracking({
-            tmdbId: media.tmdbId,
-            mediaType: media.mediaType,
-            seasonNumber: media.seasonNumber,
-            status: edit.status,
-            score: edit.score,
-            episodeProgress: edit.progress,
-            notes: edit.notes,
-            favorite: edit.favorite,
-          });
-    write
-      .then((saved) => {
-        setMediaId(saved.mediaId);
+    const rated = edit.score !== score ? edit.score : null;
+    toast(editToast({ status, score, favorite }, edit, scoringSystem));
+    persist(edit)
+      .then(() => {
         // The score is recommender signal too; tracking and interactions
         // are separate pillars server-side, so rating writes both.
-        if (edit.score != null && edit.score !== prev.score) {
+        if (rated != null) {
           recordInteraction({
             tmdbId: media.tmdbId,
             mediaType: media.mediaType,
             seasonNumber: media.seasonNumber,
             kind: "rated",
-            rating: edit.score,
+            rating: rated,
             source: "detail",
           }).catch(() => {});
         }
       })
-      .catch(() => {
-        setStatus(prev.status);
-        setScore(prev.score);
-        setProgress(prev.progress);
-        setNotes(prev.notes);
-        setFavorite(prev.favorite);
-        toast("Could not update that. Try again");
-      });
+      .catch(() => toast("Could not update that. Try again"));
+  }
+
+  /**
+   * Shows the change now and writes it in turn. A failure goes back to what
+   * the server has, unless a later change is already on its way.
+   */
+  function write(edit: TrackingEdit | null, send: () => Promise<void>) {
+    const turn = ++latest.current;
+    show(edit);
+    const run = queue.current.then(send).catch((err: unknown) => {
+      if (turn === latest.current) show(saved.current?.edit ?? null);
+      throw err;
+    });
+    queue.current = run.catch(() => {});
+    return run;
+  }
+
+  function persist(edit: TrackingEdit) {
+    return write(edit, async () => {
+      const { progress: episodeProgress, ...rest } = edit;
+      const fields = { ...rest, episodeProgress };
+      const { mediaId } = saved.current
+        ? await updateTracking(saved.current.mediaId, fields)
+        : await addTracking({
+            tmdbId: media.tmdbId,
+            mediaType: media.mediaType,
+            seasonNumber: media.seasonNumber,
+            ...fields,
+          });
+      saved.current = { mediaId, edit };
+    });
+  }
+
+  /** Out of the library at once, with Undo to put the same entry back. */
+  function remove() {
+    const prev = current;
+    setEditing(false);
+    const id = toastWithUndo({
+      message: "Removed from your library",
+      undoneMessage: "Back in your library",
+      onUndo: () => persist(prev),
+    });
+    write(null, async () => {
+      if (!saved.current) return;
+      try {
+        await deleteTracking(saved.current.mediaId);
+      } catch (err) {
+        // Already gone server-side: silence, per the copy doc.
+        if ((err as { status?: number })?.status !== 404) throw err;
+      }
+      saved.current = null;
+    }).catch(() =>
+      toast("Could not update that. Try again", { id, action: undefined })
+    );
   }
 
   const controls = !trackable ? (
@@ -283,6 +334,7 @@ function DetailLayout({
       <StatusControl
         status={status}
         onChange={changeStatus}
+        onRemove={remove}
         options={out ? ["planning"] : undefined}
         size="touch"
         className="min-w-0 grow basis-36 sm:w-full sm:flex-none"
@@ -512,32 +564,27 @@ function DetailLayout({
             if (!o) setEditing(false);
           }}
           onSave={saveEdit}
-          onDelete={() => {
-            const prev = { status, score, progress, notes, favorite, mediaId };
-            setStatus(null);
-            setScore(null);
-            setProgress(null);
-            setNotes(null);
-            setFavorite(false);
-            setEditing(false);
-            toast("Removed from your library");
-            if (prev.mediaId != null) {
-              deleteTracking(prev.mediaId)
-                .then(() => setMediaId(null))
-                .catch((err: unknown) => {
-                  // Already gone server-side: silence, per the copy doc.
-                  if ((err as { status?: number })?.status === 404) {
-                    setMediaId(null);
-                    return;
-                  }
-                  setStatus(prev.status);
-                  setScore(prev.score);
-                  setProgress(prev.progress);
-                  setNotes(prev.notes);
-                  setFavorite(prev.favorite);
-                  toast("Could not update that. Try again");
-                });
+          onDelete={remove}
+        />
+      ) : null}
+
+      {rating ? (
+        <RatingDialog
+          title={title}
+          year={year}
+          posterPath={posterPath}
+          skipLabel="Skip for now"
+          open
+          onOpenChange={(o) => {
+            if (!o) skipRating();
+          }}
+          onSubmit={(value) => {
+            if (value == null) {
+              skipRating();
+              return;
             }
+            setRating(null);
+            saveEdit({ ...rating, score: value });
           }}
         />
       ) : null}

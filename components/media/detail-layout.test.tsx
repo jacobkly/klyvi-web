@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +11,7 @@ const listTracking = vi.fn();
 const lookupTracking = vi.fn();
 const updateTracking = vi.fn();
 const addTracking = vi.fn();
+const deleteTracking = vi.fn();
 const push = vi.fn();
 const toast = vi.fn();
 let sessionLoading = false;
@@ -21,7 +22,7 @@ vi.mock("@/lib/api/tracking", () => ({
   lookupTracking: (...a: unknown[]) => lookupTracking(...a),
   addTracking: (...a: unknown[]) => addTracking(...a),
   updateTracking: (...a: unknown[]) => updateTracking(...a),
-  deleteTracking: vi.fn(),
+  deleteTracking: (...a: unknown[]) => deleteTracking(...a),
 }));
 vi.mock("@/lib/api/interactions", () => ({ recordInteraction: vi.fn() }));
 vi.mock("sonner", () => ({ toast: (...a: unknown[]) => toast(...a) }));
@@ -132,6 +133,57 @@ describe("DetailLayout saves", () => {
     await user.click(await screen.findByRole("button", { name: /Completed/ }));
     await user.click(await screen.findByRole("menuitem", { name: "Paused" }));
   }
+
+  it("asks for a rating when something unrated is completed", async () => {
+    lookupTracking.mockResolvedValue(tracked({ status: "watching", score: null }));
+    updateTracking.mockResolvedValue(tracked({}));
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(await screen.findByRole("button", { name: /Watching/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Completed" }));
+    // Completed is saved already, so leaving the pop-up keeps it.
+    expect(updateTracking).toHaveBeenCalledWith(
+      955,
+      expect.objectContaining({ status: "completed", score: null })
+    );
+    expect(await screen.findByRole("dialog", { name: "How was it?" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save rating" }));
+
+    await waitFor(() =>
+      expect(updateTracking).toHaveBeenLastCalledWith(
+        955,
+        expect.objectContaining({ status: "completed", score: 75 })
+      )
+    );
+    expect(screen.queryByRole("dialog", { name: "How was it?" })).toBeNull();
+  });
+
+  it("stays completed when the rating is skipped", async () => {
+    lookupTracking.mockResolvedValue(tracked({ status: "watching", score: null }));
+    updateTracking.mockResolvedValue(tracked({}));
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(await screen.findByRole("button", { name: /Watching/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Completed" }));
+    expect(toast).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole("button", { name: "Skip for now" }));
+    expect(toast).toHaveBeenCalledWith("Marked as completed");
+    expect(updateTracking).toHaveBeenCalledOnce();
+    expect(await screen.findByRole("button", { name: /Completed/ })).toBeInTheDocument();
+  });
+
+  it("does not ask again when there is a score", async () => {
+    lookupTracking.mockResolvedValue(tracked({ status: "rewatching" }));
+    updateTracking.mockResolvedValue(tracked({}));
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(await screen.findByRole("button", { name: /Rewatching/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Completed" }));
+    expect(screen.queryByRole("dialog", { name: "How was it?" })).toBeNull();
+  });
 
   it("shows the new status before the request resolves", async () => {
     updateTracking.mockReturnValue(new Promise(() => {}));
@@ -399,5 +451,80 @@ describe("DetailLayout for the visitor (U.21)", () => {
     renderDetail();
     await waitFor(() => expect(lookupTracking).toHaveBeenCalled());
     expect(screen.getAllByRole("button", { name: /Add to library/ })).toHaveLength(1);
+  });
+});
+
+describe("DetailLayout removal", () => {
+  beforeEach(() => {
+    sessionUser = { id: "u1" };
+    sessionLoading = false;
+    lookupTracking.mockReset().mockResolvedValue(tracked({ score: 88, notes: "Great" }));
+    addTracking.mockReset().mockResolvedValue(tracked({}));
+    updateTracking.mockReset();
+    deleteTracking.mockReset().mockResolvedValue(undefined);
+    toast.mockReset();
+  });
+
+  async function removeFrom(status: RegExp) {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: status }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Remove from library" })
+    );
+  }
+
+  it("takes a title out from the status menu, and Undo puts it back whole", async () => {
+    renderDetail();
+    await removeFrom(/Completed/);
+
+    expect(screen.getByRole("button", { name: /Add to library/ })).toBeInTheDocument();
+    await waitFor(() => expect(deleteTracking).toHaveBeenCalledWith(955));
+
+    const removed = toast.mock.calls.find((c) => c[0] === "Removed from your library");
+    await act(() => removed?.[1].action.onClick());
+    expect(addTracking).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "completed", score: 88, notes: "Great" })
+    );
+    expect(screen.getByRole("button", { name: /Completed/ })).toBeInTheDocument();
+    expect(toast).toHaveBeenLastCalledWith("Back in your library");
+  });
+
+  it("removes a title whose add is still on its way", async () => {
+    lookupTracking.mockResolvedValue(null);
+    let added: (e: LibraryEntry) => void = () => {};
+    addTracking.mockReturnValue(new Promise((r) => (added = r)));
+    const user = userEvent.setup();
+    renderDetail();
+    await waitFor(() => expect(lookupTracking).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: /Add to library/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Watching" }));
+    await removeFrom(/Watching/);
+
+    expect(deleteTracking).not.toHaveBeenCalled();
+    await act(async () => added(tracked({ status: "watching" })));
+    await waitFor(() => expect(deleteTracking).toHaveBeenCalledWith(955));
+    expect(screen.getByRole("button", { name: /Add to library/ })).toBeInTheDocument();
+  });
+
+  it("puts it back and says so when the removal fails", async () => {
+    deleteTracking.mockRejectedValue(new Error("503"));
+    renderDetail();
+    await removeFrom(/Completed/);
+
+    expect(await screen.findByText("Your score: 88")).toBeInTheDocument();
+    expect(toast).toHaveBeenLastCalledWith(
+      "Could not update that. Try again",
+      expect.anything()
+    );
+  });
+
+  it("treats one already gone as removed", async () => {
+    deleteTracking.mockRejectedValue(Object.assign(new Error("gone"), { status: 404 }));
+    renderDetail();
+    await removeFrom(/Completed/);
+
+    await waitFor(() => expect(deleteTracking).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: /Add to library/ })).toBeInTheDocument();
+    expect(toast).toHaveBeenCalledTimes(1);
   });
 });

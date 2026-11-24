@@ -40,4 +40,25 @@ describe("StatusControl", () => {
     await user.click(screen.getByRole("menuitem", { name: "Completed" }));
     expect(onChange).toHaveBeenCalledWith("completed");
   });
+
+  it("offers removal only for a tracked title", async () => {
+    const user = userEvent.setup();
+    const onRemove = vi.fn();
+    const { rerender } = render(
+      <StatusControl status={null} onChange={() => {}} onRemove={onRemove} />
+    );
+    await user.click(screen.getByRole("button", { name: /Add to library/ }));
+    await screen.findByRole("menuitem", { name: "Planning" });
+    expect(
+      screen.queryByRole("menuitem", { name: "Remove from library" })
+    ).toBeNull();
+
+    rerender(
+      <StatusControl status="watching" onChange={() => {}} onRemove={onRemove} />
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Remove from library" })
+    );
+    expect(onRemove).toHaveBeenCalledOnce();
+  });
 });

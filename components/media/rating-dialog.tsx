@@ -22,6 +22,7 @@ export function RatingDialog({
   title,
   year,
   posterPath,
+  skipLabel = "Just mark it seen",
   open,
   onOpenChange,
   onSubmit,
@@ -29,6 +30,8 @@ export function RatingDialog({
   title: string;
   year: number | null;
   posterPath: string | null;
+  /** The way out without a score. */
+  skipLabel?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Score 0..100, or null for "seen but not rating it". */
@@ -62,7 +65,7 @@ export function RatingDialog({
             className="w-full text-muted-foreground"
             onClick={() => onSubmit(null)}
           >
-            Just mark it seen
+            {skipLabel}
           </Button>
         </div>
       }
