@@ -25,30 +25,33 @@ describe("MobileTopBar", () => {
     expect(screen.getByRole("banner").className).toContain("md:hidden");
   });
 
-  it("links the wordmark home, signed in and out", () => {
-    const { unmount } = render(<MobileTopBar />);
-    expect(screen.getByRole("link", { name: "Klyvi" })).toHaveAttribute("href", "/home");
-    unmount();
-    session.user = null;
+  it("has no bar or wordmark, only what floats", () => {
     render(<MobileTopBar />);
-    expect(screen.getByRole("link", { name: "Klyvi" })).toHaveAttribute("href", "/");
+    const bar = screen.getByRole("banner");
+    expect(bar.className).toContain("pointer-events-none");
+    expect(bar.className).not.toContain("glass");
+    expect(screen.queryByRole("link", { name: "Klyvi" })).toBeNull();
   });
 
-  it("opens search with a 44px button", async () => {
+  it("opens search from a 44px glass pill", async () => {
     const onOpenSearch = vi.fn();
     render(<MobileTopBar onOpenSearch={onOpenSearch} />);
     const search = screen.getByRole("button", { name: "Search" });
-    expect(search.className).toContain("size-11");
+    for (const c of ["h-11", "glass", "rounded-full", "pointer-events-auto"]) {
+      expect(search.className).toContain(c);
+    }
     await userEvent.setup().click(search);
     expect(onOpenSearch).toHaveBeenCalledOnce();
   });
 
-  it("trades the wordmark for a 44px Back arrow on a details page", async () => {
+  it("floats a 44px glass Back over the art on a details page", async () => {
     const onBack = vi.fn();
     render(<MobileTopBar onBack={onBack} />);
     const back = screen.getByRole("button", { name: "Back" });
-    expect(back.className).toContain("size-11");
-    expect(screen.queryByRole("link", { name: "Klyvi" })).toBeNull();
+    for (const c of ["size-11", "glass", "rounded-full"]) {
+      expect(back.className).toContain(c);
+    }
+    expect(screen.getByRole("banner").className).toContain("-mb-(--top-bar-height)");
     await userEvent.setup().click(back);
     expect(onBack).toHaveBeenCalledOnce();
   });
@@ -74,10 +77,10 @@ describe("MobileTopBar", () => {
       Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
     });
 
-    it("is bare at the top, leaves going down and comes back as glass going up", () => {
+    it("leaves going down and comes back going up or at the top", () => {
       render(<MobileTopBar />);
       const bar = screen.getByRole("banner");
-      expect(bar.className).not.toContain("glass");
+      expect(bar.className).not.toContain("-translate-y-full");
 
       scrollTo(900);
       expect(bar.className).toContain("-translate-y-full");
@@ -85,10 +88,11 @@ describe("MobileTopBar", () => {
 
       scrollTo(880);
       expect(bar.className).not.toContain("-translate-y-full");
-      expect(bar.className).toContain("glass");
+      expect(document.documentElement.dataset.topBar).toBe("shown");
 
+      scrollTo(900);
       scrollTo(0);
-      expect(bar.className).not.toContain("glass");
+      expect(bar.className).not.toContain("-translate-y-full");
     });
 
     it("ignores a few pixels of jitter", () => {

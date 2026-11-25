@@ -2,16 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import {
-  Clapperboard,
-  Clock,
-  CloudLightning,
-  Flame,
-  Shuffle,
-  Sparkles,
-  Sun,
-  type LucideIcon,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
 import { MoodPanel, PickPanel, PickPanelSkeleton } from "@/components/find/find-panels";
@@ -46,7 +37,8 @@ const MOODS: {
   label: string;
   /** What the lens reads, in a few words, for its tile. */
   hint: string;
-  icon: LucideIcon;
+  /** A TMDB still, picked because its film fits the lens. */
+  art: string;
   filmsOnly?: boolean;
   fits: (s: Scored) => boolean;
 }[] = [
@@ -54,14 +46,14 @@ const MOODS: {
     id: "any",
     label: "Anything",
     hint: "Your best matches",
-    icon: Shuffle,
+    art: "/dyJvKsNs2KP8qQnAXbRwDjblViy.jpg", // Spirited Away
     fits: () => true,
   },
   {
     id: "short",
     label: "Under 2 hours",
     hint: "Fits in an evening",
-    icon: Clock,
+    art: "/wRcm3iwi4BeMN59U4fjO7u3dOVI.jpg", // Run Lola Run
     filmsOnly: true,
     fits: (s) => s.runtime != null && s.runtime <= 120,
   },
@@ -69,7 +61,7 @@ const MOODS: {
     id: "slow",
     label: "Slow burn",
     hint: "Quiet drama over action",
-    icon: Flame,
+    art: "/fWrq3u16gaBJ6nYNWcR3XaOhQPq.jpg", // Paris, Texas
     fits: (s) =>
       s.reasons.some(
         (r) =>
@@ -80,8 +72,8 @@ const MOODS: {
   {
     id: "light",
     label: "Something light",
-    hint: "Comedy, romance, animation",
-    icon: Sun,
+    hint: "Comedy and romance",
+    art: "/jK65srQczOKTpW62wPxwwKztGgE.jpg", // The Grand Budapest Hotel
     fits: (s) =>
       s.genres.some((g) => ["Comedy", "Romance", "Family", "Animation"].includes(g)) &&
       !s.genres.includes("Horror"),
@@ -90,7 +82,7 @@ const MOODS: {
     id: "heavy",
     label: "Heavy",
     hint: "Drama, crime, war",
-    icon: CloudLightning,
+    art: "/9UAKA6ceZi6TgQwTAAMt7DWwYPI.jpg", // There Will Be Blood
     fits: (s) =>
       s.genres.some((g) => ["Drama", "War", "Crime", "Thriller"].includes(g)) &&
       !s.genres.includes("Comedy"),
@@ -99,7 +91,7 @@ const MOODS: {
     id: "old",
     label: "Twentieth century",
     hint: "Made before 2000",
-    icon: Clapperboard,
+    art: "/87wqeMeUeMRLjsE1IWNKJcPlpuC.jpg", // Casablanca
     fits: (s) => s.year != null && s.year < 2000,
   },
 ];

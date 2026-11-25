@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function DetailSkeleton() {
   return (
     <main className="mx-auto w-full max-w-[1400px]">
-      <div className="px-4 pt-16 md:px-6 md:pt-24">
+      <div className="px-4 pt-24 md:px-6 md:pt-24">
         <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
           <div className="w-36 shrink-0 sm:w-44 lg:w-52">
             <Skeleton className="aspect-[2/3] w-full rounded-art" />

@@ -14,7 +14,6 @@ import {
   RotateCcw,
   Sparkles,
   Undo2,
-  type LucideIcon,
 } from "lucide-react";
 
 import { ACTION_TILE } from "@/components/find/action-tile";
@@ -41,7 +40,8 @@ export type MoodOption = {
   id: string;
   label: string;
   hint: string;
-  icon: LucideIcon;
+  /** A TMDB still from a film of the mood, the tile's artwork. */
+  art: string;
   filmsOnly?: boolean;
 };
 
@@ -82,7 +82,7 @@ export function MoodPanel({
 }) {
   return (
     <div ref={ref} tabIndex={-1} className="outline-none">
-      <div className="px-4 pt-2 md:p-6 md:pb-4">
+      <div className="px-4 pt-4 md:p-6 md:pb-4">
         <h1 className="text-[22px] leading-tight font-semibold tracking-tight md:pr-12 md:text-2xl">
           What are you in the mood for?
         </h1>
@@ -103,23 +103,27 @@ export function MoodPanel({
                 disabled={m.filmsOnly === true && media === "tv"}
                 onClick={() => onMood(m.id)}
                 className={cn(
-                  "group/tile hero-rise relative flex flex-col items-start gap-1 rounded-lg p-3 text-left ring-1 md:p-4 outline-none transition-[background-color,box-shadow,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
-                  on
-                    ? "bg-primary/15 ring-2 ring-violet-text"
-                    : "bg-foreground/5 ring-foreground/10 hover:bg-foreground/10"
+                  "group/tile hero-rise relative isolate flex h-24 cursor-pointer flex-col justify-end overflow-hidden rounded-lg bg-card p-3 text-left text-white short-phone:h-16 md:h-32 md:p-4 outline-none transition-[box-shadow,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
+                  on ? "ring-2 ring-violet-text" : "ring-1 ring-foreground/10"
                 )}
               >
-                <m.icon
-                  aria-hidden="true"
+                <Image
+                  src={tmdbImage(m.art)}
+                  alt=""
+                  fill
+                  sizes="(min-width: 48rem) 320px, 50vw"
                   className={cn(
-                    "mb-2 size-5 transition-colors duration-(--dur-press) short-phone:mb-1 md:mb-3 md:size-6",
-                    on
-                      ? "text-violet-text"
-                      : "text-muted-foreground group-hover/tile:text-foreground"
+                    "-z-20 object-cover object-[50%_30%] transition-opacity duration-(--dur-base)",
+                    !on && "opacity-75 group-hover/tile:opacity-100"
                   )}
                 />
-                <span className="text-[15px] font-semibold text-foreground">{m.label}</span>
-                <span aria-hidden="true" className="text-xs text-muted-foreground short-phone:hidden">
+                {/* Dark enough under the words for 4.5:1 on any still. */}
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/60 to-transparent"
+                />
+                <span className="text-[15px] leading-5 font-semibold">{m.label}</span>
+                <span aria-hidden="true" className="text-xs text-white/85 short-phone:hidden">
                   {m.hint}
                 </span>
                 {on ? (

@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Scored } from "@/lib/types";
@@ -490,6 +490,15 @@ describe("FindClient", () => {
       await screen.findByRole("heading", { name: "What are you in the mood for?" })
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Game of Thrones" })).toBeNull();
+  });
+
+  it("gives each mood its own still, decorative, named by its label", () => {
+    render(<FindClient />);
+    const tiles = within(screen.getByRole("group", { name: "Mood" })).getAllByRole("button");
+    const stills = tiles.map((t) => t.querySelector("img"));
+    for (const still of stills) expect(still).toHaveAttribute("alt", "");
+    expect(new Set(stills.map((s) => s?.getAttribute("src"))).size).toBe(tiles.length);
+    expect(screen.getByRole("button", { name: "Heavy" })).toBe(tiles[4]);
   });
 
   it("shows the same pick again after Back from its page", async () => {

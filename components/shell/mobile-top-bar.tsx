@@ -5,21 +5,23 @@ import * as React from "react";
 import { ArrowLeft, Search } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /** How far a thumb has to move one way before the bar reacts. */
 const SLACK = 8;
 
-type BarState = "top" | "shown" | "hidden";
+/** Glass that floats over the page, with the focus ring and press it needs. */
+const FLOATING =
+  "pointer-events-auto cursor-pointer glass rounded-full border text-foreground outline-none transition-[scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:active:scale-100";
 
 /**
- * "top" at the head of the page, "hidden" while scrolling down, "shown" after
- * any scroll back up. Small jitters and the bounce past either end count as
- * no movement.
+ * Hidden while scrolling down, back after any scroll up and at the head of
+ * the page. Small jitters and the bounce past either end count as no
+ * movement.
  */
-function useBarState(): BarState {
-  const [bar, setBar] = React.useState<BarState>("top");
+function useBarHidden(): boolean {
+  const [hidden, setHidden] = React.useState(false);
   React.useEffect(() => {
     const clamp = () =>
       Math.min(
@@ -31,11 +33,11 @@ function useBarState(): BarState {
       const y = clamp();
       if (y <= 4) {
         last = y;
-        setBar("top");
+        setHidden(false);
         return;
       }
       if (Math.abs(y - last) < SLACK) return;
-      setBar(y > last ? "hidden" : "shown");
+      setHidden(y > last);
       last = y;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -45,20 +47,20 @@ function useBarState(): BarState {
   // What sticks beneath the bar reads this (--top-bar in globals.css).
   React.useEffect(() => {
     const root = document.documentElement;
-    root.dataset.topBar = bar;
+    root.dataset.topBar = hidden ? "hidden" : "shown";
     return () => {
       delete root.dataset.topBar;
     };
-  }, [bar]);
-  return bar;
+  }, [hidden]);
+  return hidden;
 }
 
 /**
- * The phone's header, below md where the desktop top bar is hidden: the
- * wordmark home and Search. A details page gets a Back arrow in place of the
- * wordmark, since Home is a tab. At the head of a page it has no bar of its own,
- * so artwork runs behind it. Scrolling down it leaves, and a small scroll up
- * brings it back as glass. The account is the Profile tab. Signed out, Get
+ * The phone's header, below md where the desktop top bar is hidden. There is
+ * no bar, only glass floating over the page, as the tab bar does: a Search
+ * pill at the right, and on a details page a round Back button at the left,
+ * where it lies over the artwork. Scrolling down it leaves, and a small
+ * scroll up brings it back. Home and the account are tabs. Signed out, Get
  * started sits here, since Sign in is a tab.
  */
 function MobileTopBar({
@@ -70,56 +72,46 @@ function MobileTopBar({
 }) {
   const { user, loading } = useSession();
   const signedOut = !loading && !user;
-  const bar = useBarState();
+  const hidden = useBarHidden();
 
   return (
     <header
-      data-state={bar}
       className={cn(
-        "sticky top-0 z-40 h-(--top-bar-height) pt-[env(safe-area-inset-top)] transition-transform duration-(--dur-base) ease-(--ease-enter) focus-within:translate-y-0 md:hidden",
-        bar === "hidden" && "-translate-y-full",
-        bar === "shown" && "glass border-b"
+        "pointer-events-none sticky top-0 z-40 flex h-(--top-bar-height) items-end gap-2 px-4 transition-transform duration-(--dur-base) ease-(--ease-enter) focus-within:translate-y-0 md:hidden",
+        // Takes no room on a details page, so the art reaches the top.
+        onBack && "-mb-(--top-bar-height)",
+        hidden && "-translate-y-full"
       )}
     >
-      <div className="flex h-full items-center gap-2 px-4">
-        {onBack ? (
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            onClick={onBack}
-            aria-label="Back"
-            className="-ml-3 cursor-pointer"
-          >
-            <ArrowLeft aria-hidden="true" className="size-5" strokeWidth={2} />
-          </Button>
-        ) : (
-          <Link
-            href={signedOut ? "/" : "/home"}
-            className="tap-target inline-flex items-center rounded-full text-[15px] font-semibold tracking-tight text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
-          >
-            Klyvi
-          </Link>
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back"
+          className={cn(FLOATING, "flex size-11 shrink-0 items-center justify-center")}
+        >
+          <ArrowLeft aria-hidden="true" className="size-5" strokeWidth={2} />
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={onOpenSearch}
+        className={cn(
+          FLOATING,
+          "ml-auto flex h-11 max-w-[55%] min-w-0 flex-1 items-center gap-2 px-4 text-sm"
         )}
-        <div className="ml-auto flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            onClick={onOpenSearch}
-            aria-label="Search"
-            className="text-muted-foreground"
-          >
-            <Search aria-hidden="true" className="size-5" strokeWidth={2} />
-          </Button>
-          {signedOut ? (
-            <Link
-              href="/signup"
-              className={cn(buttonVariants({ size: "sm" }), "hit-44 relative")}
-            >
-              Get started
-            </Link>
-          ) : null}
-        </div>
-      </div>
+      >
+        <Search aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
+        Search
+      </button>
+      {signedOut ? (
+        <Link
+          href="/signup"
+          className={cn(buttonVariants({ size: "touch" }), "pointer-events-auto shrink-0")}
+        >
+          Get started
+        </Link>
+      ) : null}
     </header>
   );
 }
