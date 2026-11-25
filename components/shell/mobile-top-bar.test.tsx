@@ -43,6 +43,16 @@ describe("MobileTopBar", () => {
     expect(onOpenSearch).toHaveBeenCalledOnce();
   });
 
+  it("trades the wordmark for a 44px Back arrow on a details page", async () => {
+    const onBack = vi.fn();
+    render(<MobileTopBar onBack={onBack} />);
+    const back = screen.getByRole("button", { name: "Back" });
+    expect(back.className).toContain("size-11");
+    expect(screen.queryByRole("link", { name: "Klyvi" })).toBeNull();
+    await userEvent.setup().click(back);
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
   it("leaves the account to the Profile tab", () => {
     render(<MobileTopBar />);
     expect(screen.queryByRole("link", { name: /Your account/ })).toBeNull();

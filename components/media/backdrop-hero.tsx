@@ -34,7 +34,7 @@ function BackdropHero({
         className={
           backdropPath
             ? "relative pt-44 sm:pt-60 lg:pt-80"
-            : "relative pt-10"
+            : "relative pt-10 md:pt-24"
         }
       >
         {children}

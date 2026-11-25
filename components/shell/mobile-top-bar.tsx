@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Search } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 
 import { useSession } from "@/components/auth/auth-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -55,12 +55,19 @@ function useBarState(): BarState {
 
 /**
  * The phone's header, below md where the desktop top bar is hidden: the
- * wordmark home and Search. At the head of a page it has no bar of its own,
+ * wordmark home and Search. A details page gets a Back arrow in place of the
+ * wordmark, since Home is a tab. At the head of a page it has no bar of its own,
  * so artwork runs behind it. Scrolling down it leaves, and a small scroll up
  * brings it back as glass. The account is the Profile tab. Signed out, Get
  * started sits here, since Sign in is a tab.
  */
-function MobileTopBar({ onOpenSearch }: { onOpenSearch?: () => void }) {
+function MobileTopBar({
+  onOpenSearch,
+  onBack,
+}: {
+  onOpenSearch?: () => void;
+  onBack?: () => void;
+}) {
   const { user, loading } = useSession();
   const signedOut = !loading && !user;
   const bar = useBarState();
@@ -75,12 +82,24 @@ function MobileTopBar({ onOpenSearch }: { onOpenSearch?: () => void }) {
       )}
     >
       <div className="flex h-full items-center gap-2 px-4">
-        <Link
-          href={signedOut ? "/" : "/home"}
-          className="tap-target inline-flex items-center rounded-full text-[15px] font-semibold tracking-tight text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
-        >
-          Klyvi
-        </Link>
+        {onBack ? (
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            onClick={onBack}
+            aria-label="Back"
+            className="-ml-3 cursor-pointer"
+          >
+            <ArrowLeft aria-hidden="true" className="size-5" strokeWidth={2} />
+          </Button>
+        ) : (
+          <Link
+            href={signedOut ? "/" : "/home"}
+            className="tap-target inline-flex items-center rounded-full text-[15px] font-semibold tracking-tight text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            Klyvi
+          </Link>
+        )}
         <div className="ml-auto flex items-center gap-1">
           <Button
             variant="ghost"

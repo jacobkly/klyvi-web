@@ -25,7 +25,7 @@ export function DetailError() {
 
 export function DetailNotFound() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-16 md:px-6">
+    <main className="mx-auto w-full max-w-2xl px-4 py-16 md:px-6 md:py-24">
       <EmptyState
         icon={SearchX}
         title="That title is not in the catalog"
@@ -38,7 +38,7 @@ export function DetailNotFound() {
 
 export function SeasonNotFound({ tmdbId }: { tmdbId: number }) {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-16 md:px-6">
+    <main className="mx-auto w-full max-w-2xl px-4 py-16 md:px-6 md:py-24">
       <EmptyState
         icon={SearchX}
         title="That season does not exist"

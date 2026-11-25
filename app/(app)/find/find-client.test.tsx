@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Scored } from "@/lib/types";
@@ -105,6 +105,8 @@ const FEED: Scored[] = [
 
 describe("FindClient", () => {
   beforeEach(() => {
+    // Each test starts on an entry that never showed picks.
+    window.history.replaceState(null, "");
     getFeed.mockReset().mockResolvedValue(FEED);
     getMovie.mockReset().mockResolvedValue(null);
     recordInteraction.mockReset().mockResolvedValue(undefined);
@@ -380,6 +382,8 @@ describe("FindClient", () => {
     await screen.findByRole("heading", { name: "Game of Thrones" });
     expect(getFeed).toHaveBeenCalledWith({ media: "tv" });
     first.unmount();
+    // A new visit, rather than Back to the picks.
+    window.history.pushState(null, "", "/find");
 
     render(<FindClient />);
     expect(screen.getByRole("button", { name: "TV" })).toHaveAttribute(
@@ -488,6 +492,33 @@ describe("FindClient", () => {
     expect(screen.queryByRole("heading", { name: "Game of Thrones" })).toBeNull();
   });
 
+  it("shows the same pick again after Back from its page", async () => {
+    window.history.pushState(null, "", "/find");
+    const { unmount } = render(<FindClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Heavy" }));
+    fireEvent.click(screen.getByRole("button", { name: /Find something/ }));
+    await screen.findByRole("heading", { name: "Memories of Murder" });
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    await screen.findByRole("heading", { name: "Mulholland Drive" });
+    // The page goes away while its history entry stays.
+    unmount();
+    getFeed.mockClear();
+
+    render(<FindClient />);
+    expect(screen.getByRole("heading", { name: "Mulholland Drive" })).toBeInTheDocument();
+    expect(getFeed).not.toHaveBeenCalled();
+  });
+
+  it("starts at the moods on a fresh visit, whatever was shown before", async () => {
+    await showPick();
+    cleanup();
+    window.history.pushState(null, "", "/find");
+    render(<FindClient />);
+    expect(
+      screen.getByRole("heading", { name: "What are you in the mood for?" })
+    ).toBeInTheDocument();
+  });
+
   it("turns a show's save toast into an error when the save fails", async () => {
     toast.mockReturnValue("t1");
     listTracking.mockRejectedValue(new Error("503"));
@@ -534,9 +565,25 @@ describe("FindClient", () => {
       pushState.mockRestore();
     });
 
+    it("reopens on the same pick, and starts fresh once the mood step is back", async () => {
+      await showPopUp();
+      fireEvent.keyDown(window, { key: "ArrowRight" });
+      await pickHeading("Parasite");
+      cleanup();
+      render(<FindClient embedded />);
+      await pickHeading("Parasite");
+
+      fireEvent.click(screen.getByRole("button", { name: "Change mood" }));
+      cleanup();
+      render(<FindClient embedded />);
+      expect(screen.getByRole("group", { name: "Mood" })).toBeInTheDocument();
+    });
+
     it("moves focus to the pick when it lands", async () => {
       await showPopUp();
-      expect(document.activeElement).toHaveAttribute("data-slot", "pick-panel");
+      await waitFor(() =>
+        expect(document.activeElement).toHaveAttribute("data-slot", "pick-panel")
+      );
     });
 
     it("jumps to any pick in the set from its poster", async () => {

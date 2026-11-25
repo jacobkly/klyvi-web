@@ -10,6 +10,7 @@ import { Compass, House, Library, Search, Sparkles, type LucideIcon } from "luci
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { markPopUp } from "@/lib/last-picks";
 import { isActive } from "@/lib/nav";
 import { modifierLabel, useIsMac } from "@/lib/platform";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,26 @@ function LeftRail({ onOpenSearch }: { onOpenSearch: () => void }) {
   // pop-up (More about it) closes it without an effect.
   const [openAt, setOpenAt] = React.useState<string | null>(null);
   const findOpen = openAt === pathname;
+  // Leaving the page closes it for good, so a later visit starts without it.
+  const [lastPath, setLastPath] = React.useState(pathname);
+  if (lastPath !== pathname) {
+    setLastPath(pathname);
+    if (openAt === lastPath) setOpenAt(null);
+  }
+  // Except on the way Back to it: the pop-up reopens on the pick you left.
+  React.useEffect(() => {
+    const onPop = () => {
+      if (window.history.state?.findOpen === true) {
+        setOpenAt(window.location.pathname);
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const openFind = (open: boolean) => {
+    if (!open) markPopUp(false);
+    setOpenAt(open ? pathname : null);
+  };
   const onFind = isActive(pathname, "/find");
 
   const link = (href: string, label: string, Icon: LucideIcon) => {
@@ -121,7 +142,7 @@ function LeftRail({ onOpenSearch }: { onOpenSearch: () => void }) {
                 aria-label="Find next"
                 aria-haspopup="dialog"
                 className={findClass}
-                onClick={() => setOpenAt(pathname)}
+                onClick={() => openFind(true)}
               >
                 <Sparkles aria-hidden="true" className="size-5" />
               </button>
@@ -155,7 +176,7 @@ function LeftRail({ onOpenSearch }: { onOpenSearch: () => void }) {
         <UserMenu side="right" align="end" />
       </nav>
 
-      <Dialog open={findOpen} onOpenChange={(o) => setOpenAt(o ? pathname : null)}>
+      <Dialog open={findOpen} onOpenChange={openFind}>
         <DialogContent className="block max-h-[90dvh] overflow-y-auto p-0 transition-[max-width] duration-(--dur-base) sm:max-w-[min(48rem,calc(100%-2rem))] sm:has-[[data-wide]]:max-w-[min(64rem,calc(100%-2rem))] ultrawide:has-[[data-wide]]:max-w-6xl">
           <DialogTitle className="sr-only">Find next</DialogTitle>
           {findOpen ? <FindClient embedded /> : null}

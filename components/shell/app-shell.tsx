@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import type { ReactNode } from "react";
 
@@ -10,8 +10,10 @@ import { UnreadProvider } from "@/components/notifications/unread-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MobileSearch } from "@/components/search/mobile-search";
+import { isDetailPath, useGoBack } from "@/lib/go-back";
 import { cn } from "@/lib/utils";
 import { BottomTabBar } from "./bottom-tab-bar";
+import { DetailBack } from "./detail-back";
 import { LeftRail } from "./left-rail";
 import { MobileTopBar } from "./mobile-top-bar";
 import { TopBar } from "./top-bar";
@@ -29,6 +31,9 @@ import { TopBar } from "./top-bar";
  */
 function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const goBack = useGoBack();
+  const onDetail = isDetailPath(pathname);
   const { user, loading } = useSession();
   // Until the session resolves, assume signed in, as the top bar does.
   const signedOut = !loading && !user;
@@ -82,16 +87,20 @@ function AppShell({ children }: { children: ReactNode }) {
           ) : (
             <LeftRail onOpenSearch={openSearch} />
           )}
-          <MobileTopBar onOpenSearch={openPhoneSearch} />
+          <MobileTopBar
+            onOpenSearch={openPhoneSearch}
+            onBack={onDetail ? goBack : undefined}
+          />
           <MobileSearch open={phoneSearch} onOpenChange={setPhoneSearch} />
           {/* Footer inside the padded wrapper so it clears the mobile tab bar.
               flex-1 on the content region pushes the footer to the bottom of the
               viewport when a page is short, and lets it sit directly under the
               content when the page is tall enough to scroll. */}
           <div className={cn(
-              "flex flex-1 flex-col pb-(--tab-bar-space) md:pb-0",
+              "relative flex flex-1 flex-col pb-(--tab-bar-space) md:pb-0",
               !signedOut && "md:pl-20"
             )}>
+            {onDetail ? <DetailBack onBack={goBack} railed={!signedOut} /> : null}
             {/* A flex column, not a plain block: a page that wants to centre
                 itself vertically can then be a flex-1 child. Percentage
                 heights are no use here, because this wrapper's own height

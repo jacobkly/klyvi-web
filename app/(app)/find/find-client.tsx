@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { getFeed } from "@/lib/api/reco";
 import { listInteractions } from "@/lib/api/interactions";
 import { queueSignal } from "@/lib/interactions-batch";
+import { markPopUp, rememberPicks, returningPicks } from "@/lib/last-picks";
 import { dismissPick, ratePick, savePick } from "@/lib/pick-actions";
 import { mockFeed, mockInteractionCount, type RecoTier } from "@/lib/mock-reco";
 import { usePref } from "@/lib/local-prefs";
@@ -145,11 +146,25 @@ export function FindClient({
   const router = useRouter();
   const mock = simulate != null;
 
-  const [mood, setMood] = React.useState("any");
+  // Back from a title's page: the picks as they were left.
+  const [returning] = React.useState(() =>
+    mock ? null : returningPicks(user?.id ?? null, embedded)
+  );
+  const [mood, setMood] = React.useState(returning?.mood ?? "any");
   const [media, setMedia] = usePref("findMedia");
   const filmsOnlyMood = MOODS.find((x) => x.id === mood)?.filmsOnly === true;
-  const [count, setCount] = React.useState<3 | 5 | 7>(5);
-  const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
+  const [count, setCount] = React.useState<3 | 5 | 7>(returning?.count ?? 5);
+  const [phase, setPhase] = React.useState<Phase>(
+    returning
+      ? {
+          kind: "ready",
+          picks: returning.picks,
+          index: returning.index,
+          reserve: returning.reserve,
+          size: returning.size,
+        }
+      : { kind: "idle" }
+  );
   const [fetchedInteractions, setInteractions] = React.useState<
     number | null
   >(null);
@@ -167,6 +182,17 @@ export function FindClient({
     panelRef.current?.focus({ preventScroll: true });
     if (!embedded) window.scrollTo({ top: 0 });
   }, [embedded, phase.kind]);
+  // Keep the picks for a return from a title's page, and note on a page the
+  // pop-up is over that it was showing them.
+  const userId = user?.id ?? null;
+  React.useEffect(() => {
+    if (mock) return;
+    if (embedded) markPopUp(phase.kind === "ready");
+    if (phase.kind !== "ready") return;
+    const { picks, index, reserve, size } = phase;
+    rememberPicks({ userId, mood, count, picks, index, reserve, size });
+  }, [mock, embedded, userId, mood, count, phase]);
+
   // Counts the picks that have left the set, so each departure brings the
   // next pick into full view.
   const [departures, setDepartures] = React.useState(0);

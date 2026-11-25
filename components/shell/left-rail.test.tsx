@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const path = vi.hoisted(() => ({ current: "/home" }));
 vi.mock("next/navigation", () => ({
@@ -87,6 +87,48 @@ describe("LeftRail", () => {
       </TooltipProvider>
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  describe("coming back to a page the pop-up was open over", () => {
+    const ui = () => (
+      <TooltipProvider delay={0}>
+        <LeftRail onOpenSearch={vi.fn()} />
+      </TooltipProvider>
+    );
+    afterEach(() => window.history.replaceState(null, "", "/"));
+
+    async function leaveFromPopUp() {
+      const view = render(ui());
+      await userEvent.setup().click(screen.getByRole("button", { name: "Find next" }));
+      await screen.findByRole("dialog", { name: "Find next" });
+      path.current = "/movie/577922";
+      view.rerender(ui());
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      return view;
+    }
+
+    it("reopens it on Back", async () => {
+      const { rerender } = await leaveFromPopUp();
+      window.history.replaceState({ findOpen: true }, "", "/home");
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      path.current = "/home";
+      rerender(ui());
+      expect(await screen.findByRole("dialog", { name: "Find next" })).toBeInTheDocument();
+
+      // Closed by hand, it stays closed the next time this entry comes up.
+      await userEvent.setup().keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(window.history.state?.findOpen).toBeUndefined();
+    });
+
+    it("leaves it closed when you get there by a link", async () => {
+      const { rerender } = await leaveFromPopUp();
+      path.current = "/home";
+      rerender(ui());
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
   });
 
   it("is a plain link to the page when you are already on Find next", () => {
