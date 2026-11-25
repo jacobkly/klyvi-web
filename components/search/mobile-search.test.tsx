@@ -47,6 +47,14 @@ describe("MobileSearch", () => {
     expect(within(trending).getByRole("link", { name: "Dune" })).toHaveAttribute("href", "/movie/1");
   });
 
+  it("holds a round field where the top bar's pill is, and grows out of it", () => {
+    render(<MobileSearch open onOpenChange={() => {}} />);
+    expect(field().className).toContain("rounded-full");
+    expect(field().className).toContain("h-11");
+    const sheet = screen.getByRole("dialog", { name: "Search" });
+    expect(sheet.className).toContain("clip-path");
+  });
+
   it("leads with the best match and narrows to films or series", async () => {
     search.mockResolvedValue(results());
     render(<MobileSearch open onOpenChange={() => {}} />);

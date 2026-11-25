@@ -12,6 +12,7 @@ import type { SearchResults } from "@/lib/api/map";
 import { search } from "@/lib/api/search";
 import type { MediaSummary } from "@/lib/types";
 import { mediaHref } from "@/lib/media-href";
+import { cn } from "@/lib/utils";
 
 const RECENTS_KEY = "klyvi:recent-searches";
 const MAX_RECENTS = 8;
@@ -97,12 +98,21 @@ function KindLine({ m }: { m: { mediaType: string; year: number | null } }) {
   );
 }
 
+/**
+ * Where the sheet starts and ends: cut down to the top bar's Search pill, past
+ * the 44px button and gap beside it. Opaque and still, so the pill seems to
+ * grow, rather than a page fading or sliding in over it.
+ */
+const PILL =
+  "data-starting-style:opacity-100 data-ending-style:opacity-100 data-[side=top]:data-starting-style:translate-y-0 data-[side=top]:data-ending-style:translate-y-0 data-starting-style:[clip-path:inset(calc(var(--top-bar-height)-2.75rem)_1rem_calc(100%-var(--top-bar-height))_4.25rem_round_1.375rem)] data-ending-style:[clip-path:inset(calc(var(--top-bar-height)-2.75rem)_1rem_calc(100%-var(--top-bar-height))_4.25rem_round_1.375rem)]";
+
 const ROW =
   "flex min-h-11 items-center gap-3 rounded-lg px-2 py-2 outline-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/30";
 
 /**
  * Search on a phone: a full-screen sheet over the page with the field
- * focused and the keyboard up. Before you type: recent searches as chips
+ * focused and the keyboard up. It grows out of the top bar's Search pill and
+ * closes back into it, with its own field where the pill was. Before you type: recent searches as chips
  * and what is trending. After: the best match as a large card, the rest as
  * poster, title and year, narrowed to films or series with one tap. It uses Explore's search call, and "See all in
  * Explore" hands the query over for filters and the full grid. Desktop keeps
@@ -192,22 +202,27 @@ export function MobileSearch({
       <SheetContent
         side="top"
         showCloseButton={false}
-        className="[--glass-bg:var(--background)] [--glass-blur:0px] data-[side=top]:h-dvh data-[side=top]:border-b-0"
+        className={cn(
+          "[--glass-bg:var(--background)] [--glass-blur:0px] data-[side=top]:h-dvh data-[side=top]:border-b-0",
+          "transition-[clip-path,opacity] duration-(--dur-slow) ease-(--ease-enter) [clip-path:inset(0_0_0_0_round_0px)]",
+          PILL
+        )}
       >
         <SheetTitle className="sr-only">Search</SheetTitle>
-        <div className="flex items-center gap-1 border-b border-border px-2 pt-[env(safe-area-inset-top)]">
+        <div className="flex h-(--top-bar-height) shrink-0 items-end gap-2 px-4">
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon-touch"
             aria-label="Close search"
+            className="shrink-0 rounded-full"
             onClick={() => onOpenChange(false)}
           >
             <ArrowLeft aria-hidden="true" className="size-5" />
           </Button>
-          <div className="relative flex-1 py-2">
+          <div className="relative min-w-0 flex-1">
             <Search
               aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
             />
             <input
               type="search"
@@ -220,14 +235,14 @@ export function MobileSearch({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && q) remember(q);
               }}
-              className="h-11 w-full rounded-lg border border-input bg-input/30 pr-10 pl-9 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 [&::-webkit-search-cancel-button]:hidden"
+              className="h-11 w-full rounded-full border border-input bg-input/30 pr-11 pl-10 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 [&::-webkit-search-cancel-button]:hidden"
             />
             {query ? (
               <button
                 type="button"
                 aria-label="Clear the search"
                 onClick={() => setQuery("")}
-                className="hit-44 absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1 text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+                className="hit-44 absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
               >
                 <X aria-hidden="true" className="size-4" />
               </button>

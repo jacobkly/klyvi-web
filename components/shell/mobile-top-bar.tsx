@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 import { ArrowLeft, Search } from "lucide-react";
@@ -57,11 +58,12 @@ function useBarHidden(): boolean {
 
 /**
  * The phone's header, below md where the desktop top bar is hidden. There is
- * no bar, only glass floating over the page, as the tab bar does: a Search
- * pill at the right, and on a details page a round Back button at the left,
- * where it lies over the artwork. Scrolling down it leaves, and a small
- * scroll up brings it back. Home and the account are tabs. Signed out, Get
- * started sits here, since Sign in is a tab.
+ * no bar, only glass floating over the page, as the tab bar does: a round
+ * mark home, or Back on a details page, and a Search pill across the rest.
+ * The search page (MobileSearch) holds its close button and field in these
+ * same two places, so opening it reads as the pill growing into the page.
+ * Scrolling down this leaves, and a small scroll up brings it back. The
+ * account is a tab. Signed out, Get started sits here, since Sign in is a tab.
  */
 function MobileTopBar({
   onOpenSearch,
@@ -92,14 +94,19 @@ function MobileTopBar({
         >
           <ArrowLeft aria-hidden="true" className="size-5" strokeWidth={2} />
         </button>
-      ) : null}
+      ) : (
+        <Link
+          href={signedOut ? "/" : "/home"}
+          aria-label="Klyvi, home"
+          className={cn(FLOATING, "flex size-11 shrink-0 items-center justify-center")}
+        >
+          <Image src="/icon-192.png" alt="" width={32} height={32} className="size-8 rounded-full" />
+        </Link>
+      )}
       <button
         type="button"
         onClick={onOpenSearch}
-        className={cn(
-          FLOATING,
-          "ml-auto flex h-11 max-w-[55%] min-w-0 flex-1 items-center gap-2 px-4 text-sm"
-        )}
+        className={cn(FLOATING, "flex h-11 min-w-0 flex-1 items-center gap-2 px-4 text-sm")}
       >
         <Search aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
         Search

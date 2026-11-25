@@ -25,12 +25,22 @@ describe("MobileTopBar", () => {
     expect(screen.getByRole("banner").className).toContain("md:hidden");
   });
 
-  it("has no bar or wordmark, only what floats", () => {
+  it("has no bar, only what floats", () => {
     render(<MobileTopBar />);
     const bar = screen.getByRole("banner");
     expect(bar.className).toContain("pointer-events-none");
     expect(bar.className).not.toContain("glass");
-    expect(screen.queryByRole("link", { name: "Klyvi" })).toBeNull();
+  });
+
+  it("balances the pill with the mark, which links home signed in and out", () => {
+    const { unmount } = render(<MobileTopBar />);
+    const mark = screen.getByRole("link", { name: "Klyvi, home" });
+    expect(mark).toHaveAttribute("href", "/home");
+    expect(mark.className).toContain("size-11");
+    unmount();
+    session.user = null;
+    render(<MobileTopBar />);
+    expect(screen.getByRole("link", { name: "Klyvi, home" })).toHaveAttribute("href", "/");
   });
 
   it("opens search from a 44px glass pill", async () => {
@@ -52,6 +62,7 @@ describe("MobileTopBar", () => {
       expect(back.className).toContain(c);
     }
     expect(screen.getByRole("banner").className).toContain("-mb-(--top-bar-height)");
+    expect(screen.queryByRole("link", { name: "Klyvi, home" })).toBeNull();
     await userEvent.setup().click(back);
     expect(onBack).toHaveBeenCalledOnce();
   });
