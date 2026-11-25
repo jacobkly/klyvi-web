@@ -103,24 +103,27 @@ export function MoodPanel({
                 disabled={m.filmsOnly === true && media === "tv"}
                 onClick={() => onMood(m.id)}
                 className={cn(
-                  "group/tile hero-rise relative isolate flex h-24 cursor-pointer flex-col justify-end overflow-hidden rounded-lg bg-card p-3 text-left text-white short-phone:h-16 md:h-32 md:p-4 outline-none transition-[box-shadow,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
-                  on ? "ring-2 ring-violet-text" : "ring-1 ring-foreground/10"
+                  "group/tile hero-rise relative isolate flex h-24 cursor-pointer flex-col justify-end overflow-hidden rounded-lg border border-(--glass-border) border-t-(--glass-edge) bg-card p-3 text-left text-white short-phone:h-16 md:h-32 md:p-4 outline-none transition-[box-shadow,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
+                  on && "ring-2 ring-violet-text"
                 )}
               >
+                {/* Frosted, as the art behind a details page is: the film's
+                    colour and shapes, seen through glass. Scaled past the
+                    edges, which a blur would fade. */}
                 <Image
                   src={tmdbImage(m.art)}
                   alt=""
                   fill
                   sizes="(min-width: 48rem) 320px, 50vw"
                   className={cn(
-                    "-z-20 object-cover object-[50%_30%] transition-opacity duration-(--dur-base)",
-                    !on && "opacity-75 group-hover/tile:opacity-100"
+                    "-z-20 scale-110 object-cover object-[50%_30%] blur-[2.5px] md:blur-xs saturate-150 transition-opacity duration-(--dur-base) [@media(prefers-reduced-transparency:reduce)]:hidden",
+                    !on && "opacity-70 group-hover/tile:opacity-100"
                   )}
                 />
                 {/* Dark enough under the words for 4.5:1 on any still. */}
                 <span
                   aria-hidden="true"
-                  className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/60 to-transparent"
+                  className="absolute inset-0 -z-10 bg-linear-to-t from-background/80 via-background/60 to-background/10"
                 />
                 <span className="text-[15px] leading-5 font-semibold">{m.label}</span>
                 <span aria-hidden="true" className="text-xs text-white/85 short-phone:hidden">
