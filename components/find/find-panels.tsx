@@ -103,7 +103,7 @@ export function MoodPanel({
                 disabled={m.filmsOnly === true && media === "tv"}
                 onClick={() => onMood(m.id)}
                 className={cn(
-                  "group/tile hero-rise relative isolate flex h-24 cursor-pointer flex-col justify-end overflow-hidden rounded-lg border border-(--glass-border) border-t-(--glass-edge) bg-card p-3 text-left text-white short-phone:h-16 md:h-32 md:p-4 outline-none transition-[box-shadow,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
+                  "group/tile hero-rise relative isolate flex h-24 flex-col justify-end overflow-hidden rounded-lg border border-(--glass-border) border-t-(--glass-edge) bg-card p-3 text-left text-white short-phone:h-16 md:h-32 md:p-4 outline-none transition-[box-shadow,scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
                   on && "ring-2 ring-violet-text"
                 )}
               >

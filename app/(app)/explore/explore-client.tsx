@@ -336,7 +336,7 @@ export function ExploreClient({
         <div className="relative min-w-0 flex-1">
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
             strokeWidth={2}
           />
           <Input
@@ -345,14 +345,14 @@ export function ExploreClient({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search titles"
             aria-label="Search films, TV, and people"
-            className="h-11 pr-10 pl-9 text-base"
+            className="h-11 pr-11 pl-10 text-base max-lg:rounded-full"
           />
           {query ? (
             <button
               type="button"
               onClick={clearAll}
               aria-label="Clear search"
-              className="hit-44 absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+              className="hit-44 absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
             >
               <X aria-hidden="true" className="size-4" strokeWidth={2} />
             </button>

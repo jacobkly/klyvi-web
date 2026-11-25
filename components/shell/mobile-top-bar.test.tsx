@@ -106,6 +106,18 @@ describe("MobileTopBar", () => {
       expect(bar.className).not.toContain("-translate-y-full");
     });
 
+    it("holds the pill back on a page with its own search until that has gone", () => {
+      render(<MobileTopBar pageHasSearch />);
+      const pill = screen.getByText("Search").closest("button")!;
+      expect(pill.className).toContain("invisible");
+      expect(screen.getByRole("link", { name: "Klyvi, home" })).toBeInTheDocument();
+      scrollTo(900);
+      scrollTo(800);
+      expect(pill.className).not.toContain("invisible");
+      scrollTo(0);
+      expect(pill.className).toContain("invisible");
+    });
+
     it("ignores a few pixels of jitter", () => {
       render(<MobileTopBar />);
       scrollTo(900);

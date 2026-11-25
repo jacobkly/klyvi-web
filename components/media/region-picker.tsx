@@ -157,7 +157,7 @@ export function RegionPicker({
                 onPointerMove={() => setActive(i)}
                 onClick={() => pick(r)}
                 className={cn(
-                  "flex min-h-11 cursor-default items-center gap-2 rounded-md px-2 text-sm md:min-h-9",
+                  "flex min-h-11 cursor-pointer items-center gap-2 rounded-md px-2 text-sm md:min-h-9",
                   i === active && "bg-muted"
                 )}
               >

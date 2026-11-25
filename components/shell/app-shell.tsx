@@ -90,6 +90,7 @@ function AppShell({ children }: { children: ReactNode }) {
           <MobileTopBar
             onOpenSearch={openPhoneSearch}
             onBack={onDetail ? goBack : undefined}
+            pageHasSearch={pathname === "/explore"}
           />
           <MobileSearch open={phoneSearch} onOpenChange={setPhoneSearch} />
           {/* Footer inside the padded wrapper so it clears the mobile tab bar.

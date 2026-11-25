@@ -386,6 +386,26 @@ body:has(
   html {
     @apply font-sans;
   }
+  /* The hand for whatever can be pressed, which Tailwind leaves as an arrow
+     on buttons. Plain text keeps the browser's text cursor. */
+  :is(
+      a[href],
+      button,
+      summary,
+      select,
+      input:is([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+      label:has(:is([type="checkbox"], [type="radio"], [type="file"], [role="checkbox"], [role="radio"], [role="switch"])),
+      [role="button"],
+      [role="checkbox"],
+      [role="radio"],
+      [role="switch"],
+      [role="tab"],
+      [role="option"],
+      [role^="menuitem"],
+      [data-slot="slider"]
+    ):not(:disabled, [aria-disabled="true"], [data-disabled]) {
+    cursor: pointer;
+  }
   /* Numbers that sit in a column must not jitter when 9/12 becomes 10/12. */
   .font-mono,
   [data-numeric] {

@@ -12,17 +12,21 @@ import { cn } from "@/lib/utils";
 /** How far a thumb has to move one way before the bar reacts. */
 const SLACK = 8;
 
+/** Past Explore's own search field, which by here has scrolled away. */
+const FIELD_GONE = 240;
+
 /** Glass that floats over the page, with the focus ring and press it needs. */
 const FLOATING =
-  "pointer-events-auto cursor-pointer glass rounded-full border text-foreground outline-none transition-[scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:active:scale-100";
+  "pointer-events-auto glass rounded-full border text-foreground outline-none transition-[scale] duration-(--dur-press) focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:active:scale-100";
 
 /**
  * Hidden while scrolling down, back after any scroll up and at the head of
  * the page. Small jitters and the bounce past either end count as no
- * movement.
+ * movement. Deep is past a search field at the head of the page.
  */
-function useBarHidden(): boolean {
+function useBar(): { hidden: boolean; deep: boolean } {
   const [hidden, setHidden] = React.useState(false);
+  const [deep, setDeep] = React.useState(false);
   React.useEffect(() => {
     const clamp = () =>
       Math.min(
@@ -32,6 +36,7 @@ function useBarHidden(): boolean {
     let last = clamp();
     const onScroll = () => {
       const y = clamp();
+      setDeep(y > FIELD_GONE);
       if (y <= 4) {
         last = y;
         setHidden(false);
@@ -53,7 +58,7 @@ function useBarHidden(): boolean {
       delete root.dataset.topBar;
     };
   }, [hidden]);
-  return hidden;
+  return { hidden, deep };
 }
 
 /**
@@ -62,19 +67,23 @@ function useBarHidden(): boolean {
  * mark home, or Back on a details page, and a Search pill across the rest.
  * The search page (MobileSearch) holds its close button and field in these
  * same two places, so opening it reads as the pill growing into the page.
+ * On Explore the pill waits until the page's own field has scrolled away.
  * Scrolling down this leaves, and a small scroll up brings it back. The
  * account is a tab. Signed out, Get started sits here, since Sign in is a tab.
  */
 function MobileTopBar({
   onOpenSearch,
   onBack,
+  pageHasSearch = false,
 }: {
   onOpenSearch?: () => void;
   onBack?: () => void;
+  /** The page opens with a search field of its own. */
+  pageHasSearch?: boolean;
 }) {
   const { user, loading } = useSession();
   const signedOut = !loading && !user;
-  const hidden = useBarHidden();
+  const { hidden, deep } = useBar();
 
   return (
     <header
@@ -106,7 +115,11 @@ function MobileTopBar({
       <button
         type="button"
         onClick={onOpenSearch}
-        className={cn(FLOATING, "flex h-11 min-w-0 flex-1 items-center gap-2 px-4 text-sm")}
+        className={cn(
+          FLOATING,
+          "flex h-11 min-w-0 flex-1 items-center gap-2 px-4 text-sm",
+          pageHasSearch && !deep && "invisible"
+        )}
       >
         <Search aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
         Search

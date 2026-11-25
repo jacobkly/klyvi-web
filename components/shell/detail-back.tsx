@@ -21,7 +21,7 @@ function DetailBack({ onBack, railed }: { onBack: () => void; railed: boolean })
           variant="ghost"
           size="lg"
           onClick={onBack}
-          className="pointer-events-auto cursor-pointer glass border hover:border-foreground/40 hover:bg-muted dark:hover:bg-muted"
+          className="pointer-events-auto glass border hover:border-foreground/40 hover:bg-muted dark:hover:bg-muted"
         >
           <ArrowLeft
             aria-hidden="true"

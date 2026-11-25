@@ -380,7 +380,7 @@ export function RateDeck({ redo = false }: { redo?: boolean } = {}) {
           onPointerUp={() => endDrag(true)}
           onPointerCancel={() => endDrag(false)}
           className={cn(
-            "flex touch-pan-y flex-col items-center transition-[translate,rotate,opacity] duration-(--dur-base) ease-(--ease-enter) select-none",
+            "flex cursor-grab touch-pan-y flex-col items-center transition-[translate,rotate,opacity] duration-(--dur-base) ease-(--ease-enter) select-none active:cursor-grabbing",
             "animate-in fade-in-0 slide-in-from-bottom-2",
             exit === "right" && "translate-x-24 rotate-6 opacity-0",
             exit === "left" && "-translate-x-24 -rotate-6 opacity-0",
