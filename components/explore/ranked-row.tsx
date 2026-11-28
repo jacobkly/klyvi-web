@@ -1,22 +1,29 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Film } from "lucide-react";
 
+import { WatchedMark } from "@/components/klyvi/watched-mark";
 import type { Ranking } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb-image";
 
 /**
- * One row of a Top 100 list: rank numeral, poster thumb, title block,
+ * One row of a top list: rank numeral, poster thumb, title block,
  * community score. The rank column is fixed-width mono so 7, 42, and 100
- * all sit on the same grid. The whole row links to the title.
+ * all sit on the same grid. The whole row links to the title. A title the
+ * user has seen through gets the watched check on its thumb.
  */
 export function RankedRow({
   item,
   kind,
+  deep = false,
 }: {
   item: Ranking;
   kind: "movies" | "tv";
+  /** The list goes past #999, so the rank column holds four digits. */
+  deep?: boolean;
 }) {
   const href =
     kind === "movies" ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`;
@@ -29,7 +36,10 @@ export function RankedRow({
       >
         <span
           data-numeric
-          className="w-12 shrink-0 text-right font-mono text-lg text-muted-foreground"
+          className={cn(
+            "shrink-0 text-right font-mono text-lg text-muted-foreground",
+            deep ? "w-14" : "w-12"
+          )}
         >
           #{item.rank}
         </span>
@@ -55,6 +65,11 @@ export function RankedRow({
               className="size-4 text-muted-foreground/60"
             />
           )}
+          <WatchedMark
+            mediaType={kind === "movies" ? "movie" : "tv"}
+            tmdbId={item.tmdbId}
+            size="sm"
+          />
         </div>
 
         <div className="min-w-0 flex-1">

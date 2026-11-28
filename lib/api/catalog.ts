@@ -100,18 +100,46 @@ export async function getFamily(
   }));
 }
 
-/**
- * TMDB list passthrough for browse rails and pages. The API pins page 1
- * server-side today; the client sends `page` anyway so pagination lights
- * up the moment the passthrough honors it (contract item, phase 9).
- */
+/** Asks a list to leave anime out. Leaving it out of a page can make the
+ *  page short, so a paged list goes by `totalPages`, not by a short page. */
+export type AnimeOption = { anime?: boolean };
+
+function animeParam(opts?: AnimeOption): string {
+  return opts?.anime === false ? "&anime=false" : "";
+}
+
+/** One page of a browse list, and how many pages TMDB has. */
+export type ListPage = { items: MediaSummary[]; page: number; totalPages: number };
+
+/** One page of a TMDB list, for a page that keeps loading as you scroll. */
+export async function getListPage(
+  kind: "movie" | "tv",
+  type: ListType,
+  page: number,
+  opts?: AnimeOption,
+  signal?: AbortSignal
+): Promise<ListPage> {
+  const w = await apiFetch<WireSearchResponse>(
+    `/v1/${kind === "movie" ? "movies" : "tv"}/?type=${type}&page=${page}${animeParam(opts)}`,
+    { signal }
+  );
+  const mapped = mapSearchResults(w, kind);
+  return {
+    items: kind === "movie" ? mapped.movies : mapped.tv,
+    page: w.page || page,
+    totalPages: w.total_pages || page,
+  };
+}
+
+/** The first page of a TMDB list, for rails. */
 export async function getMovieList(
   type: ListType,
   signal?: AbortSignal,
-  page = 1
+  page = 1,
+  opts?: AnimeOption
 ): Promise<MediaSummary[]> {
   const w = await apiFetch<WireSearchResponse>(
-    `/v1/movies/?type=${type}&page=${page}`,
+    `/v1/movies/?type=${type}&page=${page}${animeParam(opts)}`,
     { signal }
   );
   return mapSearchResults(w, "movie").movies;
@@ -120,22 +148,34 @@ export async function getMovieList(
 export async function getTvList(
   type: ListType,
   signal?: AbortSignal,
-  page = 1
+  page = 1,
+  opts?: AnimeOption
 ): Promise<MediaSummary[]> {
   const w = await apiFetch<WireSearchResponse>(
-    `/v1/tv/?type=${type}&page=${page}`,
+    `/v1/tv/?type=${type}&page=${page}${animeParam(opts)}`,
     { signal }
   );
   return mapSearchResults(w, "tv").tv;
 }
 
-/** Public Top 100 ranking. `kind` picks the movie or TV list. */
+/** Titles on one page of a top list. */
+export const RANKING_PAGE_SIZE = 100;
+
+/** The last page of a top list, which goes 1,000 deep. */
+export const RANKING_MAX_PAGE = 10;
+
+/** One page of a public top list, 100 to a page. `kind` picks the movie or
+ *  TV list. Without anime the list is ranked without it. A page shorter
+ *  than 100 is the last. */
 export async function getRankings(
   kind: "movies" | "tv",
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  opts?: AnimeOption & { page?: number }
 ): Promise<Ranking[]> {
+  const page = opts?.page ?? 1;
+  const query = `${page > 1 ? `&page=${page}` : ""}${animeParam(opts)}`;
   const rows = await apiFetch<WireRanking[] | null>(
-    `/v1/rankings/${kind}`,
+    `/v1/rankings/${kind}${query ? `?${query.slice(1)}` : ""}`,
     { signal }
   );
   return (rows ?? []).map(mapRanking);

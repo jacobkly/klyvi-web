@@ -23,6 +23,12 @@ export function isDetailPath(pathname: string): boolean {
   return /^\/(movie|tv)\/[^/]+/.test(pathname);
 }
 
+/** A page a tab opens onto, such as a rail's View more or a top list.
+ *  It is not a tab itself, so it needs a way back. */
+export function isSubPath(pathname: string): boolean {
+  return /^\/explore\/(browse\/[^/]+|top-100-films|top-100-tv)\/?$/.test(pathname);
+}
+
 /** Where Back goes when there is no page behind this one, as on a link
  *  someone sent: a season's show, or Explore. */
 export function backFallback(pathname: string): string {

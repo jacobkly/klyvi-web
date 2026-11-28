@@ -20,6 +20,7 @@ import {
   type PosterAction,
 } from "@/components/klyvi/poster-parts";
 import { ScoreValue } from "@/components/klyvi/score-value";
+import { WatchedMark } from "@/components/klyvi/watched-mark";
 import { mediaHref } from "@/lib/media-href";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb-image";
@@ -65,6 +66,10 @@ function StatusGlyph({ status }: { status: TrackingStatus }) {
  * episode progress, then your score. It rides the scrim in overlay and sits
  * bottom-left on the artwork otherwise. The season tag is top-left and the
  * quick-actions menu, when given, is top-right.
+ *
+ * Without a status, a film or show the user has seen through gets a check
+ * top-left (seasons have their tag there and never get one), and a dark
+ * layer when a list above asks to dim what is watched.
  *
  * Missing artwork is a first-class state, not a broken image: a muted block
  * with the title set in it. TMDB has gaps and freshly-tracked entries can
@@ -218,6 +223,10 @@ function PosterCard({
                 <ScoreValue score={score} mine className="text-white" />
               ) : null}
             </span>
+          ) : null}
+
+          {status == null ? (
+            <WatchedMark mediaType={media.mediaType} tmdbId={media.tmdbId} />
           ) : null}
         </div>
 

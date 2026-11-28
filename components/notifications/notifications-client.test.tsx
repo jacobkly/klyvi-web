@@ -249,6 +249,50 @@ describe("NotificationsClient", () => {
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
   });
 
+  it("loads older notices on its own as the end nears", async () => {
+    // jsdom lays nothing out, so put every element a little below the top.
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 100, bottom: 100 } as DOMRect);
+    serve(
+      page({ has_more: true }),
+      page({
+        notifications: [notice({ id: 9, title: "Older Show" })],
+        unread_count: 0,
+        has_more: false,
+      })
+    );
+    render(<NotificationsClient />);
+
+    expect(
+      await screen.findByRole("link", { name: /Older Show/ })
+    ).toBeInTheDocument();
+    expect(listCalls()).toHaveLength(2);
+    spy.mockRestore();
+  });
+
+  it("stops loading on its own after a failure, until Try again", async () => {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 100, bottom: 100 } as DOMRect);
+    const user = userEvent.setup();
+    serve(page({ has_more: true }), new Error("down"), page({
+      notifications: [notice({ id: 9, title: "Older Show" })],
+      unread_count: 0,
+    }));
+    render(<NotificationsClient />);
+
+    expect(await screen.findByText("Could not load more.")).toBeInTheDocument();
+    await new Promise((r) => window.requestAnimationFrame(r));
+    expect(listCalls()).toHaveLength(2);
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(
+      await screen.findByRole("link", { name: /Older Show/ })
+    ).toBeInTheDocument();
+    spy.mockRestore();
+  });
+
   it("keeps the rows when older ones fail to load", async () => {
     const user = userEvent.setup();
     serve(page({ has_more: true }), new Error("down"), page({

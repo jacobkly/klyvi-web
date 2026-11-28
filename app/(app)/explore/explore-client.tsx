@@ -1,31 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { Search, SearchX, X } from "lucide-react";
 
-import Link from "next/link";
-
+import { AnimeSwitch, useBrowseFilters } from "@/components/explore/browse-filters";
 import { EmptyState } from "@/components/klyvi/empty-state";
+import { FilterField, FilterPanel } from "@/components/klyvi/filter-panel";
 import { PosterCard } from "@/components/klyvi/poster-card";
 import { MediaRail } from "@/components/klyvi/media-rail";
 import { SectionHeader } from "@/components/klyvi/section-header";
 import { RankingList } from "@/components/explore/ranking-list";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { DEFAULT_PREFS, usePref, type ExploreFilters } from "@/lib/local-prefs";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getMovieList, getTvList } from "@/lib/api/catalog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getMovieList, getTvList, type AnimeOption } from "@/lib/api/catalog";
 import { search as apiSearch } from "@/lib/api/search";
 import type { SearchMedia, SearchResults } from "@/lib/api/map";
 import type { MediaSummary, PersonResult } from "@/lib/types";
@@ -44,18 +37,19 @@ const GENRES: { value: string; label: string; ids: number[] }[] = [
   { value: "action", label: "Action", ids: [28, 10759] },
   { value: "documentary", label: "Documentary", ids: [99] },
 ];
-const GENRE_ITEMS = Object.fromEntries(GENRES.map((g) => [g.value, g.label]));
 
-const DECADES = {
-  all: "Any year",
-  "2020": "2020s",
-  "2010": "2010s",
-  "2000": "2000s",
-  "1990": "1990s",
-  older: "Before 1990",
-};
+// A list, not an object: an object puts number-like keys ("2020") first,
+// whatever order they are written in.
+const DECADE_OPTIONS = [
+  { value: "all", label: "Any year" },
+  { value: "2020", label: "2020s" },
+  { value: "2010", label: "2010s" },
+  { value: "2000", label: "2000s" },
+  { value: "1990", label: "1990s" },
+  { value: "older", label: "Before 1990" },
+];
 
-const SORTS = {
+const SORTS: Record<string, string> = {
   relevance: "Relevance",
   rating: "Highest rated",
   newest: "Newest",
@@ -67,29 +61,29 @@ type ResultTab = "all" | "movie" | "tv" | "person";
 type Rail = {
   title: string;
   slug: string;
-  load: (signal: AbortSignal) => Promise<MediaSummary[]>;
+  load: (signal: AbortSignal, opts: AnimeOption) => Promise<MediaSummary[]>;
 };
 
 const RAILS: Rail[] = [
   {
     title: "Trending this week",
     slug: "trending-films",
-    load: (s) => getMovieList("trending", s),
+    load: (s, o) => getMovieList("trending", s, 1, o),
   },
   {
     title: "Popular films",
     slug: "popular-films",
-    load: (s) => getMovieList("popular", s),
+    load: (s, o) => getMovieList("popular", s, 1, o),
   },
   {
     title: "Top rated",
     slug: "top-rated-films",
-    load: (s) => getMovieList("top_rated", s),
+    load: (s, o) => getMovieList("top_rated", s, 1, o),
   },
   {
     title: "Popular TV",
     slug: "popular-tv",
-    load: (s) => getTvList("popular", s),
+    load: (s, o) => getTvList("popular", s, 1, o),
   },
 ];
 
@@ -119,6 +113,18 @@ function countFilters(f: Filters): number {
   );
 }
 
+/** What the Filters panel on Explore edits: the search filters, and anime
+ *  in or out of the rails and top lists, which View more pages share. */
+type PanelValue = { explore: Filters; anime: boolean };
+const PANEL_DEFAULTS: PanelValue = {
+  explore: NO_FILTERS,
+  anime: DEFAULT_PREFS.browseFilters.anime,
+};
+
+function countPanel(v: PanelValue): number {
+  return countFilters(v.explore) + (v.anime ? 1 : 0);
+}
+
 export function ExploreClient({
   autofocus,
   initialQuery = "",
@@ -132,9 +138,13 @@ export function ExploreClient({
   // Remembered with the other preferences, so they follow the account.
   const [filters, commitFilters] = usePref("exploreFilters");
   const { genre, decade, sort } = filters;
-  // The phone sheet edits a copy, and Apply filters commits it.
-  const [draft, setDraft] = React.useState<Filters>(NO_FILTERS);
-  const [filtersOpen, setFiltersOpen] = React.useState(false);
+  const { filters: browse, setAnime } = useBrowseFilters();
+  const anime = browse.anime;
+  const panelValue: PanelValue = { explore: filters, anime };
+  const savePanel = (v: PanelValue) => {
+    commitFilters(v.explore);
+    if (v.anime !== anime) setAnime(v.anime);
+  };
 
   /** The last search to settle, tagged with the query and attempt it
    *  answered. Idle and searching are derived from it during render. */
@@ -253,77 +263,6 @@ export function ExploreClient({
     : 0;
 
 
-  // The genre, year and sort controls, shown inline on desktop and in the
-  // filter sheet on phones.
-  const filterControls = (v: Filters, set: (f: Filters) => void, withClear: boolean) => (
-    <>
-      <Select
-        value={v.genre}
-        onValueChange={(g) => set({ ...v, genre: g ?? "all" })}
-        items={GENRE_ITEMS}
-      >
-        <SelectTrigger
-          aria-label="Genre"
-          className="data-[size=default]:h-11 min-w-36"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {GENRES.map((g) => (
-            <SelectItem key={g.value} value={g.value}>
-              {g.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={v.decade}
-        onValueChange={(d) => set({ ...v, decade: d ?? "all" })}
-        items={DECADES}
-      >
-        <SelectTrigger
-          aria-label="Year"
-          className="data-[size=default]:h-11 min-w-32"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {Object.entries(DECADES).map(([v, l]) => (
-            <SelectItem key={v} value={v}>
-              {l}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={v.sort}
-        onValueChange={(o) => set({ ...v, sort: o ?? "relevance" })}
-        items={SORTS}
-      >
-        <SelectTrigger
-          aria-label="Sort by"
-          className="data-[size=default]:h-11 min-w-36"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {Object.entries(SORTS).map(([v, l]) => (
-            <SelectItem key={v} value={v}>
-              {l}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {withClear && countFilters(v) > 0 ? (
-        <Button variant="ghost" size="sm" onClick={() => set(NO_FILTERS)}>
-          Clear filters
-        </Button>
-      ) : null}
-    </>
-  );
   return (
     <main className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
@@ -359,57 +298,17 @@ export function ExploreClient({
           ) : null}
         </div>
 
-        {/* Phones: the filters live in a sheet sized to them, applied in one
-            go. Desktop: inline and live.
-            Hidden on the wrapper, since a class passed through Base UI's
-            render prop loses to the component's own display rule. */}
-        <div className="lg:hidden">
-          <Drawer
-            open={filtersOpen}
-            onOpenChange={(open) => {
-              if (open) setDraft(filters);
-              setFiltersOpen(open);
-            }}
-          >
-            <DrawerTrigger
-              render={
-                <Button variant="outline" size="touch" className="gap-2">
-                  <SlidersHorizontal aria-hidden="true" data-icon="inline-start" />
-                  {filterCount > 0 ? `Filters (${filterCount})` : "Filters"}
-                </Button>
-              }
-            />
-            <DrawerContent initialFocus={false}>
-              <div className="flex min-h-11 shrink-0 items-center justify-between px-5 pb-2">
-                <DrawerTitle>Filters</DrawerTitle>
-                {countFilters(draft) > 0 ? (
-                  <Button variant="ghost" size="touch" onClick={() => setDraft(NO_FILTERS)}>
-                    Clear
-                  </Button>
-                ) : null}
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 [&_[data-slot=select-trigger]]:w-full">
-                {filterControls(draft, setDraft, false)}
-              </div>
-              <div className="shrink-0 px-5 pt-4 pb-4">
-                <Button
-                  size="touch"
-                  className="w-full"
-                  onClick={() => {
-                    commitFilters(draft);
-                    setFiltersOpen(false);
-                  }}
-                >
-                  Apply filters
-                </Button>
-              </div>
-            </DrawerContent>
-          </Drawer>
-        </div>
-
-        <div className="hidden shrink-0 flex-wrap items-center gap-2 lg:flex">
-          {filterControls(filters, commitFilters, true)}
-        </div>
+        <FilterPanel
+          value={panelValue}
+          defaults={PANEL_DEFAULTS}
+          onSave={savePanel}
+          count={countPanel}
+          iconOnly
+        >
+          {(draft, setDraft) => (
+            <ExploreFilterFields value={draft} onChange={setDraft} />
+          )}
+        </FilterPanel>
       </div>
 
       {q.length === 1 ? (
@@ -421,28 +320,35 @@ export function ExploreClient({
           the rails back as they were, with no refetch. */}
       <div hidden={active} className="mt-10 flex flex-col gap-10">
         {RAILS.map((rail, i) => (
-          <CatalogRail key={rail.slug} rail={rail} first={i === 0} />
+          <CatalogRail
+            // A fresh fetch, with its skeleton, when anime goes in or out.
+            key={`${rail.slug}:${anime}`}
+            rail={rail}
+            anime={anime}
+            first={i === 0}
+          />
         ))}
 
-        {/* Top 100 preview, live from the rankings endpoint. */}
-        <section>
-          <SectionHeader
-            title="Top 100 films"
-            action={{ label: "View all", href: "/explore/top-100-films" }}
-            className="mb-4"
-          />
-          <RankingList kind="movies" limit={10} />
-          <p className="mt-3 text-xs text-muted-foreground">
-            Also see the{" "}
-            <Link
-              href="/explore/top-100-tv"
-              className="text-violet-text hover:underline"
-            >
-              Top 100 series
-            </Link>
-            .
-          </p>
-        </section>
+        {/* The first ten of each top list, films and series side by side on
+            a wide screen, one after the other on a phone. */}
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-6">
+          <section>
+            <SectionHeader
+              title="Top films"
+              action={{ label: "View all", href: "/explore/top-100-films" }}
+              className="mb-4"
+            />
+            <RankingList kind="movies" limit={10} />
+          </section>
+          <section>
+            <SectionHeader
+              title="Top series"
+              action={{ label: "View all", href: "/explore/top-100-tv" }}
+              className="mb-4"
+            />
+            <RankingList kind="tv" limit={10} />
+          </section>
+        </div>
       </div>
 
       {active ? (
@@ -536,7 +442,15 @@ export function ExploreClient({
 /** Cards the first rail shows on a wide screen before it scrolls. */
 const FIRST_SCREEN = 7;
 
-function CatalogRail({ rail, first }: { rail: Rail; first: boolean }) {
+function CatalogRail({
+  rail,
+  anime,
+  first,
+}: {
+  rail: Rail;
+  anime: boolean;
+  first: boolean;
+}) {
   const [state, setState] = React.useState<RailState>({ kind: "loading" });
   /** Bumped by Try again to refetch just this rail. */
   const [attempt, setAttempt] = React.useState(0);
@@ -544,14 +458,14 @@ function CatalogRail({ rail, first }: { rail: Rail; first: boolean }) {
   React.useEffect(() => {
     const ac = new AbortController();
     rail
-      .load(ac.signal)
+      .load(ac.signal, { anime })
       .then((items) => setState({ kind: "ready", items }))
       .catch((e) => {
         if (e instanceof DOMException && e.name === "AbortError") return;
         setState({ kind: "error" });
       });
     return () => ac.abort();
-  }, [rail, attempt]);
+  }, [rail, anime, attempt]);
 
   const action = { label: "View more", href: `/explore/browse/${rail.slug}` };
 
@@ -594,6 +508,90 @@ function CatalogRail({ rail, first }: { rail: Rail; first: boolean }) {
             />
           ))}
     </MediaRail>
+  );
+}
+
+const SORT_OPTIONS = Object.entries(SORTS).map(([value, label]) => ({ value, label }));
+
+/** One choice from a row of chips. Pressing the chosen chip again keeps
+ *  it, so the row always has one on. */
+function ChipChoice({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <FilterField label={label}>
+      <ToggleGroup
+        value={[value]}
+        onValueChange={(v: unknown[]) => {
+          const next = options.find((o) => o.value === v.at(-1));
+          if (next) onChange(next.value);
+        }}
+        variant="outline"
+        size="sm"
+        // Named by the field around it, so it is not read out twice.
+        className="w-full flex-wrap"
+      >
+        {options.map((o) => (
+          <ToggleGroupItem
+            key={o.value}
+            value={o.value}
+            className="aria-pressed:border-foreground/40 max-lg:h-11 max-lg:px-4"
+          >
+            {o.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </FilterField>
+  );
+}
+
+/** The Filters on Explore: genre, year and sort for search results, and
+ *  anime in or out of the lists. */
+function ExploreFilterFields({
+  value,
+  onChange,
+}: {
+  value: PanelValue;
+  onChange: (next: PanelValue) => void;
+}) {
+  const set = (patch: Partial<Filters>) =>
+    onChange({ ...value, explore: { ...value.explore, ...patch } });
+  return (
+    <>
+      <p className="-mb-2 text-xs text-muted-foreground">
+        Genre, year and sort narrow what a search finds.
+      </p>
+      <ChipChoice
+        label="Genre"
+        options={GENRES}
+        value={value.explore.genre}
+        onChange={(genre) => set({ genre })}
+      />
+      <ChipChoice
+        label="Year"
+        options={DECADE_OPTIONS}
+        value={value.explore.decade}
+        onChange={(decade) => set({ decade })}
+      />
+      <ChipChoice
+        label="Sort by"
+        options={SORT_OPTIONS}
+        value={value.explore.sort}
+        onChange={(sort) => set({ sort })}
+      />
+      <AnimeSwitch
+        checked={value.anime}
+        onCheckedChange={(on) => onChange({ ...value, anime: on })}
+      />
+    </>
   );
 }
 

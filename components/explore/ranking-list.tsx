@@ -2,20 +2,29 @@
 
 import * as React from "react";
 
+import { useBrowseFilters } from "@/components/explore/browse-filters";
 import { RankedRow } from "@/components/explore/ranked-row";
+import { isWatched, useWatched } from "@/components/klyvi/watched-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getRankings } from "@/lib/api/catalog";
+import {
+  getRankings,
+  RANKING_MAX_PAGE,
+  RANKING_PAGE_SIZE,
+} from "@/lib/api/catalog";
+import type { WatchedFilter } from "@/lib/local-prefs";
 import type { Ranking } from "@/lib/types";
+import { usePagedList } from "@/lib/use-paged-list";
 
-type State =
-  | { kind: "loading" }
-  | { kind: "error" }
-  | { kind: "ready"; items: Ranking[] };
+function keyOf(r: Ranking): string {
+  return String(r.tmdbId);
+}
 
 /**
- * The public Top 100 list, live from GET /v1/rankings/{kind}. `limit` caps
- * the rows for the small explore preview; the full pages omit it.
+ * A public top list, live from GET /v1/rankings/{kind}, ranked with or
+ * without anime as the Filters say. `limit` caps the rows for Explore's
+ * preview. Without it the list pages on as the end nears, 100 at a time and
+ * 1,000 deep, and watched titles show, dim or hide as asked.
  */
 export function RankingList({
   kind,
@@ -24,30 +33,48 @@ export function RankingList({
   kind: "movies" | "tv";
   limit?: number;
 }) {
-  const [state, setState] = React.useState<State>({ kind: "loading" });
-  /** Bumped by the error state's Try again to refetch. */
-  const [attempt, setAttempt] = React.useState(0);
+  const { filters } = useBrowseFilters();
+  return (
+    <RankingPages
+      // A different ranking, from its first page, when anime goes in or out.
+      key={filters.anime ? "with-anime" : "without-anime"}
+      kind={kind}
+      limit={limit}
+      anime={filters.anime}
+      // The preview stays ten rows, so it only marks what is watched.
+      watched={limit ? "show" : filters.watched}
+    />
+  );
+}
 
-  React.useEffect(() => {
-    const ac = new AbortController();
-    getRankings(kind, ac.signal)
-      .then((items) =>
-        setState({
-          kind: "ready",
-          items: limit ? items.slice(0, limit) : items,
-        })
-      )
-      .catch((e) => {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        setState({ kind: "error" });
-      });
-    return () => ac.abort();
-  }, [kind, limit, attempt]);
-
-  function retry() {
-    setState({ kind: "loading" });
-    setAttempt((n) => n + 1);
-  }
+function RankingPages({
+  kind,
+  limit,
+  anime,
+  watched,
+}: {
+  kind: "movies" | "tv";
+  limit?: number;
+  anime: boolean;
+  watched: WatchedFilter;
+}) {
+  const fetchPage = React.useCallback(
+    async (page: number, signal?: AbortSignal) => {
+      const items = await getRankings(kind, signal, { anime, page });
+      if (limit) return { items: items.slice(0, limit), last: true };
+      return {
+        items,
+        last: items.length < RANKING_PAGE_SIZE || page >= RANKING_MAX_PAGE,
+      };
+    },
+    [kind, limit, anime]
+  );
+  const { state, loadMore, retry, sentinelRef } = usePagedList({
+    fetchPage,
+    keyOf,
+  });
+  const watchedIds = useWatched();
+  const media = kind === "movies" ? "movie" : "tv";
 
   if (state.kind === "loading") {
     return (
@@ -74,19 +101,61 @@ export function RankingList({
     );
   }
 
-  if (state.items.length === 0) {
+  const { done, loadingMore } = state;
+  const items =
+    watched === "hide"
+      ? state.items.filter((r) => !isWatched(watchedIds, media, r.tmdbId))
+      : state.items;
+
+  if (items.length === 0 && done) {
     return (
       <p className="rounded-lg bg-card p-6 text-center text-sm text-muted-foreground ring-1 ring-foreground/10">
-        The ranking is empty right now. It refreshes daily.
+        {state.items.length > 0
+          ? "You have seen every title on this list. Show watched titles in Filters to see them again."
+          : "The ranking is empty right now. It refreshes daily."}
       </p>
     );
   }
 
   return (
-    <ol className="flex flex-col gap-2">
-      {state.items.map((item) => (
-        <RankedRow key={`${item.rank}-${item.tmdbId}`} item={item} kind={kind} />
-      ))}
-    </ol>
+    <>
+      <ol
+        className="flex flex-col gap-2"
+        data-dim-watched={watched === "dim" ? "" : undefined}
+      >
+        {items.map((item) => (
+          <RankedRow
+            key={`${item.rank}-${item.tmdbId}`}
+            item={item}
+            kind={kind}
+            deep={!limit}
+          />
+        ))}
+        {loadingMore || (items.length === 0 && !done)
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <li key={`more-${i}`}>
+                <Skeleton className="h-[72px] rounded-lg" />
+              </li>
+            ))
+          : null}
+      </ol>
+
+      {limit ? null : (
+        <>
+          <div ref={sentinelRef} aria-hidden="true" />
+          <div className="mt-8 flex justify-center">
+            {done ? (
+              <p className="text-sm text-muted-foreground">
+                That is the whole list.
+              </p>
+            ) : (
+              <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+                Load more
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+    </>
   );
 }

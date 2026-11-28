@@ -6,11 +6,26 @@
  * media_id and is idempotent; PATCH and DELETE address that media_id.
  */
 
-import type { LibraryEntry, MediaType, TrackingStatus } from "@/lib/types";
+import type { LibraryEntry, MediaType, TrackingStatus, Watched } from "@/lib/types";
 
 import { browserFetch } from "./http";
-import { mapTrackingEntry } from "./map";
-import type { WireAffected, WireTrackingEntry } from "./wire";
+import { mapTrackingEntry, mapWatched } from "./map";
+import type { WireAffected, WireTrackingEntry, WireWatched } from "./wire";
+
+/** Fired on window after any tracking write, so what depends on the library
+ *  (the watched marks) can catch up. */
+export const TRACKING_CHANGED = "klyvi:tracking-changed";
+
+function changed<T>(result: T): T {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(TRACKING_CHANGED));
+  return result;
+}
+
+/** The TMDB ids of what the user has seen through. */
+export async function getWatched(signal?: AbortSignal): Promise<Watched> {
+  const w = await browserFetch<WireWatched>("/v1/tracking/watched", { signal });
+  return mapWatched(w ?? { movies: [], tv: [] });
+}
 
 export async function listTracking(filters?: {
   mediaType?: MediaType;
@@ -142,7 +157,7 @@ export async function addTracking(input: {
       favorite: input.favorite,
     },
   });
-  return mapTrackingEntry(row);
+  return changed(mapTrackingEntry(row));
 }
 
 export async function updateTracking(
@@ -168,13 +183,14 @@ export async function updateTracking(
       },
     }
   );
-  return mapTrackingEntry(row);
+  return changed(mapTrackingEntry(row));
 }
 
 export async function deleteTracking(mediaId: number): Promise<void> {
   await browserFetch<{ deleted: boolean }>(`/v1/tracking/${mediaId}`, {
     method: "DELETE",
   });
+  changed(null);
 }
 
 /** Danger zone: clears every score in one media-type scope. */
@@ -194,5 +210,5 @@ export async function deleteTrackingScope(
     method: "DELETE",
     body: { media_type: mediaType },
   });
-  return r.affected;
+  return changed(r.affected);
 }

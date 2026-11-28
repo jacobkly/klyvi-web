@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +14,8 @@ vi.mock("@/lib/api/catalog", () => ({
   getMovieList: (...a: unknown[]) => getMovieList(...a),
   getTvList: (...a: unknown[]) => getTvList(...a),
   getRankings: (...a: unknown[]) => getRankings(...a),
+  RANKING_PAGE_SIZE: 100,
+  RANKING_MAX_PAGE: 10,
 }));
 const search = vi.fn();
 vi.mock("@/lib/api/search", () => ({
@@ -184,27 +186,88 @@ describe("ExploreClient filters", () => {
     window.localStorage.clear();
   });
 
-  it("remembers the filters and applies the sheet's changes only on Apply", async () => {
+  // Both openers are in the page, the sheet for phones first and the panel
+  // for wide screens second, one hidden by CSS at each width. jsdom has no
+  // CSS, so the tests open the first.
+  it("remembers the filters and saves the sheet's changes only on Save", async () => {
     window.localStorage.setItem(
       "klyvi:prefs",
-      JSON.stringify({ exploreFilters: { genre: "18", decade: "all", sort: "relevance" } })
+      JSON.stringify({ exploreFilters: { genre: "drama", decade: "all", sort: "relevance" } })
     );
     const user = userEvent.setup();
     render(<ExploreClient />);
 
-    await user.click(screen.getByRole("button", { name: "Filters (1)" }));
-    await user.click(await screen.findByRole("button", { name: "Clear" }));
-    // Cleared in the sheet only, so the page (hidden behind it) keeps its filter.
-    expect(screen.getByRole("button", { name: "Filters (1)", hidden: true })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Filters (1)" })[0]);
+    expect(await screen.findByRole("button", { name: "Drama", pressed: true })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    // Reset in the sheet only, so the page (hidden behind it) keeps its filter.
+    expect(
+      screen.getAllByRole("button", { name: "Filters (1)", hidden: true }).length
+    ).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument()
+      expect(screen.getAllByRole("button", { name: "Filters" }).length).toBeGreaterThan(0)
     );
     expect(JSON.parse(window.localStorage.getItem("klyvi:prefs") ?? "{}").exploreFilters).toEqual({
       genre: "all",
       decade: "all",
       sort: "relevance",
     });
+  });
+
+  it("lists the years newest first, between Any year and Before 1990", async () => {
+    const user = userEvent.setup();
+    render(<ExploreClient />);
+
+    await user.click(screen.getAllByRole("button", { name: "Filters" })[0]);
+    const years = within(await screen.findByRole("group", { name: "Year" }))
+      .getAllByRole("button")
+      .map((b) => b.textContent);
+    expect(years).toEqual(["Any year", "2020s", "2010s", "2000s", "1990s", "Before 1990"]);
+  });
+
+  it("asks the rails for lists without anime, and with it once let in", async () => {
+    const user = userEvent.setup();
+    render(<ExploreClient />);
+
+    await waitFor(() =>
+      expect(getMovieList).toHaveBeenCalledWith("trending", expect.any(AbortSignal), 1, {
+        anime: false,
+      })
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "Filters" })[0]);
+    await user.click(await screen.findByRole("switch"));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(getMovieList).toHaveBeenCalledWith("trending", expect.any(AbortSignal), 1, {
+        anime: true,
+      })
+    );
+    expect(getTvList).toHaveBeenCalledWith("popular", expect.any(AbortSignal), 1, {
+      anime: true,
+    });
+    expect(getRankings).toHaveBeenCalledWith("tv", expect.any(AbortSignal), {
+      anime: true,
+      page: 1,
+    });
+    expect(JSON.parse(window.localStorage.getItem("klyvi:prefs") ?? "{}").browseFilters).toEqual({
+      watched: "show",
+      anime: true,
+    });
+  });
+
+  it("shows the top films and series side by side, each with View all", async () => {
+    render(<ExploreClient />);
+
+    expect(screen.getByRole("heading", { name: "Top films" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top series" })).toBeInTheDocument();
+    const links = screen
+      .getAllByRole("link", { name: /View all/ })
+      .map((a) => a.getAttribute("href"));
+    expect(links).toEqual(["/explore/top-100-films", "/explore/top-100-tv"]);
+    await waitFor(() => expect(getRankings).toHaveBeenCalledTimes(2));
   });
 });

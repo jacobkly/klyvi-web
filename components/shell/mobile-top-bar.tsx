@@ -64,7 +64,8 @@ function useBar(): { hidden: boolean; deep: boolean } {
 /**
  * The phone's header, below md where the desktop top bar is hidden. There is
  * no bar, only glass floating over the page, as the tab bar does: a round
- * mark home, or Back on a details page, and a Search pill across the rest.
+ * mark home, or Back on a page a tab opens onto, and a Search pill across
+ * the rest.
  * The search page (MobileSearch) holds its close button and field in these
  * same two places, so opening it reads as the pill growing into the page.
  * On Explore the pill waits until the page's own field has scrolled away.
@@ -74,10 +75,13 @@ function useBar(): { hidden: boolean; deep: boolean } {
 function MobileTopBar({
   onOpenSearch,
   onBack,
+  overArt = false,
   pageHasSearch = false,
 }: {
   onOpenSearch?: () => void;
   onBack?: () => void;
+  /** The page opens on artwork that reaches the top, under this bar. */
+  overArt?: boolean;
   /** The page opens with a search field of its own. */
   pageHasSearch?: boolean;
 }) {
@@ -90,7 +94,7 @@ function MobileTopBar({
       className={cn(
         "pointer-events-none sticky top-0 z-40 flex h-(--top-bar-height) items-end gap-2 px-4 transition-transform duration-(--dur-base) ease-(--ease-enter) focus-within:translate-y-0 md:hidden",
         // Takes no room on a details page, so the art reaches the top.
-        onBack && "-mb-(--top-bar-height)",
+        overArt && "-mb-(--top-bar-height)",
         hidden && "-translate-y-full"
       )}
     >

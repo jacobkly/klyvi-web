@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { browserFetch } from "./http";
 import {
+  deleteTracking,
+  getWatched,
   listTracking,
   listTrackingPaged,
   lookupTracking,
+  TRACKING_CHANGED,
   TRACKING_PAGE,
+  updateTracking,
 } from "./tracking";
 import type { WireTrackingEntry } from "./wire";
 
@@ -179,5 +183,44 @@ describe("listTracking", () => {
       "/v1/tracking?media_type=movie&tmdb_ids=272%2C155"
     );
     expect(rows[0]).toMatchObject({ status: "completed", score: 90 });
+  });
+});
+
+describe("getWatched", () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it("turns the id lists into sets, and a missing list into an empty one", async () => {
+    fetchMock.mockResolvedValueOnce({ movies: [550, 680], tv: null });
+    const w = await getWatched();
+    expect(fetchMock).toHaveBeenCalledWith("/v1/tracking/watched", { signal: undefined });
+    expect([...w.movies]).toEqual([550, 680]);
+    expect(w.tv.size).toBe(0);
+  });
+});
+
+describe("tracking writes", () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it("tell the page after an edit or a removal, so marks can catch up", async () => {
+    const heard = vi.fn();
+    window.addEventListener(TRACKING_CHANGED, heard);
+    fetchMock.mockResolvedValueOnce(MOVIE_ROW).mockResolvedValueOnce({ deleted: true });
+
+    await updateTracking(142, { status: "completed" });
+    await deleteTracking(142);
+
+    expect(heard).toHaveBeenCalledTimes(2);
+    window.removeEventListener(TRACKING_CHANGED, heard);
+  });
+
+  it("stay quiet when the write fails", async () => {
+    const heard = vi.fn();
+    window.addEventListener(TRACKING_CHANGED, heard);
+    fetchMock.mockRejectedValueOnce(new Error("down"));
+
+    await expect(updateTracking(142, { status: "completed" })).rejects.toThrow();
+
+    expect(heard).not.toHaveBeenCalled();
+    window.removeEventListener(TRACKING_CHANGED, heard);
   });
 });

@@ -218,6 +218,9 @@ export type WireTrackingEntry = {
 /** POST /v1/tracking/reset-scores and DELETE /v1/tracking. */
 export type WireAffected = { affected: number };
 
+/** GET /v1/tracking/watched: TMDB ids, always arrays. */
+export type WireWatched = { movies: number[] | null; tv: number[] | null };
+
 // ---------- interactions ----------
 
 export type WireInteraction = {

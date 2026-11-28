@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getFamily, getMovieCollection } from "./catalog";
+import { getFamily, getListPage, getMovieCollection, getRankings } from "./catalog";
 import { apiFetch } from "./http";
 import type { WireCollectionMovie, WireFamilyTitle } from "./wire";
 
@@ -103,5 +103,51 @@ describe("getFamily", () => {
   it("is empty when the API has none", async () => {
     fetchMock.mockResolvedValueOnce(null);
     expect(await getFamily("movies", 1)).toEqual([]);
+  });
+});
+
+describe("getListPage", () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it("asks for one page, leaves anime out only when told, and passes TMDB's page count on", async () => {
+    fetchMock.mockResolvedValue({ page: 3, results: [], total_pages: 500, total_results: 10000 });
+
+    expect(await getListPage("movie", "trending", 3, { anime: false })).toEqual({
+      items: [],
+      page: 3,
+      totalPages: 500,
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/v1/movies/?type=trending&page=3&anime=false",
+      { signal: undefined }
+    );
+
+    await getListPage("tv", "popular", 1, { anime: true });
+    expect(fetchMock).toHaveBeenLastCalledWith("/v1/tv/?type=popular&page=1", {
+      signal: undefined,
+    });
+  });
+});
+
+describe("getRankings", () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it("sends no query for the first page with anime in", async () => {
+    fetchMock.mockResolvedValue(null);
+    expect(await getRankings("movies", undefined, { anime: true, page: 1 })).toEqual([]);
+    expect(fetchMock).toHaveBeenLastCalledWith("/v1/rankings/movies", { signal: undefined });
+  });
+
+  it("names a later page, and anime left out", async () => {
+    fetchMock.mockResolvedValue([]);
+    await getRankings("tv", undefined, { anime: false, page: 4 });
+    expect(fetchMock).toHaveBeenLastCalledWith("/v1/rankings/tv?page=4&anime=false", {
+      signal: undefined,
+    });
+
+    await getRankings("tv", undefined, { anime: false });
+    expect(fetchMock).toHaveBeenLastCalledWith("/v1/rankings/tv?anime=false", {
+      signal: undefined,
+    });
   });
 });

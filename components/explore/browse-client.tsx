@@ -3,147 +3,89 @@
 import * as React from "react";
 import { SearchX } from "lucide-react";
 
+import { useBrowseFilters } from "@/components/explore/browse-filters";
 import { EmptyState } from "@/components/klyvi/empty-state";
 import { PosterCard } from "@/components/klyvi/poster-card";
+import { isWatched, useWatched } from "@/components/klyvi/watched-provider";
 import { Button } from "@/components/ui/button";
 import { PosterCardSkeleton } from "@/components/klyvi/skeletons";
-import { getMovieList, getTvList } from "@/lib/api/catalog";
+import { getListPage } from "@/lib/api/catalog";
 import type { BrowseCategory } from "@/lib/browse-categories";
+import type { WatchedFilter } from "@/lib/local-prefs";
 import type { MediaSummary } from "@/lib/types";
-
-type State =
-  | { kind: "loading" }
-  | { kind: "error" }
-  | {
-      kind: "ready";
-      items: MediaSummary[];
-      page: number;
-      /** True once a page added nothing new: the list has run dry. */
-      done: boolean;
-      loadingMore: boolean;
-    };
+import { usePagedList } from "@/lib/use-paged-list";
 
 function keyOf(m: MediaSummary): string {
   return `${m.mediaType}:${m.tmdbId}`;
 }
 
+/** Titles to a page of a TMDB list. */
+const PAGE_SIZE = 20;
+
+/** Pages fetched before anything shows, so the first screen is full. */
+const FIRST_PAGES = 2;
+
+/** TMDB serves no list past page 500, and the API clamps there. */
+const LAST_PAGE = 500;
+
+const GRID =
+  "grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8";
+
 /**
- * The grid behind a rail's View more: first page up front, then an
- * IntersectionObserver sentinel pulls the next page as the user nears the
- * bottom, with a visible Load more button as the accessible fallback.
- * Pages are deduped by id and the list ends the first time a page brings
- * nothing new, so a backend that pins page 1 (today's) degrades to one
- * quiet page instead of a spinner that never stops.
+ * The grid behind a rail's View more, filtered by the page's Filters: the
+ * list is fetched again when anime goes in or out, and watched titles show,
+ * dim or hide as asked.
  */
 export function BrowseClient({ category }: { category: BrowseCategory }) {
-  const [state, setState] = React.useState<State>({ kind: "loading" });
-  const sentinelRef = React.useRef<HTMLDivElement>(null);
-  // Synchronous mirror of `state` so loadMore can guard against the
-  // observer and the button firing in the same tick (and StrictMode
-  // double-invoking updaters) without starting effects inside setState.
-  const stateRef = React.useRef<State>(state);
-  React.useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
-  const fetchPage = React.useCallback(
-    (page: number, signal?: AbortSignal) =>
-      category.kind === "movie"
-        ? getMovieList(category.type, signal, page)
-        : getTvList(category.type, signal, page),
-    [category]
+  const { filters } = useBrowseFilters();
+  return (
+    <BrowseList
+      // A different list, from its first page, when anime goes in or out.
+      key={filters.anime ? "with-anime" : "without-anime"}
+      category={category}
+      anime={filters.anime}
+      watched={filters.watched}
+    />
   );
+}
 
-  /** Bumped by the error state's Try again to refetch the first page. */
-  const [attempt, setAttempt] = React.useState(0);
+/**
+ * Two pages up front, then the next page each time the end nears, with a
+ * visible Load more button as the accessible fallback. The list ends at
+ * TMDB's last page. A page can come back short or empty with anime left
+ * out, so the end is the page count, never a short page.
+ */
+function BrowseList({
+  category,
+  anime,
+  watched,
+}: {
+  category: BrowseCategory;
+  anime: boolean;
+  watched: WatchedFilter;
+}) {
+  const fetchPage = React.useCallback(
+    async (page: number, signal?: AbortSignal) => {
+      const p = await getListPage(category.kind, category.type, page, { anime }, signal);
+      return {
+        items: p.items,
+        last: page >= Math.min(p.totalPages, LAST_PAGE),
+      };
+    },
+    [category, anime]
+  );
+  const { state, loadMore, retry, sentinelRef } = usePagedList({
+    fetchPage,
+    keyOf,
+    firstPages: FIRST_PAGES,
+  });
 
-  React.useEffect(() => {
-    const ac = new AbortController();
-    fetchPage(1, ac.signal)
-      .then((items) =>
-        setState({
-          kind: "ready",
-          items,
-          page: 1,
-          done: items.length === 0,
-          loadingMore: false,
-        })
-      )
-      .catch((e) => {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        setState({ kind: "error" });
-      });
-    return () => ac.abort();
-  }, [fetchPage, attempt]);
-
-  function retry() {
-    setState({ kind: "loading" });
-    setAttempt((n) => n + 1);
-  }
-
-  const loadMore = React.useCallback(() => {
-    const cur = stateRef.current;
-    if (cur.kind !== "ready" || cur.done || cur.loadingMore) return;
-    const marked: State = { ...cur, loadingMore: true };
-    stateRef.current = marked;
-    setState(marked);
-    const nextPage = cur.page + 1;
-    fetchPage(nextPage)
-      .then((fetched) => {
-        setState((s) => {
-          if (s.kind !== "ready") return s;
-          const seen = new Set(s.items.map(keyOf));
-          const fresh = fetched.filter((m) => !seen.has(keyOf(m)));
-          return {
-            kind: "ready",
-            items: [...s.items, ...fresh],
-            page: nextPage,
-            done: fresh.length === 0,
-            loadingMore: false,
-          };
-        });
-      })
-      .catch(() => {
-        // A failed page is not a failed screen; stop quietly and let
-        // the button offer another try.
-        setState((s) =>
-          s.kind === "ready" ? { ...s, loadingMore: false } : s
-        );
-      });
-  }, [fetchPage]);
-
-  // Auto-load as the sentinel nears the viewport. A scroll-position check
-  // rather than IntersectionObserver: the observer's enter-transition
-  // fires unreliably (and not at all when a page starts already short),
-  // whereas re-checking on scroll and after every load chains cleanly.
-  // The "Load more" button below stays as the no-JS / accessible fallback.
-  const itemCount = state.kind === "ready" ? state.items.length : 0;
-  React.useEffect(() => {
-    if (state.kind !== "ready") return;
-    const check = () => {
-      const el = sentinelRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      // rect.top > 0 skips the synthetic zero-rect environments (jsdom);
-      // loadMore is guarded (done / loadingMore) so an eager call is safe.
-      // Two screens ahead, so the next page is usually in before the
-      // reader reaches the end.
-      if (rect.top > 0 && rect.top <= window.innerHeight * 3) {
-        loadMore();
-      }
-    };
-    window.addEventListener("scroll", check, { passive: true });
-    window.addEventListener("resize", check);
-    return () => {
-      window.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
-    };
-  }, [loadMore, state.kind, itemCount]);
+  const watchedIds = useWatched();
 
   if (state.kind === "loading") {
     return (
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
-        {Array.from({ length: 16 }).map((_, i) => (
+      <div className={GRID}>
+        {Array.from({ length: 24 }).map((_, i) => (
           <PosterCardSkeleton key={i} variant="compact" />
         ))}
       </div>
@@ -166,15 +108,24 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
     );
   }
 
-  const { items, done, loadingMore } = state;
+  const { done, loadingMore } = state;
+  const items =
+    watched === "hide"
+      ? state.items.filter((m) => !isWatched(watchedIds, m.mediaType, m.tmdbId))
+      : state.items;
 
-  if (items.length === 0) {
+  if (items.length === 0 && done) {
+    const hidden = state.items.length > 0;
     return (
       <div className="flex flex-1 items-center justify-center">
         <EmptyState
           icon={SearchX}
-          title="Nothing here right now"
-          body="This list came back empty. It refreshes as the catalog does."
+          title={hidden ? "You have seen all of these" : "Nothing here right now"}
+          body={
+            hidden
+              ? "Every title on this list is one you have watched. Show watched titles in Filters to see them again."
+              : "This list came back empty. It refreshes as the catalog does."
+          }
           action={{ label: "Back to Explore", href: "/explore" }}
         />
       </div>
@@ -183,12 +134,15 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
 
   return (
     <>
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
+      <div
+        className={GRID}
+        data-dim-watched={watched === "dim" ? "" : undefined}
+      >
         {items.map((m) => (
           <PosterCard key={keyOf(m)} media={m} variant="compact" />
         ))}
-        {loadingMore
-          ? Array.from({ length: 8 }).map((_, i) => (
+        {loadingMore || (items.length === 0 && !done)
+          ? Array.from({ length: PAGE_SIZE / 2 }).map((_, i) => (
               <PosterCardSkeleton key={`more-${i}`} variant="compact" />
             ))
           : null}
@@ -199,7 +153,7 @@ export function BrowseClient({ category }: { category: BrowseCategory }) {
       <div className="mt-8 flex justify-center">
         {done ? (
           <p className="text-sm text-muted-foreground">
-            That is the whole list for now.
+            That is the whole list.
           </p>
         ) : (
           <Button

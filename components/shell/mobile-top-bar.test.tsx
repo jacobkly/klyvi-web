@@ -56,7 +56,7 @@ describe("MobileTopBar", () => {
 
   it("floats a 44px glass Back over the art on a details page", async () => {
     const onBack = vi.fn();
-    render(<MobileTopBar onBack={onBack} />);
+    render(<MobileTopBar onBack={onBack} overArt />);
     const back = screen.getByRole("button", { name: "Back" });
     for (const c of ["size-11", "glass", "rounded-full"]) {
       expect(back.className).toContain(c);
@@ -65,6 +65,12 @@ describe("MobileTopBar", () => {
     expect(screen.queryByRole("link", { name: "Klyvi, home" })).toBeNull();
     await userEvent.setup().click(back);
     expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it("keeps its room on a page with no art behind it", () => {
+    render(<MobileTopBar onBack={() => {}} />);
+    expect(screen.getByRole("button", { name: "Back" })).toBeTruthy();
+    expect(screen.getByRole("banner").className).not.toContain("-mb-(--top-bar-height)");
   });
 
   it("leaves the account to the Profile tab", () => {

@@ -11,7 +11,13 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ back: nav.back, replace: nav.replace }),
 }));
 
-import { backFallback, isDetailPath, stepsBack, useGoBack } from "./go-back";
+import {
+  backFallback,
+  isDetailPath,
+  isSubPath,
+  stepsBack,
+  useGoBack,
+} from "./go-back";
 
 describe("isDetailPath", () => {
   it("is films, shows and seasons", () => {
@@ -21,6 +27,25 @@ describe("isDetailPath", () => {
     for (const p of ["/home", "/explore/browse/popular", "/movie", "/tvs/1"]) {
       expect(isDetailPath(p)).toBe(false);
     }
+  });
+});
+
+describe("isSubPath", () => {
+  it("is a View more list and the top lists", () => {
+    for (const p of [
+      "/explore/browse/popular-movies",
+      "/explore/top-100-films",
+      "/explore/top-100-tv",
+    ]) {
+      expect(isSubPath(p)).toBe(true);
+    }
+    for (const p of ["/explore", "/explore/browse", "/home", "/movie/1"]) {
+      expect(isSubPath(p)).toBe(false);
+    }
+  });
+
+  it("falls back to Explore", () => {
+    expect(backFallback("/explore/top-100-films")).toBe("/explore");
   });
 });
 

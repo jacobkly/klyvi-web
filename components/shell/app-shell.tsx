@@ -6,11 +6,12 @@ import type { ReactNode } from "react";
 
 import { useSession } from "@/components/auth/auth-provider";
 import { SiteFooter } from "@/components/klyvi/site-footer";
+import { WatchedProvider } from "@/components/klyvi/watched-provider";
 import { UnreadProvider } from "@/components/notifications/unread-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MobileSearch } from "@/components/search/mobile-search";
-import { isDetailPath, useGoBack } from "@/lib/go-back";
+import { isDetailPath, isSubPath, useGoBack } from "@/lib/go-back";
 import { cn } from "@/lib/utils";
 import { BottomTabBar } from "./bottom-tab-bar";
 import { DetailBack } from "./detail-back";
@@ -34,6 +35,8 @@ function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const goBack = useGoBack();
   const onDetail = isDetailPath(pathname);
+  // A View more list or a top list: no tab of its own, so a way back.
+  const onSub = isSubPath(pathname);
   const { user, loading } = useSession();
   // Until the session resolves, assume signed in, as the top bar does.
   const signedOut = !loading && !user;
@@ -60,6 +63,7 @@ function AppShell({ children }: { children: ReactNode }) {
   return (
     <TooltipProvider delay={300}>
       <UnreadProvider>
+      <WatchedProvider>
         {/* min-h-dvh, not min-h-full: `min-height: 100%` needs a parent with a
             DEFINITE height, and body only carries a min-height, so it resolved
             to auto and the shell just wrapped its content. That left the footer
@@ -89,7 +93,8 @@ function AppShell({ children }: { children: ReactNode }) {
           )}
           <MobileTopBar
             onOpenSearch={openPhoneSearch}
-            onBack={onDetail ? goBack : undefined}
+            onBack={onDetail || onSub ? goBack : undefined}
+            overArt={onDetail}
             pageHasSearch={pathname === "/explore"}
           />
           <MobileSearch open={phoneSearch} onOpenChange={setPhoneSearch} />
@@ -118,6 +123,7 @@ function AppShell({ children }: { children: ReactNode }) {
           </div>
           <BottomTabBar />
         </div>
+      </WatchedProvider>
       </UnreadProvider>
       {/* Bottom-right on desktop, out of the content's way. Sonner goes full
           width under 600px, and both offsets clear the tab bar. */}

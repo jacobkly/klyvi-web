@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { BrowseClient } from "@/components/explore/browse-client";
+import { BrowseFiltersButton } from "@/components/explore/browse-filters";
+import { PageBack } from "@/components/klyvi/page-back";
 import { BROWSE_CATEGORIES } from "@/lib/browse-categories";
 
 export function generateStaticParams() {
@@ -28,11 +30,17 @@ export default async function BrowsePage({
 
   return (
     <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 py-8 md:px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">{cat.title}</h1>
-      <p className="mt-1 mb-8 text-sm text-muted-foreground">
-        {cat.kind === "movie" ? "Films" : "TV"} from the whole catalog, more
-        as you scroll.
-      </p>
+      <PageBack className="mb-6" />
+      <div className="mb-8 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-semibold tracking-tight">{cat.title}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {cat.kind === "movie" ? "Films" : "TV"} from the whole catalog,
+            more as you scroll.
+          </p>
+        </div>
+        <BrowseFiltersButton />
+      </div>
       <BrowseClient category={cat} />
     </main>
   );

@@ -185,6 +185,10 @@ export type ErrorGroupPage = {
 };
 
 /** One row of a public Top 100 ranking (GET /v1/rankings/{movies,tv}). */
+/** What the user has seen through, as TMDB ids: films completed or being
+ *  rewatched, and shows with every aired season so. */
+export type Watched = { movies: ReadonlySet<number>; tv: ReadonlySet<number> };
+
 export type Ranking = {
   rank: number;
   tmdbId: number;

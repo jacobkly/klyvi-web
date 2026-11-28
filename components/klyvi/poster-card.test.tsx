@@ -7,7 +7,16 @@ import {
   STATUS_LABELS,
   type MediaSummary,
   type TrackingStatus,
+  type Watched,
 } from "@/lib/types";
+
+const seen = vi.hoisted(() => ({
+  value: { movies: new Set<number>(), tv: new Set<number>() } as Watched,
+}));
+vi.mock("@/components/klyvi/watched-provider", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/klyvi/watched-provider")>()),
+  useWatched: () => seen.value,
+}));
 
 const media: MediaSummary = {
   mediaId: 142,
@@ -21,6 +30,18 @@ const media: MediaSummary = {
 const noArt: MediaSummary = { ...media, posterPath: null };
 
 describe("PosterCard", () => {
+  it("marks a title the user has seen through, and only that one", () => {
+    seen.value = { movies: new Set([11423]), tv: new Set() };
+    const { unmount } = render(<PosterCard media={media} variant="below" />);
+    expect(screen.getByRole("img", { name: "Watched" })).toBeInTheDocument();
+    unmount();
+
+    seen.value = { movies: new Set(), tv: new Set([11423]) };
+    render(<PosterCard media={media} variant="below" />);
+    expect(screen.queryByRole("img", { name: "Watched" })).toBeNull();
+    seen.value = { movies: new Set(), tv: new Set() };
+  });
+
   it("links to the movie detail route", () => {
     render(<PosterCard media={media} variant="below" />);
     expect(

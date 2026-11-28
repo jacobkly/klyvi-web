@@ -14,6 +14,7 @@ import {
   markAllNotificationsRead,
 } from "@/lib/api/notifications";
 import type { AppNotification } from "@/lib/types";
+import { useLoadNearEnd } from "@/lib/use-load-near-end";
 import { cn } from "@/lib/utils";
 
 import { NotificationRow } from "./notification-row";
@@ -95,8 +96,12 @@ export function NotificationsClient({
     setAttempt((n) => n + 1);
   };
 
+  // Set before the first render after a call, so the scroll check and the
+  // button cannot start the same page twice.
+  const busyRef = React.useRef(false);
   const loadMore = () => {
-    if (state.kind !== "ready") return;
+    if (state.kind !== "ready" || busyRef.current) return;
+    busyRef.current = true;
     setLoadingMore(true);
     setMoreFailed(false);
     getNotifications({ offset: state.items.length })
@@ -112,8 +117,22 @@ export function NotificationsClient({
         );
       })
       .catch(() => setMoreFailed(true))
-      .finally(() => setLoadingMore(false));
+      .finally(() => {
+        busyRef.current = false;
+        setLoadingMore(false);
+      });
   };
+
+  // Older notices follow as the end nears. After a failure it waits for
+  // Try again rather than retrying on every scroll.
+  const sentinelRef = React.useRef<HTMLDivElement>(null);
+  const ready = state.kind === "ready";
+  useLoadNearEnd(
+    sentinelRef,
+    loadMore,
+    ready && state.hasMore && !loadingMore && !moreFailed,
+    ready ? state.items.length : 0
+  );
 
   const off = profile
     ? offLine(profile.notifyPremieres, profile.notifyReleases)
@@ -187,6 +206,7 @@ export function NotificationsClient({
               <NotificationRow key={notice.id} notice={notice} />
             ))}
           </ul>
+          <div ref={sentinelRef} aria-hidden="true" />
           {state.hasMore ? (
             <div className="mt-6 flex flex-col items-center gap-3">
               {moreFailed ? (

@@ -27,6 +27,7 @@ import type {
   NotificationPage,
   PersonResult,
   Ranking,
+  Watched,
   Reason,
   Scored,
   SimilarTitle,
@@ -58,6 +59,7 @@ import type {
   WireTvSeason,
   WireTvSeries,
   WireUser,
+  WireWatched,
 } from "./wire";
 
 // ---------- helpers ----------
@@ -477,6 +479,10 @@ export function mapErrorGroupPage(w: WireErrorGroupPage): ErrorGroupPage {
 }
 
 // ---------- rankings / stats / imports ----------
+
+export function mapWatched(w: WireWatched): Watched {
+  return { movies: new Set(w.movies ?? []), tv: new Set(w.tv ?? []) };
+}
 
 export function mapRanking(w: WireRanking): Ranking {
   return {
